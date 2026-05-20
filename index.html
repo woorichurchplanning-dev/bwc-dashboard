@@ -3299,7 +3299,7 @@ window.addEventListener('DOMContentLoaded', () => {
   } catch(e) {}
 
   updatePeriodLabel(getFW());
-  mergeHist();
+  // mergeHist(); /* 임시 비활성화 — D 객체만으로 테스트 */
   DONE['home'] = true;
   // 홈이 기본 탭이므로 전역 필터 바 초기 숨김
   const fb = document.querySelector('.flt-bar');
