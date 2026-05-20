@@ -731,7 +731,34 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   .wk-card { box-shadow:none !important; border:1pt solid #e0e0e0 !important; }
 }
 
+#__debug { position:fixed; bottom:0; left:0; right:0; background:#000; color:#0f0; font-family:monospace; font-size:11px; padding:8px; z-index:99999; max-height:30vh; overflow:auto; white-space:pre-wrap; word-break:break-all; }
 </style>
+<script>
+window.__debugLog = [];
+window.__dbg = function(msg) {
+  window.__debugLog.push(msg);
+  const el = document.getElementById('__debug');
+  if (el) el.textContent = window.__debugLog.join('\n');
+};
+window.addEventListener('error', function(e) {
+  window.__dbg('❌ ERROR: ' + (e.message || '?') + ' @ ' + (e.filename || '').split('/').pop() + ':' + (e.lineno || '?') + ':' + (e.colno || '?'));
+});
+window.addEventListener('unhandledrejection', function(e) {
+  window.__dbg('❌ REJECT: ' + (e.reason?.message || e.reason || '?'));
+});
+document.addEventListener('DOMContentLoaded', function() {
+  const dbg = document.createElement('div');
+  dbg.id = '__debug';
+  dbg.textContent = window.__debugLog.join('\n') || '(디버그 로그 대기 중)';
+  document.body.appendChild(dbg);
+  window.__dbg('🟢 DOMContentLoaded');
+  setTimeout(() => {
+    window.__dbg('🔍 typeof D=' + typeof D + ', typeof HIST=' + typeof HIST + ', typeof initHome=' + typeof initHome);
+    if (typeof D !== 'undefined') window.__dbg('  D.weeks.length=' + (D.weeks?.length || '?'));
+    if (typeof HIST !== 'undefined') window.__dbg('  HIST.weeks.length=' + (HIST.weeks?.length || '?'));
+  }, 500);
+});
+</script>
 </head>
 <body>
 
