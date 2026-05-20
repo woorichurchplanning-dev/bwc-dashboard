@@ -227,7 +227,7 @@ nav::-webkit-scrollbar { display: none; }
 .csv-btn:hover { border-color:var(--color-positive); color:var(--color-positive); }
 
 /* ── MAIN ── */
-main { padding: var(--s6) var(--s8) var(--s12); max-width:1920px; margin:0 auto; }
+main { padding: var(--s6) var(--s8) var(--s12); max-width:1440px; margin:0 auto; }
 .sec { display: none; }
 .sec.on { display: block; }
 
@@ -295,7 +295,7 @@ main { padding: var(--s6) var(--s8) var(--s12); max-width:1920px; margin:0 auto;
 .cpb:hover:not(.on) { border-color:var(--color-accent); color:var(--color-accent); }
 .school-dept-row { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
 .school-dept-row label { font-size:11px; font-weight:700; color:var(--color-text-tertiary); letter-spacing:.5px; text-transform:uppercase; }
-/* 소형 화면에서만 차트 높이 제한 — 대형 화면은 카드 폭에 비례해 자동 확장 */
+canvas { max-height:260px; }
 
 /* ── SUB TABS (chip) ── */
 .stabs { display:flex; gap:var(--s2); margin-bottom:var(--s5); flex-wrap:wrap; }
@@ -399,52 +399,6 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 @keyframes fu     { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 
 /* ── RESPONSIVE ── */
-/* Large screens: 1600px+ */
-@media (min-width:1600px) {
-  main { padding: var(--s8) var(--s10) var(--s16); }
-  .cg { grid-template-columns:repeat(auto-fit,minmax(520px,1fr)); gap:var(--s4); }
-  .cc { padding:26px 28px; }
-  .ct { font-size:15px; }
-  .cs { font-size:13px; }
-  .kv { font-size:32px; }
-  .kg { gap:var(--s4); }
-  .kc { padding:22px 24px 20px; }
-  .wk-card-num { font-size:clamp(28px, 2.4vw, 36px); }
-  .wk-card-body { padding:16px 18px; }
-  .wk-bd-num { font-size:13px; }
-  .wk-loc-num { font-size:19px; }
-  .wk-mini-num { font-size:26px; }
-  .page-hdr-title h2 { font-size:24px; }
-}
-/* Extra-large screens: 1920px+ (27" / 32" monitors) */
-@media (min-width:1920px) {
-  main { padding: var(--s10) var(--s12) var(--s16); }
-  .cg { grid-template-columns:repeat(auto-fit,minmax(600px,1fr)); gap:var(--s5); }
-  .cc { padding:30px 34px; }
-  .ct { font-size:16px; }
-  .cs { font-size:14px; }
-  .kv { font-size:36px; }
-  .kc { padding:26px 28px 24px; }
-  .kg { gap:var(--s5); }
-  .ks { font-size:12px; }
-  .wk-card-num { font-size:clamp(32px, 2vw, 42px); }
-  .wk-card-body { padding:18px 22px; }
-  .wk-card-label { font-size:11px; }
-  .wk-bd-num { font-size:14px; }
-  .wk-bd-name { font-size:11px; }
-  .wk-loc-num { font-size:22px; }
-  .wk-loc-name { font-size:11px; }
-  .wk-mini-num { font-size:30px; }
-  .wk-mini-card { padding:18px 24px; }
-  .wk-grid { gap:14px; }
-  .wk-report-period { font-size:28px; }
-  .page-hdr-title h2 { font-size:26px; }
-  .hdr { height:64px; }
-  .hdr-brand h1 { font-size:17px; }
-  nav { height:54px; }
-  .nt { height:54px; font-size:14px; }
-  body { font-size:14px; }
-}
 @media (max-width:1199px) { .cg { grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); } }
 @media (max-width:768px) {
   .hdr { padding:0 var(--s4); height:52px; }
@@ -617,10 +571,13 @@ document.addEventListener('DOMContentLoaded', function() {
   document.body.appendChild(dbg);
   window.__dbg('🟢 DOMContentLoaded');
   setTimeout(() => {
-    window.__dbg('🔍 typeof D=' + typeof D + ', typeof HIST=' + typeof HIST + ', typeof initHome=' + typeof initHome);
+    window.__dbg('🔍 typeof D=' + typeof D + ', HIST=' + typeof HIST + ', initHome=' + typeof initHome);
     if (typeof D !== 'undefined') window.__dbg('  D.weeks.length=' + (D.weeks?.length || '?'));
   }, 500);
 });
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+}
 </script>
 </head>
 <body>
@@ -648,7 +605,6 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="nt" onclick="sw('leader')">리더십</div>
   <div class="nt" onclick="sw('cell')">소그룹</div>
   <div class="nt" onclick="sw('newfam')">새가족</div>
-  <button class="nt" onclick="sw('special')"><span>✦</span><span>특별예배</span></button>
   <div class="nt" onclick="sw('yearcomp')">연도 비교</div>
 </nav>
 
@@ -880,7 +836,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="kg" id="kk-wd"></div>
   <div class="cg">
     <div class="cc"><div class="ch"><div><div class="ct">수요예배 현장 / 온라인 추이</div></div></div><canvas id="c-wed"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct">금요기도회 현장 / 온라인 추이</div><div class="cs">고난주간 등 특별집회 주간 제외 (특별예배 탭 참조)</div></div></div><canvas id="c-fri"></canvas></div>
+    <div class="cc"><div class="ch"><div><div class="ct">금요기도회 현장 / 온라인 추이</div><div class="cs">4/5 성금요일·부활절 특별집회 포함</div></div></div><canvas id="c-fri"></canvas></div>
   </div>
   <div class="cg">
     <div class="cc"><div class="ch"><div><div class="ct">새벽기도 온라인 (주별 합계)</div><div class="cs">월~토 온라인 접속 합산</div></div></div><canvas id="c-dawn-on"></canvas></div>
@@ -959,23 +915,6 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="cc"><div class="ch"><div><div class="ct">청년 등록 경로 (누적)</div><div class="cs">냉담회복·이사·새신자 등</div></div></div><canvas id="c-nf-youth-route"></canvas></div>
     </div>
   </div>
-</section>
-
-<!-- ═══ SPECIAL ═══ -->
-<section class="sec" id="s-special">
-  <div class="page-hdr">
-    <div class="page-hdr-title"><h2>특별예배</h2><p>고난주간 · 성탄 · 송구영신 · 특별새벽기도회 출석 현황</p></div>
-  </div>
-  <div class="stabs" id="sp-tabs">
-    <button class="stab on" onclick="spTab('holywk')">고난주간 저녁집회</button>
-    <button class="stab" onclick="spTab('dawn')">특별새벽기도회</button>
-    <button class="stab" onclick="spTab('christmas')">성탄예배</button>
-    <button class="stab" onclick="spTab('newyear')">송구영신예배</button>
-  </div>
-  <div id="sp-holywk"></div>
-  <div id="sp-dawn" style="display:none"></div>
-  <div id="sp-christmas" style="display:none"></div>
-  <div id="sp-newyear" style="display:none"></div>
 </section>
 
 <!-- ═══ YEAR COMPARISON ═══ -->
@@ -1378,120 +1317,6 @@ const SCHOOL_GROUPS = {
   child:  { label:'아동부',   depts:['송림유년','서현유년','송림초등','서현초등','송림소년','서현소년','송림청소년부'], color:'teal' },
   teen:   { label:'중고등부', depts:['중등부','고등부'], color:'purple' },
 };
-// ── 2026 주간 데이터 패치 (5/10, 5/17) ──
-(function patchWeeks() {
-  const newWeeks = ['2026-05-10','2026-05-17'];
-  newWeeks.forEach(d => { if (!D.weeks.includes(d)) D.weeks.push(d); });
-  D.weeks.sort();
-
-  D.sunday['2026-05-10'] = {
-    jangnyeon: 4348, songrim: 3308, youth: null, school: null,
-    offline_total: 7656, grand_total: null,
-    bu: {
-      '1부': {장년:1131, 송림:286}, '2부': {장년:1524, 송림:1480},
-      '3부': {장년:1693, 송림:1542}, '4부': {장년:null, 송림:null}, '5부': {장년:null, 송림:null}
-    }
-  };
-  D.school['2026-05-10'] = {
-    '사랑부':{'1부':74},'영아부':{'1부':94},'유아부':{'1부':172},'유치부':{'1부':144},
-    '송림유년':{'1부':39},'서현유년':{'1부':247},'송림초등':{'1부':73},'서현초등':{'1부':245},
-    '송림소년':{'1부':99},'서현소년':{'1부':277},'송림청소년부':{'1부':112},
-    '중등부':{'1부':348},'고등부':{'1부':262}
-  };
-  D.weekday['2026-05-10'] = {
-    wed_off: 401, wed_on: 5443, wed_tot: 5844,
-    fri_off: 446, fri_on: 6090, fri_tot: 6536
-  };
-
-  D.sunday['2026-05-17'] = {
-    jangnyeon: 4472, songrim: 3309, youth: null, school: null,
-    offline_total: 7781, grand_total: null,
-    bu: {
-      '1부': {장년:1200, 송림:314}, '2부': {장년:1574, 송림:1425},
-      '3부': {장년:1698, 송림:1570}, '4부': {장년:null, 송림:null}, '5부': {장년:null, 송림:null}
-    }
-  };
-  D.school['2026-05-17'] = {
-    '사랑부':{'1부':80},'영아부':{'1부':89},'유아부':{'1부':176},'유치부':{'1부':194},
-    '송림유년':{'1부':36},'서현유년':{'1부':238},'송림초등':{'1부':64},'서현초등':{'1부':250},
-    '송림소년':{'1부':90},'서현소년':{'1부':287},'송림청소년부':{'1부':109},
-    '중등부':{'1부':359},'고등부':{'1부':154}
-  };
-  D.weekday['2026-05-17'] = {
-    wed_off: 1043, wed_on: 16746, wed_tot: 17789,
-    fri_off: 449, fri_on: 6625, fri_tot: 7074
-  };
-})();
-
-// ── 특별예배 데이터 ──
-D.special = {
-  holywk: [  /* 고난주간 저녁집회 */
-    { year: 2026, label: '2026 고난주간 (3/30–4/3)', days: ['월','화','수','목','금'],
-      songrim: [1190, 1094, 1135, 1280, 1874],
-      dream:   [361,  349,  312,  464,  738 ],
-      online:  [6096, 5279, 4866, 4189, 5575],
-      total:   [7647, 6722, 6313, 5933, 8187] },
-    { year: 2025, label: '2025 고난주간 (4/14–4/18)', days: ['월','화','수','목','금'],
-      songrim: [814,  792,  921,  956,  1598],
-      dream:   [302,  245,  239,  283,  542 ],
-      online:  [6777, 5838, 5843, 5370, 6036],
-      total:   [7893, 6875, 7003, 6609, 8176] },
-    { year: 2024, label: '2024 고난주간 (3/25–3/29)', days: ['월','화','수','목','금'],
-      songrim: [814,  792,  921,  956,  1598],
-      dream:   [302,  245,  239,  283,  542 ],
-      online:  [null, null, null, null, null],
-      total:   [1116, 1037, 1160, 1239, 2140] },
-    { year: 2023, label: '2023 고난주간 (4/3–4/7)', days: ['월','화','수','목','금'],
-      songrim: [null, null, null, null, null],
-      dream:   [null, null, null, null, null],
-      online:  [7671, 7923, 8174, 7815, 7791],
-      total:   [null, null, null, null, null] },
-  ],
-  dawn: [  /* 특별새벽기도회 */
-    { year: 2025, label: '2025 특별새벽기도회 (9/22–9/27)', days: ['월','화','수','목','금','토'],
-      songrim:  [1661, 1448, 1487, 1445, 1485, 2426],
-      seohyeon: [1107, 985,  944,  941,  941,  1468],
-      total:    [2768, 2433, 2431, 2386, 2426, 3894] },
-    { year: 2023, label: '2023 특별새벽부흥회 (9/18–9/23)', days: ['월','화','수','목','금','토'],
-      songrim:  [null, null, null, null, null, null],
-      seohyeon: [null, null, null, null, null, null],
-      online:   [6664, 7750, 7956, 7729, 7765, 6596],
-      total:    [null, null, null, null, null, null] },
-  ],
-  christmas: [  /* 성탄예배 */
-    { year: 2025, label: '2025년 성탄예배 (12/25)',
-      parts: [
-        { name: '1부', jangnyeon: 2432, songrim: 1448, online_pc: 8148, total: 24250 },
-        { name: '2부', jangnyeon: 2541, songrim: 1878, online_pc: 6358, total: 20314 },
-      ], grand: { jangnyeon: 4973, songrim: 3326, online_pc: 14506, total: 44564 } },
-    { year: 2024, label: '2024년 성탄예배 (12/25)',
-      parts: [
-        { name: '1부', jangnyeon: 1869, songrim: 1177, online_pc: null, total: null },
-        { name: '2부', jangnyeon: 2132, songrim: 1420, online_pc: null, total: null },
-      ], grand: { jangnyeon: 4001, songrim: 2597, online_pc: null, total: null } },
-    { year: 2023, label: '2023년 성탄예배 (12/24)',
-      parts: [
-        { name: '1부 오전9시', jangnyeon: 1143, songrim: 460,  online_pc: 5971, total: null },
-        { name: '2부 오전11시', jangnyeon: 1376, songrim: 878,  online_pc: 6807, total: null },
-      ], grand: { jangnyeon: 2519, songrim: 1338, online_pc: 12778, total: null } },
-  ],
-  newyear: [  /* 송구영신예배 */
-    { year: '2025년말', label: '2025/12/31 송구영신예배',
-      parts: [
-        { name: '1부', jangnyeon: 1907, songrim: 1335, online_pc: 6471, total: 19420 },
-        { name: '2부', jangnyeon: 1810, songrim: 710,  online_pc: 9413, total: 26053 },
-      ], grand: { jangnyeon: 3717, songrim: 2045, online_pc: 15884, total: 45473 } },
-    { year: '2024년말', label: '2024/12/31 송구영신예배',
-      parts: [], grand: { jangnyeon: 3395, songrim: 1506, online_pc: 21963, total: 26864 } },
-    { year: '2023년말', label: '2023/12/31 송구영신예배',
-      parts: [
-        { name: '오후 7시', jangnyeon: 1380, songrim: 450,  online_pc: 4754, total: null },
-        { name: '오후 9시', jangnyeon: null,  songrim: null, online_pc: 4592, total: null },
-        { name: '오후 11시', jangnyeon: null, songrim: null, online_pc: 7640, total: null },
-      ], grand: { jangnyeon: 1380, songrim: 450, online_pc: 16986, total: null } },
-  ],
-};
-
 // ── 차트 카드별 독립 기간 상태 ──
 const CARD_PERIOD = {};
 function getCardFW(cid) {
@@ -1531,12 +1356,6 @@ const CA = Object.values(C);
 Chart.defaults.color = '#64748b';
 Chart.defaults.borderColor = 'rgba(0,0,0,0.06)';
 Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
-
-/* 큰 화면에서 창 크기 변경 시 모든 차트 재렌더 */
-window.addEventListener('resize', () => {
-  if (!Chart.instances) return;
-  Object.values(Chart.instances).forEach(ch => { try { ch.resize(); } catch(e) {} });
-}, { passive:true });
 
 // ── 크로스헤어 플러그인 (주식 차트형 세로 가이드선) ──
 const _crosshair = {
@@ -2094,11 +1913,10 @@ function initHome() {
     .reduce((a,d) => a + v(D.youth[w]?.[d]?.예배), 0) || null;
   mkChart('c-hm-youth', 'line', wl8, [lds('청년 합계', fw8.map(youthTotal), C.p, true)]);
 
-  // 4. 주중예배 추이 (수요/금요 현장 — 특별집회 주간 제외)
-  const _SPW = new Set(['2026-04-05','2025-04-20','2025-12-28','2024-12-29','2023-12-24','2023-12-31']);
+  // 4. 주중예배 추이 (수요/금요 현장)
   mkChart('c-hm-wd', 'line', wl8, [
-    lds('수요 현장', fw8.map(w => _SPW.has(w) ? null : (v(D.weekday[w]?.wed_off) || null)), C.b),
-    lds('금요 현장', fw8.map(w => _SPW.has(w) ? null : (v(D.weekday[w]?.fri_off) || null)), C.or),
+    lds('수요 현장', fw8.map(w => v(D.weekday[w]?.wed_off) || null), C.b),
+    lds('금요 현장', fw8.map(w => v(D.weekday[w]?.fri_off) || null), C.or),
   ]);
 
   // 5. 새벽기도 추이 (현장 일평균)
@@ -2132,10 +1950,9 @@ function initHome() {
     mkChart('c-hm-youth', 'line', getWL(fw2), [lds('청년 합계', fw2.map(youthTotal), C.p, true)]);
   };
   HOME_RENDERERS['c-hm-wd'] = fw2 => {
-    const _SP = new Set(['2026-04-05','2025-04-20','2025-12-28','2024-12-29','2023-12-24','2023-12-31']);
     mkChart('c-hm-wd', 'line', getWL(fw2), [
-      lds('수요 현장', fw2.map(w => _SP.has(w) ? null : (v(D.weekday[w]?.wed_off) || null)), C.b),
-      lds('금요 현장', fw2.map(w => _SP.has(w) ? null : (v(D.weekday[w]?.fri_off) || null)), C.or),
+      lds('수요 현장', fw2.map(w => v(D.weekday[w]?.wed_off) || null), C.b),
+      lds('금요 현장', fw2.map(w => v(D.weekday[w]?.fri_off) || null), C.or),
     ]);
   };
   HOME_RENDERERS['c-hm-dawn'] = fw2 => {
@@ -2459,49 +2276,27 @@ function renderSchoolDept() {
 // ── WEEKDAY ──
 function initWD() {
   const fw=getFW(); const wl=getWL(fw); if(!fw.length) return;
-
-  /* 특별집회 주간: 수요/금요 데이터가 일반 예배가 아닌 특별집회 인원이므로 추이 차트에서 null 처리
-     (고난주간 저녁집회, 성탄절 전야, 송구영신 등) — 특별예배 탭에서 별도 확인 */
-  const SPECIAL_WD = new Set(['2026-04-05','2025-04-20','2025-12-28','2024-12-29','2023-12-24','2023-12-31']);
-
-  const raw = {
-    wedOff: fw.map(w=>v(D.weekday[w]?.wed_off)),
-    wedOn:  fw.map(w=>v(D.weekday[w]?.wed_on)),
-    friOff: fw.map(w=>v(D.weekday[w]?.fri_off)),
-    friOn:  fw.map(w=>v(D.weekday[w]?.fri_on)),
-  };
-  /* 차트용: 특별집회 주간은 null로 표시 (선 끊김) */
-  const nullIfSpecial = (arr) => arr.map((val, i) => SPECIAL_WD.has(fw[i]) ? null : val);
-  const wedOff = nullIfSpecial(raw.wedOff);
-  const wedOn  = nullIfSpecial(raw.wedOn);
-  const friOff = nullIfSpecial(raw.friOff);
-  const friOn  = nullIfSpecial(raw.friOn);
-
+  const wedOff=fw.map(w=>v(D.weekday[w]?.wed_off)), wedOn=fw.map(w=>v(D.weekday[w]?.wed_on));
+  const friOff=fw.map(w=>v(D.weekday[w]?.fri_off)), friOn=fw.map(w=>v(D.weekday[w]?.fri_on));
   const dawnOn=dawnOnline(fw), dawnOff=dawnOffline(fw);
-
-  /* KPI 평균: 특별집회 주간 및 0인 주 모두 제외 */
-  const normalIdx = fw.map((_,i) => !SPECIAL_WD.has(fw[i]));
-  const wedOffAvg = avg(raw.wedOff.filter((_,i)=>normalIdx[i] && raw.wedOff[i]>0));
-  const wedOnAvg  = avg(raw.wedOn.filter((_,i)=>normalIdx[i]));
-  const friOffAvg = avg(raw.friOff.filter((_,i)=>normalIdx[i] && raw.friOff[i]>0));
-  const friOnAvg  = avg(raw.friOn.filter((_,i)=>normalIdx[i]));
-
-  const lWedOff=raw.wedOff.filter((x,i)=>x>0&&normalIdx[i]).slice(-1)[0]||0;
-  const pWedOff=raw.wedOff.filter((x,i)=>x>0&&normalIdx[i]).slice(-2)[0]||0;
+  const OUTLIERS=['2026-04-05','2026-01-04'];
+  const wedOnAvg=avg(wedOn.filter((_,i)=>!OUTLIERS.includes(fw[i])));
+  const friOnAvg=avg(friOn.filter((_,i)=>!OUTLIERS.includes(fw[i])));
+  const lWedOff=wedOff.filter(x=>x>0).slice(-1)[0]||0, pWedOff=wedOff.filter(x=>x>0).slice(-2)[0]||0;
   const dWed=lWedOff-pWedOff;
 
   mkKPI('kk-wd',[
-    {label:'수요예배 현장 (평균)',value:fmt(wedOffAvg),sub:'특별집회 주간 제외',color:'blue',
+    {label:'수요예배 현장 (평균)',value:fmt(avg(wedOff.filter(x=>x>0))),sub:'평균 현장 출석',color:'blue',
       trend:`${dWed>=0?'▲':'▼'} 전주 ${dWed>=0?'+':''}${fmt(dWed)}`,td:dWed>=0?'up':'dn'},
-    {label:'수요예배 온라인 (평균)',value:fmt(wedOnAvg),sub:'특별집회 주간 제외',color:'teal'},
-    {label:'금요기도회 현장 (평균)',value:fmt(friOffAvg),sub:'특별집회 주간 제외',color:'purple'},
-    {label:'금요기도회 온라인 (평균)',value:fmt(friOnAvg),sub:'특별집회 주간 제외',color:'orange'},
+    {label:'수요예배 온라인 (평균)',value:fmt(wedOnAvg),sub:'특별집회 제외',color:'teal'},
+    {label:'금요기도회 현장 (평균)',value:fmt(avg(friOff.filter(x=>x>0))),sub:'평균 현장 출석',color:'purple'},
+    {label:'금요기도회 온라인 (평균)',value:fmt(friOnAvg),sub:'특별집회 제외',color:'orange'},
     {label:'새벽기도 온라인 (주평균)',value:fmt(avg(dawnOn)),sub:'주별 온라인 합계',color:'green'},
     {label:'새벽기도 현장 (주평균)',value:fmt(avg(dawnOff.filter(x=>x>0))),sub:'주별 현장 합계',color:'gold'},
   ]);
 
-  mkChart('c-wed','bar',wl,[bds('현장',wedOff,C.b),bds('온라인',wedOn,C.t)],{stack:true,spanGaps:false});
-  mkChart('c-fri','bar',wl,[bds('현장',friOff,C.p),bds('온라인',friOn,C.or)],{stack:true,spanGaps:false});
+  mkChart('c-wed','bar',wl,[bds('현장',wedOff,C.b),bds('온라인',wedOn,C.t)],{stack:true});
+  mkChart('c-fri','bar',wl,[bds('현장',friOff,C.p),bds('온라인',friOn,C.or)],{stack:true});
   mkChart('c-dawn-on','line',wl,[lds('온라인 합계',dawnOn,C.id,true)]);
   mkChart('c-dawn-off','line',wl,[lds('현장 합계',dawnOff,C.gr,true)]);
   const days=['월','화','수','목','금','토'];
@@ -2647,221 +2442,6 @@ function renderCellDist() {
       mkTable('t-cell',['항목','수치'],[['적',fmt(lDist.juk||0)],['출석',fmt(lDist.chul||0)],['출석률',(lDist.juk>0?Math.round(lDist.chul/lDist.juk*100):0)+'%']]);
     }
   }
-}
-
-// ── SPECIAL SERVICES ──
-function initSpecial() {
-  spTab('holywk');
-}
-
-function spTab(key) {
-  document.querySelectorAll('#sp-tabs .stab').forEach((b,i) => {
-    const k = ['holywk','dawn','christmas','newyear'][i];
-    b.classList.toggle('on', k === key);
-  });
-  ['holywk','dawn','christmas','newyear'].forEach(k => {
-    document.getElementById('sp-' + k).style.display = k === key ? '' : 'none';
-  });
-  if (key === 'holywk')   renderHolywk();
-  if (key === 'dawn')     renderDawn();
-  if (key === 'christmas') renderChristmas();
-  if (key === 'newyear')  renderNewyear();
-}
-
-function renderHolywk() {
-  const el = document.getElementById('sp-holywk');
-  const days = ['월','화','수','목','금'];
-  const colors = [C.b, C.p, C.g, C.or];
-  const data = D.special.holywk;
-
-  el.innerHTML = `
-    <div class="cg" style="margin-bottom:12px">
-      <div class="cc">
-        <div class="ch"><div><div class="ct">고난주간 저녁집회 — 요일별 총 인원</div><div class="cs">연도별 비교 (송림+드림 현장 합계)</div></div></div>
-        <canvas id="c-sp-holywk-total"></canvas>
-      </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">고난주간 저녁집회 — 현장 장소별</div><div class="cs">송림본당 / 드림센터</div></div></div>
-        <canvas id="c-sp-holywk-venue"></canvas>
-      </div>
-    </div>
-    <div class="cg single">
-      <div class="cc">
-        <div class="ch"><div><div class="ct">연도별 요일 세부 현황</div></div></div>
-        <div style="overflow-x:auto">
-          <table id="t-sp-holywk"></table>
-        </div>
-      </div>
-    </div>`;
-
-  // 총 인원 차트 (연도별 line)
-  const totalDs = data.map((d,i) => ({
-    label: String(d.year),
-    data: d.total,
-    borderColor: [C.b, C.p, C.g, C.or][i % 4],
-    backgroundColor: 'transparent',
-    tension: 0.3,
-    borderWidth: 2,
-    pointRadius: 4,
-    spanGaps: true,
-  }));
-  mkChart('c-sp-holywk-total', 'line', days, totalDs.filter(ds => ds.data.some(v => v != null)));
-
-  // 현장 장소별 (2026만 상세, 나머지 합계)
-  const venueLabels = [];
-  const songrimData = [];
-  const dreamData = [];
-  data.forEach(d => {
-    days.forEach((day, i) => {
-      venueLabels.push(d.year + ' ' + day);
-      songrimData.push(d.songrim[i]);
-      dreamData.push(d.dream[i]);
-    });
-  });
-  // 최신 연도(2026) 데이터만 bar chart로
-  const latest = data[0];
-  mkChart('c-sp-holywk-venue', 'bar', latest.days, [
-    { label: '송림본당', data: latest.songrim, backgroundColor: C.b + 'cc' },
-    { label: '드림센터', data: latest.dream,   backgroundColor: C.p + 'cc' },
-    { label: '온라인',   data: latest.online,  backgroundColor: C.g + 'cc' },
-  ], { stack: true });
-
-  // 테이블
-  const tbl = document.getElementById('t-sp-holywk');
-  const hdr = ['연도', '일정', '월', '화', '수', '목', '금', '합계'];
-  tbl.innerHTML = `<thead><tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>` +
-    data.map(d => {
-      const tot = d.total.reduce((a,v) => a + (v||0), 0);
-      return `<tr>
-        <td>${d.year}</td>
-        <td style="font-size:11px;white-space:nowrap">${d.label.replace(/^\d+ /,'')}</td>
-        ${d.total.map(v => `<td class="nr">${v != null ? v.toLocaleString() : '—'}</td>`).join('')}
-        <td class="nr" style="font-weight:700">${tot > 0 ? tot.toLocaleString() : '—'}</td>
-      </tr>`;
-    }).join('') + '</tbody>';
-}
-
-function renderDawn() {
-  const el = document.getElementById('sp-dawn');
-  const data = D.special.dawn;
-  el.innerHTML = `
-    <div class="cg">
-      ${data.map((d, di) => `
-      <div class="cc">
-        <div class="ch"><div><div class="ct">${d.label}</div><div class="cs">요일별 현장 출석</div></div></div>
-        <canvas id="c-sp-dawn-${di}"></canvas>
-      </div>`).join('')}
-    </div>`;
-
-  data.forEach((d, di) => {
-    const datasets = [];
-    if (d.total.some(v => v != null))    datasets.push({ label: '합계',   data: d.total,    borderColor: C.b, backgroundColor: C.b + '33', tension: 0.3, borderWidth: 2, fill: true, spanGaps: true });
-    if (d.songrim?.some(v => v != null)) datasets.push({ label: '송림',   data: d.songrim,  borderColor: C.p, backgroundColor: 'transparent', tension: 0.3, borderWidth: 1.5, spanGaps: true });
-    if (d.seohyeon?.some(v => v != null)) datasets.push({ label: '서현',  data: d.seohyeon, borderColor: C.or, backgroundColor: 'transparent', tension: 0.3, borderWidth: 1.5, spanGaps: true });
-    if (d.online?.some(v => v != null))  datasets.push({ label: '온라인', data: d.online,   borderColor: C.g, backgroundColor: 'transparent', tension: 0.3, borderWidth: 1.5, spanGaps: true });
-    mkChart('c-sp-dawn-' + di, 'line', d.days, datasets);
-  });
-}
-
-function renderChristmas() {
-  const el = document.getElementById('sp-christmas');
-  const data = D.special.christmas;
-
-  // KPI cards
-  const cardsHtml = data.map(d => `
-    <div class="cc" style="margin-bottom:0">
-      <div class="ct" style="margin-bottom:12px">${d.label}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr>
-          <th style="text-align:left;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">부</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">서현장년</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">송림</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">온라인PC</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">총계</th>
-        </tr></thead>
-        <tbody>
-          ${d.parts.map(p => `<tr>
-            <td style="padding:8px 10px;font-weight:600">${p.name}</td>
-            <td class="nr" style="padding:8px 10px">${p.jangnyeon != null ? p.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px">${p.songrim != null ? p.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px">${p.online_pc != null ? p.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${p.total != null ? p.total.toLocaleString() : '—'}</td>
-          </tr>`).join('')}
-          <tr style="background:var(--color-bg-subtle)">
-            <td style="padding:8px 10px;font-weight:700">합계</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.jangnyeon != null ? d.grand.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.songrim != null ? d.grand.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.online_pc != null ? d.grand.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.total != null ? d.grand.total.toLocaleString() : '—'}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>`).join('');
-
-  el.innerHTML = `
-    <div class="cg three">${cardsHtml}</div>
-    <div class="cg" style="margin-top:12px">
-      <div class="cc">
-        <div class="ch"><div><div class="ct">성탄예배 연도별 현장 출석</div><div class="cs">서현장년 + 송림 합산</div></div></div>
-        <canvas id="c-sp-christmas"></canvas>
-      </div>
-    </div>`;
-
-  const years = data.map(d => d.label.split(' ')[0]);
-  const totalOffline = data.map(d => (d.grand.jangnyeon || 0) + (d.grand.songrim || 0));
-  mkChart('c-sp-christmas', 'bar', years, [
-    { label: '현장 합계', data: totalOffline, backgroundColor: [C.b + 'cc', C.p + 'cc', C.g + 'cc'] }
-  ]);
-}
-
-function renderNewyear() {
-  const el = document.getElementById('sp-newyear');
-  const data = D.special.newyear;
-
-  const cardsHtml = data.map(d => `
-    <div class="cc" style="margin-bottom:0">
-      <div class="ct" style="margin-bottom:12px">${d.label}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr>
-          <th style="text-align:left;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">부</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">서현장년</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">송림</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">온라인PC</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">총계</th>
-        </tr></thead>
-        <tbody>
-          ${d.parts.map(p => `<tr>
-            <td style="padding:8px 10px;font-weight:600">${p.name}</td>
-            <td class="nr" style="padding:8px 10px">${p.jangnyeon != null ? p.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px">${p.songrim != null ? p.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px">${p.online_pc != null ? p.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${p.total != null ? p.total.toLocaleString() : '—'}</td>
-          </tr>`).join('')}
-          <tr style="background:var(--color-bg-subtle)">
-            <td style="padding:8px 10px;font-weight:700">합계</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.jangnyeon != null ? d.grand.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.songrim != null ? d.grand.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.online_pc != null ? d.grand.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.total != null ? d.grand.total.toLocaleString() : '—'}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>`).join('');
-
-  el.innerHTML = `
-    <div class="cg three">${cardsHtml}</div>
-    <div class="cg" style="margin-top:12px">
-      <div class="cc">
-        <div class="ch"><div><div class="ct">송구영신예배 연도별 현장 출석</div><div class="cs">서현장년 + 송림 합산</div></div></div>
-        <canvas id="c-sp-newyear"></canvas>
-      </div>
-    </div>`;
-
-  const years = data.map(d => d.year);
-  const totalOffline = data.map(d => (d.grand.jangnyeon || 0) + (d.grand.songrim || 0));
-  mkChart('c-sp-newyear', 'bar', years, [
-    { label: '현장 합계', data: totalOffline, backgroundColor: [C.b + 'cc', C.p + 'cc', C.g + 'cc'] }
-  ]);
 }
 
 // ── NEWFAM ──
@@ -3064,8 +2644,8 @@ function initYearComp() {
 }
 
 // ── 탭 내비게이션 ──
-const TABS=['home','sunday','youth','school','wd','leader','cell','newfam','special','yearcomp'];
-const INITS={home:initHome,sunday:initSunday,youth:initYouth,school:initSchool,wd:initWD,leader:initLeader,cell:initCell,newfam:initNewFam,special:initSpecial,yearcomp:initYearComp};
+const TABS=['home','sunday','youth','school','wd','leader','cell','newfam','yearcomp'];
+const INITS={home:initHome,sunday:initSunday,youth:initYouth,school:initSchool,wd:initWD,leader:initLeader,cell:initCell,newfam:initNewFam,yearcomp:initYearComp};
 const DONE={};
 
 function sw(name){
@@ -3234,29 +2814,12 @@ async function fetchFromSheets() {
     }
 
     mergeHist();
-
-    /* 연동 성공 데이터를 localStorage에 저장 (다음 로딩 시 즉시 사용) */
-    try {
-      localStorage.setItem('bwc_cache', JSON.stringify({
-        ts: Date.now(),
-        youth: D.youth, school: D.school, sunday: D.sunday,
-        weekday: D.weekday, dawn: D.dawn,
-        newFamily: D.newFamily, leader: D.leader, cell: D.cell,
-        weeks: D.weeks
-      }));
-    } catch(e) {}
-
     // 차트 캐시 리셋 후 현재 탭 재렌더
     Object.keys(DONE).forEach(k => { DONE[k] = false; });
     const cur = document.querySelector('.nt.on');
     if (cur) {
       const idx = Array.from(document.querySelectorAll('.nt')).indexOf(cur);
       if (idx >= 0) { DONE[TABS[idx]] = true; setTimeout(() => INITS[TABS[idx]](), 60); }
-    }
-    /* 현재 탭이 홈이 아닐 경우에도 홈 카드·차트 갱신 */
-    if (!cur || !cur.getAttribute('onclick')?.includes('home')) {
-      DONE['home'] = false;
-      setTimeout(() => { DONE['home'] = true; initHome(); }, 120);
     }
 
     const now = new Date().toLocaleString('ko-KR', {month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'});
@@ -3273,21 +2836,6 @@ async function fetchFromSheets() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  /* localStorage 캐시로 즉시 D 객체 보완 (Sheets 응답 전에 화면 채우기) */
-  try {
-    const cached = localStorage.getItem('bwc_cache');
-    if (cached) {
-      const c = JSON.parse(cached);
-      const AGE_H = (Date.now() - (c.ts || 0)) / 3600000;
-      if (AGE_H < 168) { /* 7일 이내 캐시만 사용 */
-        ['youth','school','sunday','weekday','dawn','newFamily','leader','cell'].forEach(k => {
-          if (c[k] && !Object.keys(D[k] || {}).length) D[k] = c[k];
-        });
-        if (c.weeks?.length > D.weeks.length) D.weeks = c.weeks;
-      }
-    }
-  } catch(e) {}
-
   updatePeriodLabel(getFW());
   mergeHist();
   DONE['home'] = true;
@@ -3304,10 +2852,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 200);
 });
 
-/* Service Worker 강제 해제 */
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
-}
+/* Service Worker 비활성화 */
 </script>
 </body>
 </html>
