@@ -697,6 +697,15 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   </div>
 
   <div class="ss on" id="sun-main">
+    <div class="year-bar" style="display:flex;gap:8px;margin-bottom:16px;padding:0 8px">
+      <label style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;margin-right:8px">연도별</label>
+      <div style="display:flex;gap:4px;flex:1;max-width:300px">
+        <div style="flex:1;height:4px;background:#635bff;border-radius:2px" title="2026"></div>
+        <div style="flex:1;height:4px;background:#a78bfa;border-radius:2px" title="2025"></div>
+        <div style="flex:1;height:4px;background:#c4b5fd;border-radius:2px" title="2024"></div>
+        <div style="flex:1;height:4px;background:#ddd6fe;border-radius:2px" title="2023"></div>
+      </div>
+    </div>
     <div class="kg" id="kk-sun"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">서현·송림 장년 출석 추이</div></div></div><canvas id="c-sun-trend"></canvas></div>
@@ -705,6 +714,15 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   </div>
 
   <div class="ss" id="sun-seohhyeon">
+    <div class="year-bar" style="display:flex;gap:8px;margin-bottom:16px;padding:0 8px">
+      <label style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;margin-right:8px">연도별</label>
+      <div style="display:flex;gap:4px;flex:1;max-width:300px">
+        <div style="flex:1;height:4px;background:#635bff;border-radius:2px" title="2026"></div>
+        <div style="flex:1;height:4px;background:#a78bfa;border-radius:2px" title="2025"></div>
+        <div style="flex:1;height:4px;background:#c4b5fd;border-radius:2px" title="2024"></div>
+        <div style="flex:1;height:4px;background:#ddd6fe;border-radius:2px" title="2023"></div>
+      </div>
+    </div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">서현 1·2·3부 출석 추이</div></div></div><canvas id="c-sh-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-sh-pie">서현 부별 비중</div></div></div><canvas id="c-sh-pie"></canvas></div>
@@ -715,6 +733,15 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   </div>
 
   <div class="ss" id="sun-songrim">
+    <div class="year-bar" style="display:flex;gap:8px;margin-bottom:16px;padding:0 8px">
+      <label style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;margin-right:8px">연도별</label>
+      <div style="display:flex;gap:4px;flex:1;max-width:300px">
+        <div style="flex:1;height:4px;background:#635bff;border-radius:2px" title="2026"></div>
+        <div style="flex:1;height:4px;background:#a78bfa;border-radius:2px" title="2025"></div>
+        <div style="flex:1;height:4px;background:#c4b5fd;border-radius:2px" title="2024"></div>
+        <div style="flex:1;height:4px;background:#ddd6fe;border-radius:2px" title="2023"></div>
+      </div>
+    </div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">송림 1·2·3부 출석 추이</div></div></div><canvas id="c-sr-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-sr-pie">송림 부별 비중</div></div></div><canvas id="c-sr-pie"></canvas></div>
@@ -2652,23 +2679,12 @@ function renderHolywk() {
   const data = D.special.holywk;
 
   el.innerHTML = `
-    <div class="cg" style="margin-bottom:12px">
-      <div class="cc">
-        <div class="ch"><div><div class="ct">고난주간 저녁집회 — 요일별 총 인원</div><div class="cs">연도별 비교 (송림+드림 현장 합계)</div></div></div>
-        <canvas id="c-sp-holywk-total"></canvas>
-      </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">고난주간 저녁집회 — 현장 장소별</div><div class="cs">송림본당 / 드림센터</div></div></div>
-        <canvas id="c-sp-holywk-venue"></canvas>
-      </div>
+    <div class="cg">
+      <div class="cc"><div class="ch"><div><div class="ct">고난주간 저녁집회 — 요일별 총 인원</div><div class="cs">연도별 비교 (송림+드림 현장 합계)</div></div></div><canvas id="c-sp-holywk-total"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">고난주간 저녁집회 — 현장 장소별</div><div class="cs">송림본당 / 드림센터 / 온라인</div></div></div><canvas id="c-sp-holywk-venue"></canvas></div>
     </div>
-    <div class="cg single">
-      <div class="cc">
-        <div class="ch"><div><div class="ct">연도별 요일 세부 현황</div></div></div>
-        <div style="overflow-x:auto">
-          <table id="t-sp-holywk"></table>
-        </div>
-      </div>
+    <div class="cc"><div class="ch"><div><div class="ct">연도별 요일 세부 현황</div></div></div>
+      <div style="overflow-x:auto"><table id="t-sp-holywk"></table></div>
     </div>`;
 
   // 총 인원 차트 (연도별 line)
@@ -2721,14 +2737,7 @@ function renderHolywk() {
 function renderDawn() {
   const el = document.getElementById('sp-dawn');
   const data = D.special.dawn;
-  el.innerHTML = `
-    <div class="cg">
-      ${data.map((d, di) => `
-      <div class="cc">
-        <div class="ch"><div><div class="ct">${d.label}</div><div class="cs">요일별 현장 출석</div></div></div>
-        <canvas id="c-sp-dawn-${di}"></canvas>
-      </div>`).join('')}
-    </div>`;
+  el.innerHTML = `<div class="cg">${data.map((d, di) => `<div class="cc"><div class="ch"><div><div class="ct">${d.label}</div><div class="cs">요일별 현장 출석</div></div></div><canvas id="c-sp-dawn-${di}"></canvas></div>`).join('')}</div>`;
 
   data.forEach((d, di) => {
     const datasets = [];
@@ -2744,32 +2753,31 @@ function renderChristmas() {
   const el = document.getElementById('sp-christmas');
   const data = D.special.christmas;
 
-  // KPI cards
   const cardsHtml = data.map(d => `
-    <div class="cc" style="margin-bottom:0">
-      <div class="ct" style="margin-bottom:12px">${d.label}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr>
-          <th style="text-align:left;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">부</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">서현장년</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">송림</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">온라인PC</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">총계</th>
+    <div class="cc">
+      <div class="ch"><div><div class="ct" style="font-size:13px">${d.label}</div></div></div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--color-bg-subtle)">
+          <th style="text-align:left;padding:6px 8px;font-size:11px;font-weight:600">부</th>
+          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">서현</th>
+          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">송림</th>
+          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">온라인</th>
+          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">합계</th>
         </tr></thead>
         <tbody>
           ${d.parts.map(p => `<tr>
-            <td style="padding:8px 10px;font-weight:600">${p.name}</td>
-            <td class="nr" style="padding:8px 10px">${p.jangnyeon != null ? p.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px">${p.songrim != null ? p.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px">${p.online_pc != null ? p.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${p.total != null ? p.total.toLocaleString() : '—'}</td>
+            <td style="padding:6px 8px">${p.name}</td>
+            <td class="nr" style="padding:6px 8px">${p.jangnyeon != null ? p.jangnyeon.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px">${p.songrim != null ? p.songrim.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px">${p.online_pc != null ? p.online_pc.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px;font-weight:600">${p.total != null ? p.total.toLocaleString() : '—'}</td>
           </tr>`).join('')}
-          <tr style="background:var(--color-bg-subtle)">
-            <td style="padding:8px 10px;font-weight:700">합계</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.jangnyeon != null ? d.grand.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.songrim != null ? d.grand.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.online_pc != null ? d.grand.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.total != null ? d.grand.total.toLocaleString() : '—'}</td>
+          <tr style="background:var(--color-bg-muted)">
+            <td style="padding:6px 8px;font-weight:600">합계</td>
+            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.jangnyeon != null ? d.grand.jangnyeon.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.songrim != null ? d.grand.songrim.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.online_pc != null ? d.grand.online_pc.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px;font-weight:700">${d.grand.total != null ? d.grand.total.toLocaleString() : '—'}</td>
           </tr>
         </tbody>
       </table>
@@ -2777,11 +2785,8 @@ function renderChristmas() {
 
   el.innerHTML = `
     <div class="cg three">${cardsHtml}</div>
-    <div class="cg" style="margin-top:12px">
-      <div class="cc">
-        <div class="ch"><div><div class="ct">성탄예배 연도별 현장 출석</div><div class="cs">서현장년 + 송림 합산</div></div></div>
-        <canvas id="c-sp-christmas"></canvas>
-      </div>
+    <div class="cg">
+      <div class="cc"><div class="ch"><div><div class="ct">성탄예배 연도별 현장 출석</div><div class="cs">서현 + 송림 합산</div></div></div><canvas id="c-sp-christmas"></canvas></div>
     </div>`;
 
   const years = data.map(d => d.label.split(' ')[0]);
@@ -2796,30 +2801,30 @@ function renderNewyear() {
   const data = D.special.newyear;
 
   const cardsHtml = data.map(d => `
-    <div class="cc" style="margin-bottom:0">
-      <div class="ct" style="margin-bottom:12px">${d.label}</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <thead><tr>
-          <th style="text-align:left;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">부</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">서현장년</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">송림</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">온라인PC</th>
-          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">총계</th>
+    <div class="cc">
+      <div class="ch"><div><div class="ct" style="font-size:13px">${d.label}</div></div></div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--color-bg-subtle)">
+          <th style="text-align:left;padding:6px 8px;font-size:11px;font-weight:600">부</th>
+          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">서현</th>
+          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">송림</th>
+          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">온라인</th>
+          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">합계</th>
         </tr></thead>
         <tbody>
           ${d.parts.map(p => `<tr>
-            <td style="padding:8px 10px;font-weight:600">${p.name}</td>
-            <td class="nr" style="padding:8px 10px">${p.jangnyeon != null ? p.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px">${p.songrim != null ? p.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px">${p.online_pc != null ? p.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${p.total != null ? p.total.toLocaleString() : '—'}</td>
+            <td style="padding:6px 8px">${p.name}</td>
+            <td class="nr" style="padding:6px 8px">${p.jangnyeon != null ? p.jangnyeon.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px">${p.songrim != null ? p.songrim.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px">${p.online_pc != null ? p.online_pc.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px;font-weight:600">${p.total != null ? p.total.toLocaleString() : '—'}</td>
           </tr>`).join('')}
-          <tr style="background:var(--color-bg-subtle)">
-            <td style="padding:8px 10px;font-weight:700">합계</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.jangnyeon != null ? d.grand.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.songrim != null ? d.grand.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.online_pc != null ? d.grand.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.total != null ? d.grand.total.toLocaleString() : '—'}</td>
+          <tr style="background:var(--color-bg-muted)">
+            <td style="padding:6px 8px;font-weight:600">합계</td>
+            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.jangnyeon != null ? d.grand.jangnyeon.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.songrim != null ? d.grand.songrim.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.online_pc != null ? d.grand.online_pc.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:6px 8px;font-weight:700">${d.grand.total != null ? d.grand.total.toLocaleString() : '—'}</td>
           </tr>
         </tbody>
       </table>
@@ -2827,11 +2832,8 @@ function renderNewyear() {
 
   el.innerHTML = `
     <div class="cg three">${cardsHtml}</div>
-    <div class="cg" style="margin-top:12px">
-      <div class="cc">
-        <div class="ch"><div><div class="ct">송구영신예배 연도별 현장 출석</div><div class="cs">서현장년 + 송림 합산</div></div></div>
-        <canvas id="c-sp-newyear"></canvas>
-      </div>
+    <div class="cg">
+      <div class="cc"><div class="ch"><div><div class="ct">송구영신예배 연도별 현장 출석</div><div class="cs">서현 + 송림 합산</div></div></div><canvas id="c-sp-newyear"></canvas></div>
     </div>`;
 
   const years = data.map(d => d.year);
