@@ -551,34 +551,7 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   .wk-grid { grid-template-columns:repeat(6,1fr) !important; }
   .wk-card { box-shadow:none !important; border:1pt solid #e0e0e0 !important; }
 }
-
-#__debug { position:fixed; bottom:0; left:0; right:0; background:#000; color:#0f0; font-family:monospace; font-size:11px; padding:8px; z-index:99999; max-height:30vh; overflow:auto; white-space:pre-wrap; word-break:break-all; }
 </style>
-<script>
-window.__debugLog = [];
-window.__dbg = function(msg) {
-  window.__debugLog.push(msg);
-  const el = document.getElementById('__debug');
-  if (el) el.textContent = window.__debugLog.join('\n');
-};
-window.addEventListener('error', function(e) {
-  window.__dbg('❌ ERROR: ' + (e.message || '?') + ' @ ' + (e.filename || '').split('/').pop() + ':' + (e.lineno || '?') + ':' + (e.colno || '?'));
-});
-document.addEventListener('DOMContentLoaded', function() {
-  const dbg = document.createElement('div');
-  dbg.id = '__debug';
-  dbg.textContent = window.__debugLog.join('\n') || '(로그 대기 중)';
-  document.body.appendChild(dbg);
-  window.__dbg('🟢 DOMContentLoaded');
-  setTimeout(() => {
-    window.__dbg('🔍 typeof D=' + typeof D + ', HIST=' + typeof HIST + ', initHome=' + typeof initHome);
-    if (typeof D !== 'undefined') window.__dbg('  D.weeks.length=' + (D.weeks?.length || '?'));
-  }, 500);
-});
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
-}
-</script>
 </head>
 <body>
 
@@ -2843,7 +2816,8 @@ window.addEventListener('DOMContentLoaded', () => {
   const fb = document.querySelector('.flt-bar');
   if (fb) fb.style.display = 'none';
   setTimeout(initHome, 80);
-  // fetchFromSheets(); /* Google Sheets 자동 동기화 비활성화 */
+  // 임베드 데이터로 먼저 화면 채우고, 500ms 뒤 백그라운드 동기화
+  setTimeout(() => fetchFromSheets(), 500);
   // 테이블 카드 접기 — 테이블을 포함한 .cc에 적용
   setTimeout(() => {
     document.querySelectorAll('.cc').forEach(card => {
@@ -2851,8 +2825,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }, 200);
 });
-
-/* Service Worker 비활성화 */
 </script>
 </body>
 </html>
