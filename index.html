@@ -472,139 +472,6 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   .tgl-btn { padding:0 10px; font-size:11px; }
 }
 
-
-/* ── 모바일 반응형 최적화 ── */
-@media (max-width:768px) {
-  /* 탭 레이아웃 */
-  .period-tabs, #section-tabs {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  
-  .period-tab, .section-tab {
-    padding: 10px 14px !important;
-    font-size: 12px !important;
-    min-height: 44px;
-    flex: 1;
-    min-width: 80px;
-  }
-  
-  /* 비교 설정 */
-  .comparison-section {
-    padding: 16px 12px !important;
-  }
-  
-  .comparison-section h3 {
-    font-size: 16px;
-    margin-bottom: 15px;
-  }
-  
-  .comparison-section label {
-    font-size: 13px !important;
-    margin-bottom: 6px !important;
-  }
-  
-  #section-tabs {
-    flex-direction: column;
-  }
-  
-  .section-tab {
-    width: 100%;
-    text-align: center;
-  }
-  
-  /* 비교 설정 입력 */
-  .comparison-section > div > div {
-    display: flex !important;
-    flex-direction: column !important;
-  }
-  
-  .comparison-section input,
-  .comparison-section select {
-    padding: 12px 10px !important;
-    font-size: 14px !important;
-    min-height: 44px;
-    width: 100%;
-  }
-  
-  /* 비교 버튼 */
-  .comparison-section button:last-of-type {
-    width: 100%;
-    min-height: 44px;
-    font-size: 14px;
-  }
-  
-  /* 차트 높이 조정 */
-  #comparison-charts canvas {
-    max-height: 300px !important;
-  }
-  
-  #comparison-charts {
-    overflow-x: auto;
-  }
-  
-  /* 비교 그리드 */
-  #comparison-charts > div {
-    grid-template-columns: 1fr !important;
-  }
-}
-
-@media (max-width:480px) {
-  /* 초소형 화면 */
-  .period-tabs, #section-tabs {
-    gap: 6px;
-  }
-  
-  .period-tab, .section-tab {
-    padding: 8px 10px !important;
-    font-size: 11px !important;
-    min-height: 40px;
-  }
-  
-  .comparison-section {
-    padding: 12px 10px !important;
-    border-radius: 4px;
-  }
-  
-  .comparison-section h3 {
-    font-size: 14px;
-    margin-bottom: 12px;
-  }
-  
-  .comparison-section input,
-  .comparison-section select {
-    padding: 10px 8px !important;
-    font-size: 13px !important;
-    border: 1px solid #ccc !important;
-  }
-  
-  /* 화면 방향 대응 */
-  .flt-bar {
-    padding: 0 10px !important;
-  }
-  
-  nav {
-    padding: 0 8px !important;
-  }
-}
-
-/* 초대형 화면용 최적화 */
-@media (min-width:1200px) {
-  .comparison-section {
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  
-  .comparison-section > div:nth-child(3) {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
-    gap: 15px;
-    align-items: flex-end;
-  }
-}
-
-
 /* ── PRINT ── */
 @media print {
   @page { size:A4 portrait; margin:16mm 12mm; }
@@ -743,19 +610,15 @@ window.__dbg = function(msg) {
 window.addEventListener('error', function(e) {
   window.__dbg('❌ ERROR: ' + (e.message || '?') + ' @ ' + (e.filename || '').split('/').pop() + ':' + (e.lineno || '?') + ':' + (e.colno || '?'));
 });
-window.addEventListener('unhandledrejection', function(e) {
-  window.__dbg('❌ REJECT: ' + (e.reason?.message || e.reason || '?'));
-});
 document.addEventListener('DOMContentLoaded', function() {
   const dbg = document.createElement('div');
   dbg.id = '__debug';
-  dbg.textContent = window.__debugLog.join('\n') || '(디버그 로그 대기 중)';
+  dbg.textContent = window.__debugLog.join('\n') || '(로그 대기 중)';
   document.body.appendChild(dbg);
   window.__dbg('🟢 DOMContentLoaded');
   setTimeout(() => {
     window.__dbg('🔍 typeof D=' + typeof D + ', typeof HIST=' + typeof HIST + ', typeof initHome=' + typeof initHome);
     if (typeof D !== 'undefined') window.__dbg('  D.weeks.length=' + (D.weeks?.length || '?'));
-    if (typeof HIST !== 'undefined') window.__dbg('  HIST.weeks.length=' + (HIST.weeks?.length || '?'));
   }, 500);
 });
 </script>
@@ -819,84 +682,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <main>
 
 <!-- ═══ HOME ═══ -->
-
-<div class="period-tabs" id="period-tabs" style="margin-bottom: 20px; border-bottom: 2px solid #ddd; display:none">
-  <button class="period-tab on" data-period="current" onclick="switchPeriod('current')">현재 (2026)</button>
-  <button class="period-tab" data-period="normal" onclick="switchPeriod('normal')">일반 기간</button>
-  <button class="period-tab" data-period="covid" onclick="switchPeriod('covid')">COVID-19</button>
-  <button class="period-tab" data-period="relax" onclick="switchPeriod('relax')">완화 기간</button>
-</div>
-
-<!-- 연도 비교 기능 -->
-<div class="comparison-section" style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 8px; display:none" id="comparison-section">
-  <h3 style="margin-top: 0;">📊 연도별 비교</h3>
-  
-  <!-- 부문 선택 -->
-  <div style="margin-bottom: 15px;">
-    <label style="font-weight: bold; display: block; margin-bottom: 8px;">부문 선택</label>
-    <div id="section-tabs" style="display: flex; gap: 10px;">
-      <button class="section-tab on" data-section="sunday" onclick="switchSection('sunday')" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">주일예배</button>
-      <button class="section-tab" data-section="school" onclick="switchSection('school')" style="padding: 8px 16px; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer;">주일학교</button>
-      <button class="section-tab" data-section="youth" onclick="switchSection('youth')" style="padding: 8px 16px; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer;">청년교구</button>
-      <button class="section-tab" data-section="weekday" onclick="switchSection('weekday')" style="padding: 8px 16px; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer;">주중예배</button>
-    </div>
-  </div>
-  
-  <!-- 비교 설정 -->
-  <div style="margin-bottom: 15px;">
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-      <div>
-        <label style="font-weight: bold; display: block; margin-bottom: 6px; font-size: 13px;">기준 날짜</label>
-        <input type="date" id="comparison-date" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box; font-size: 14px;">
-      </div>
-      
-      <div>
-        <label style="font-weight: bold; display: block; margin-bottom: 6px; font-size: 13px;">비교 기간</label>
-        <select id="comparison-years" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box; font-size: 14px;">
-          <option value="1">지난 1년</option>
-          <option value="2">지난 2년</option>
-          <option value="3">지난 3년</option>
-          <option value="5">지난 5년</option>
-        </select>
-      </div>
-    </div>
-    
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-      <div>
-        <label style="font-weight: bold; display: block; margin-bottom: 6px; font-size: 13px;">표시 방식</label>
-        <select id="comparison-mode" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box; font-size: 14px;">
-          <option value="together">함께 보기</option>
-          <option value="separate">따로 보기</option>
-        </select>
-      </div>
-      
-      <div style="display: flex; align-items: flex-end;">
-        <button onclick="loadComparison()" style="padding: 10px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 14px; font-weight: bold; min-height: 44px;">비교 시작</button>
-      </div>
-    </div>
-  </div>
-  
-  <!-- 비교 차트 표시 영역 -->
-  <div id="comparison-charts" style="margin-top: 20px;"></div>
-</div>
-
-<style>
-  .period-tabs { padding: 10px 0; }
-  .period-tab { 
-    padding: 8px 16px; 
-    margin-right: 10px; 
-    border: none; 
-    background: #f0f0f0;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  .period-tab.on {
-    background: #3b82f6;
-    color: white;
-  }
-</style>
-
 <section class="sec on" id="s-home">
   <div class="page-hdr">
     <div class="page-hdr-title">
@@ -935,15 +720,6 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 
   <div class="ss on" id="sun-main">
-    <div class="year-bar" style="display:flex;gap:8px;margin-bottom:16px;padding:0 8px">
-      <label style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;margin-right:8px">연도별</label>
-      <div style="display:flex;gap:4px;flex:1;max-width:300px">
-        <div style="flex:1;height:4px;background:#635bff;border-radius:2px" title="2026"></div>
-        <div style="flex:1;height:4px;background:#a78bfa;border-radius:2px" title="2025"></div>
-        <div style="flex:1;height:4px;background:#c4b5fd;border-radius:2px" title="2024"></div>
-        <div style="flex:1;height:4px;background:#ddd6fe;border-radius:2px" title="2023"></div>
-      </div>
-    </div>
     <div class="kg" id="kk-sun"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">서현·송림 장년 출석 추이</div></div></div><canvas id="c-sun-trend"></canvas></div>
@@ -952,15 +728,6 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 
   <div class="ss" id="sun-seohhyeon">
-    <div class="year-bar" style="display:flex;gap:8px;margin-bottom:16px;padding:0 8px">
-      <label style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;margin-right:8px">연도별</label>
-      <div style="display:flex;gap:4px;flex:1;max-width:300px">
-        <div style="flex:1;height:4px;background:#635bff;border-radius:2px" title="2026"></div>
-        <div style="flex:1;height:4px;background:#a78bfa;border-radius:2px" title="2025"></div>
-        <div style="flex:1;height:4px;background:#c4b5fd;border-radius:2px" title="2024"></div>
-        <div style="flex:1;height:4px;background:#ddd6fe;border-radius:2px" title="2023"></div>
-      </div>
-    </div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">서현 1·2·3부 출석 추이</div></div></div><canvas id="c-sh-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-sh-pie">서현 부별 비중</div></div></div><canvas id="c-sh-pie"></canvas></div>
@@ -971,15 +738,6 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 
   <div class="ss" id="sun-songrim">
-    <div class="year-bar" style="display:flex;gap:8px;margin-bottom:16px;padding:0 8px">
-      <label style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;margin-right:8px">연도별</label>
-      <div style="display:flex;gap:4px;flex:1;max-width:300px">
-        <div style="flex:1;height:4px;background:#635bff;border-radius:2px" title="2026"></div>
-        <div style="flex:1;height:4px;background:#a78bfa;border-radius:2px" title="2025"></div>
-        <div style="flex:1;height:4px;background:#c4b5fd;border-radius:2px" title="2024"></div>
-        <div style="flex:1;height:4px;background:#ddd6fe;border-radius:2px" title="2023"></div>
-      </div>
-    </div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">송림 1·2·3부 출석 추이</div></div></div><canvas id="c-sr-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-sr-pie">송림 부별 비중</div></div></div><canvas id="c-sr-pie"></canvas></div>
@@ -1295,26 +1053,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <script>
-let D_historical = null;
-
-// D_historical 로드 (필요할 때)
-async function loadDHistorical() {
-  if (D_historical) return D_historical;
-  
-  try {
-    const response = await fetch('./D_historical.json');
-    if (!response.ok) throw new Error('로드 실패');
-    D_historical = await response.json();
-    return D_historical;
-  } catch (e) {
-    console.warn('D_historical 로드 실패:', e);
-    return null;
-  }
-}
-
 const D = {"weeks":["2026-01-04","2026-01-11","2026-01-18","2026-01-25","2026-02-01","2026-02-08","2026-02-15","2026-02-22","2026-03-01","2026-03-08","2026-03-15","2026-03-22","2026-03-29","2026-04-05","2026-04-12","2026-04-19","2026-04-26","2026-05-03"],"sunday":{"2026-01-04":{"jangnyeon":4482,"songrim":3068,"youth":1456,"school":2303,"offline_total":11309,"grand_total":79498,"bu":{"1부":{"장년":1101,"송림":235},"2부":{"장년":1553,"송림":1419},"3부":{"장년":1828,"송림":1414},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-01-11":{"jangnyeon":3867,"songrim":2874,"youth":1371,"school":2191,"offline_total":10303,"grand_total":82929,"bu":{"1부":{"장년":896,"송림":239},"2부":{"장년":1366,"송림":1335},"3부":{"장년":1605,"송림":1300},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-01-18":{"jangnyeon":4132,"songrim":3223,"youth":1381,"school":2266,"offline_total":11002,"grand_total":82820,"bu":{"1부":{"장년":1067,"송림":273},"2부":{"장년":1402,"송림":1390},"3부":{"장년":1663,"송림":1560},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-01-25":{"jangnyeon":3718,"songrim":2853,"youth":1304,"school":1372,"offline_total":9247,"grand_total":62339,"bu":{"1부":{"장년":883,"송림":283},"2부":{"장년":1276,"송림":1214},"3부":{"장년":1559,"송림":1356},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-02-01":{"jangnyeon":3681,"songrim":3035,"youth":1413,"school":2218,"offline_total":10347,"grand_total":60002,"bu":{"1부":{"장년":873,"송림":249},"2부":{"장년":1314,"송림":1317},"3부":{"장년":1494,"송림":1469},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-02-08":{"jangnyeon":3492,"songrim":3099,"youth":1480,"school":2165,"offline_total":10236,"grand_total":59402,"bu":{"1부":{"장년":825,"송림":286},"2부":{"장년":1261,"송림":1307},"3부":{"장년":1406,"송림":1506},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-02-15":{"jangnyeon":3870,"songrim":2768,"youth":977,"school":1651,"offline_total":9266,"grand_total":71077,"bu":{"1부":{"장년":917,"송림":246},"2부":{"장년":1376,"송림":1150},"3부":{"장년":1577,"송림":1372},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-02-22":{"jangnyeon":4340,"songrim":3146,"youth":1443,"school":2082,"offline_total":11011,"grand_total":78992,"bu":{"1부":{"장년":1087,"송림":278},"2부":{"장년":1545,"송림":1343},"3부":{"장년":1708,"송림":1525},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-03-01":{"jangnyeon":4529,"songrim":3221,"youth":1403,"school":2340,"offline_total":11493,"grand_total":77411,"bu":{"1부":{"장년":1272,"송림":290},"2부":{"장년":1529,"송림":1382},"3부":{"장년":1728,"송림":1549},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-03-08":{"jangnyeon":4326,"songrim":3295,"youth":1488,"school":2434,"offline_total":11543,"grand_total":79932,"bu":{"1부":{"장년":1061,"송림":302},"2부":{"장년":1547,"송림":1403},"3부":{"장년":1718,"송림":1590},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-03-15":{"jangnyeon":4253,"songrim":3404,"youth":1402,"school":2501,"offline_total":11560,"grand_total":80751,"bu":{"1부":{"장년":1007,"송림":318},"2부":{"장년":1584,"송림":1459},"3부":{"장년":1662,"송림":1627},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-03-22":{"jangnyeon":4262,"songrim":3341,"youth":1385,"school":2373,"offline_total":11361,"grand_total":81046,"bu":{"1부":{"장년":1048,"송림":322},"2부":{"장년":1494,"송림":1427},"3부":{"장년":1720,"송림":1592},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-03-29":{"jangnyeon":4337,"songrim":3419,"youth":1360,"school":2222,"offline_total":11338,"grand_total":84434,"bu":{"1부":{"장년":1112,"송림":323},"2부":{"장년":1491,"송림":1483},"3부":{"장년":1734,"송림":1613},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-04-05":{"jangnyeon":4586,"songrim":3558,"youth":1376,"school":2302,"offline_total":11822,"grand_total":80475,"bu":{"1부":{"장년":1177,"송림":349},"2부":{"장년":1686,"송림":1473},"3부":{"장년":1723,"송림":1736},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-04-12":{"jangnyeon":4406,"songrim":3460,"youth":1320,"school":2266,"offline_total":11452,"grand_total":80073,"bu":{"1부":{"장년":1125,"송림":331},"2부":{"장년":1604,"송림":1456},"3부":{"장년":1677,"송림":1673},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-04-19":{"jangnyeon":4225,"songrim":3363,"youth":1264,"school":2228,"offline_total":11080,"grand_total":82366,"bu":{"1부":{"장년":1073,"송림":313},"2부":{"장년":1521,"송림":1440},"3부":{"장년":1631,"송림":1610},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-04-26":{"jangnyeon":4400,"songrim":3394,"youth":1254,"school":2228,"offline_total":11276,"grand_total":81130,"bu":{"1부":{"장년":1142,"송림":335},"2부":{"장년":1539,"송림":1478},"3부":{"장년":1719,"송림":1581},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2026-05-03":{"jangnyeon":4386,"songrim":3047,"youth":0,"school":2127,"offline_total":9560,"grand_total":75791,"bu":{"1부":{"장년":1083,"송림":297},"2부":{"장년":1566,"송림":1331},"3부":{"장년":1737,"송림":1419},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}}},"weekday":{"2026-01-04":{"wed_off":0,"wed_on":0,"wed_tot":0,"fri_off":380,"fri_on":7389,"fri_tot":7769},"2026-01-11":{"wed_off":362,"wed_on":5580,"wed_tot":5942,"fri_off":436,"fri_on":6073,"fri_tot":6509},"2026-01-18":{"wed_off":358,"wed_on":6094,"wed_tot":6452,"fri_off":501,"fri_on":5997,"fri_tot":6498},"2026-01-25":{"wed_off":311,"wed_on":5204,"wed_tot":5515,"fri_off":451,"fri_on":6174,"fri_tot":6625},"2026-02-01":{"wed_off":383,"wed_on":4952,"wed_tot":5335,"fri_off":436,"fri_on":5941,"fri_tot":6377},"2026-02-08":{"wed_off":427,"wed_on":4814,"wed_tot":5241,"fri_off":441,"fri_on":6347,"fri_tot":6788},"2026-02-15":{"wed_off":323,"wed_on":3717,"wed_tot":4040,"fri_off":435,"fri_on":5526,"fri_tot":5961},"2026-02-22":{"wed_off":231,"wed_on":6393,"wed_tot":6624,"fri_off":507,"fri_on":6562,"fri_tot":7069},"2026-03-01":{"wed_off":376,"wed_on":4718,"wed_tot":5094,"fri_off":489,"fri_on":5652,"fri_tot":6141},"2026-03-08":{"wed_off":389,"wed_on":4984,"wed_tot":5373,"fri_off":505,"fri_on":6794,"fri_tot":7299},"2026-03-15":{"wed_off":415,"wed_on":5380,"wed_tot":5795,"fri_off":534,"fri_on":6352,"fri_tot":6886},"2026-03-22":{"wed_off":350,"wed_on":5094,"wed_tot":5444,"fri_off":506,"fri_on":6202,"fri_tot":6708},"2026-03-29":{"wed_off":397,"wed_on":4709,"wed_tot":5106,"fri_off":481,"fri_on":7798,"fri_tot":8279},"2026-04-05":{"wed_off":1280,"wed_on":18357,"wed_tot":19637,"fri_off":1874,"fri_on":28094,"fri_tot":29968},"2026-04-12":{"wed_off":403,"wed_on":4976,"wed_tot":5380,"fri_off":480,"fri_on":6843,"fri_tot":7323},"2026-04-19":{"wed_off":409,"wed_on":5244,"wed_tot":5653,"fri_off":479,"fri_on":5888,"fri_tot":6367},"2026-04-26":{"wed_off":420,"wed_on":4832,"wed_tot":5252,"fri_off":454,"fri_on":5858,"fri_tot":6312},"2026-05-03":{"wed_off":376,"wed_on":5304,"wed_tot":5680,"fri_off":408,"fri_on":5596,"fri_tot":6004}},"dawn":{"2026-01-04":{"online":{"월":5882,"화":6247,"수":5488,"목":7451,"금":6256,"토":9324},"offline":{"월":56,"화":63,"수":59,"목":0,"금":58,"토":55}},"2026-01-11":{"online":{"월":6622,"화":6814,"수":6153,"목":6538,"금":6233,"토":8489},"offline":{"월":65,"화":74,"수":72,"목":54,"금":71,"토":45}},"2026-01-18":{"online":{"월":6567,"화":6301,"수":6055,"목":6167,"금":5674,"토":4694},"offline":{"월":55,"화":46,"수":46,"목":51,"금":54,"토":45}},"2026-01-25":{"online":{"월":6068,"화":6449,"수":6207,"목":6303,"금":6079,"토":4819},"offline":{"월":56,"화":59,"수":63,"목":56,"금":41,"토":35}},"2026-02-01":{"online":{"월":6006,"화":6130,"수":5871,"목":6368,"금":6041,"토":4855},"offline":{"월":60,"화":58,"수":50,"목":58,"금":61,"토":79}},"2026-02-08":{"online":{"월":6204,"화":5982,"수":8871,"목":6961,"금":5872,"토":5103},"offline":{"월":45,"화":49,"수":54,"목":59,"금":59,"토":51}},"2026-02-15":{"online":{"월":6323,"화":6332,"수":5798,"목":5959,"금":5404,"토":4577},"offline":{"월":54,"화":54,"수":59,"목":59,"금":43,"토":41}},"2026-02-22":{"online":{"월":4495,"화":4315,"수":5407,"목":5509,"금":5734,"토":4892},"offline":{"월":42,"화":35,"수":48,"목":53,"금":52,"토":56}},"2026-03-01":{"online":{"월":5808,"화":5841,"수":5781,"목":6119,"금":5752,"토":5116},"offline":{"월":63,"화":61,"수":59,"목":60,"금":65,"토":52}},"2026-03-08":{"online":{"월":5556,"화":6117,"수":5774,"목":6216,"금":5870,"토":4743},"offline":{"월":59,"화":53,"수":61,"목":53,"금":42,"토":39}},"2026-03-15":{"online":{"월":6248,"화":6182,"수":6012,"목":6002,"금":5750,"토":4531},"offline":{"월":57,"화":58,"수":55,"목":55,"금":46,"토":49}},"2026-03-22":{"online":{"월":5902,"화":6268,"수":5780,"목":6210,"금":6021,"토":4461},"offline":{"월":60,"화":55,"수":51,"목":50,"금":51,"토":41}},"2026-03-29":{"online":{"월":5860,"화":6257,"수":5863,"목":5450,"금":5660,"토":4794},"offline":{"월":56,"화":57,"수":59,"목":50,"금":51,"토":52}},"2026-04-05":{"online":{"월":7287,"화":6388,"수":6093,"목":5469,"금":5411,"토":4700},"offline":{"월":66,"화":50,"수":59,"목":44,"금":46,"토":34}},"2026-04-12":{"online":{"월":5920,"화":6153,"수":5978,"목":5729,"금":5873,"토":5182},"offline":{"월":57,"화":52,"수":58,"목":51,"금":52,"토":50}},"2026-04-19":{"online":{"월":4589,"화":5824,"수":5991,"목":5567,"금":6065,"토":5728},"offline":{"월":52,"화":54,"수":53,"목":51,"금":55,"토":41}},"2026-04-26":{"online":{"월":5942,"화":6143,"수":5966,"목":6430,"금":6355,"토":5504},"offline":{"월":54,"화":48,"수":60,"목":59,"금":55,"토":72}},"2026-05-03":{"online":{"월":6282,"화":6351,"수":6005,"목":5617,"금":5036,"토":4625},"offline":{"월":47,"화":51,"수":48,"목":60,"금":47,"토":48}}},"school":{"2026-01-04":{"사랑부":{"1부":72},"영아부":{"1부":67},"유아부":{"1부":170},"유치부":{"1부":83},"송림유년":{"1부":35},"서현유년":{"1부":245},"송림초등":{"1부":60},"서현초등":{"1부":286},"송림소년":{"1부":53},"서현소년":{"1부":288},"송림청소년부":{"1부":121},"중등부":{"1부":496},"고등부":{"1부":327}},"2026-01-11":{"사랑부":{"1부":78},"영아부":{"1부":75},"유아부":{"1부":179},"유치부":{"1부":197},"송림유년":{"1부":25},"서현유년":{"1부":229},"송림초등":{"1부":62},"서현초등":{"1부":285},"송림소년":{"1부":43},"서현소년":{"1부":303},"송림청소년부":{"1부":94},"중등부":{"1부":340},"고등부":{"1부":281}},"2026-01-18":{"사랑부":{"1부":76},"영아부":{"1부":72},"유아부":{"1부":189},"유치부":{"1부":205},"송림유년":{"1부":30},"서현유년":{"1부":232},"송림초등":{"1부":64},"서현초등":{"1부":281},"송림소년":{"1부":45},"서현소년":{"1부":296},"송림청소년부":{"1부":96},"중등부":{"1부":372},"고등부":{"1부":308}},"2026-01-25":{"사랑부":{"1부":77},"영아부":{"1부":71},"유아부":{"1부":163},"유치부":{"1부":200},"송림유년":{"1부":33},"서현유년":{"1부":208},"송림초등":{"1부":62},"서현초등":{"1부":261},"송림소년":{"1부":2},"서현소년":{"1부":295},"송림청소년부":{"1부":0},"중등부":{"1부":0},"고등부":{"1부":0}},"2026-02-01":{"사랑부":{"1부":30},"영아부":{"1부":74},"유아부":{"1부":180},"유치부":{"1부":191},"송림유년":{"1부":30},"서현유년":{"1부":254},"송림초등":{"1부":52},"서현초등":{"1부":283},"송림소년":{"1부":43},"서현소년":{"1부":290},"송림청소년부":{"1부":112},"중등부":{"1부":397},"고등부":{"1부":282}},"2026-02-08":{"사랑부":{"1부":69},"영아부":{"1부":63},"유아부":{"1부":181},"유치부":{"1부":176},"송림유년":{"1부":34},"서현유년":{"1부":248},"송림초등":{"1부":60},"서현초등":{"1부":235},"송림소년":{"1부":49},"서현소년":{"1부":280},"송림청소년부":{"1부":107},"중등부":{"1부":386},"고등부":{"1부":277}},"2026-02-15":{"사랑부":{"1부":64},"영아부":{"1부":39},"유아부":{"1부":127},"유치부":{"1부":161},"송림유년":{"1부":27},"서현유년":{"1부":178},"송림초등":{"1부":43},"서현초등":{"1부":191},"송림소년":{"1부":40},"서현소년":{"1부":206},"송림청소년부":{"1부":82},"중등부":{"1부":263},"고등부":{"1부":230}},"2026-02-22":{"사랑부":{"1부":73},"영아부":{"1부":41},"유아부":{"1부":183},"유치부":{"1부":201},"송림유년":{"1부":30},"서현유년":{"1부":119},"송림초등":{"1부":63},"서현초등":{"1부":265},"송림소년":{"1부":48},"서현소년":{"1부":287},"송림청소년부":{"1부":110},"중등부":{"1부":390},"고등부":{"1부":272}},"2026-03-01":{"사랑부":{"1부":76},"영아부":{"1부":41},"유아부":{"1부":190},"유치부":{"1부":195},"송림유년":{"1부":36},"서현유년":{"1부":241},"송림초등":{"1부":62},"서현초등":{"1부":258},"송림소년":{"1부":54},"서현소년":{"1부":314},"송림청소년부":{"1부":124},"중등부":{"1부":416},"고등부":{"1부":333}},"2026-03-08":{"사랑부":{"1부":83},"영아부":{"1부":60},"유아부":{"1부":197},"유치부":{"1부":214},"송림유년":{"1부":34},"서현유년":{"1부":277},"송림초등":{"1부":68},"서현초등":{"1부":297},"송림소년":{"1부":88},"서현소년":{"1부":318},"송림청소년부":{"1부":110},"중등부":{"1부":397},"고등부":{"1부":291}},"2026-03-15":{"사랑부":{"1부":81},"영아부":{"1부":71},"유아부":{"1부":182},"유치부":{"1부":199},"송림유년":{"1부":36},"서현유년":{"1부":256},"송림초등":{"1부":70},"서현초등":{"1부":287},"송림소년":{"1부":89},"서현소년":{"1부":322},"송림청소년부":{"1부":179},"중등부":{"1부":405},"고등부":{"1부":324}},"2026-03-22":{"사랑부":{"1부":77},"영아부":{"1부":67},"유아부":{"1부":179},"유치부":{"1부":202},"송림유년":{"1부":33},"서현유년":{"1부":272},"송림초등":{"1부":59},"서현초등":{"1부":287},"송림소년":{"1부":86},"서현소년":{"1부":296},"송림청소년부":{"1부":110},"중등부":{"1부":408},"고등부":{"1부":297}},"2026-03-29":{"사랑부":{"1부":73},"영아부":{"1부":73},"유아부":{"1부":199},"유치부":{"1부":210},"송림유년":{"1부":45},"서현유년":{"1부":156},"송림초등":{"1부":67},"서현초등":{"1부":273},"송림소년":{"1부":84},"서현소년":{"1부":307},"송림청소년부":{"1부":109},"중등부":{"1부":381},"고등부":{"1부":245}},"2026-04-05":{"사랑부":{"1부":80},"영아부":{"1부":84},"유아부":{"1부":218},"유치부":{"1부":214},"송림유년":{"1부":42},"서현유년":{"1부":158},"송림초등":{"1부":69},"서현초등":{"1부":300},"송림소년":{"1부":96},"서현소년":{"1부":321},"송림청소년부":{"1부":65},"중등부":{"1부":390},"고등부":{"1부":265}},"2026-04-12":{"사랑부":{"1부":80},"영아부":{"1부":90},"유아부":{"1부":205},"유치부":{"1부":177},"송림유년":{"1부":41},"서현유년":{"1부":198},"송림초등":{"1부":69},"서현초등":{"1부":290},"송림소년":{"1부":92},"서현소년":{"1부":312},"송림청소년부":{"1부":84},"중등부":{"1부":380},"고등부":{"1부":248}},"2026-04-19":{"사랑부":{"1부":81},"영아부":{"1부":95},"유아부":{"1부":192},"유치부":{"1부":140},"송림유년":{"1부":40},"서현유년":{"1부":237},"송림초등":{"1부":69},"서현초등":{"1부":281},"송림소년":{"1부":89},"서현소년":{"1부":302},"송림청소년부":{"1부":102},"중등부":{"1부":369},"고등부":{"1부":231}},"2026-04-26":{"사랑부":{"1부":81},"영아부":{"1부":95},"유아부":{"1부":192},"유치부":{"1부":140},"송림유년":{"1부":40},"서현유년":{"1부":237},"송림초등":{"1부":69},"서현초등":{"1부":281},"송림소년":{"1부":89},"서현소년":{"1부":302},"송림청소년부":{"1부":102},"중등부":{"1부":369},"고등부":{"1부":231}},"2026-05-03":{"사랑부":{"1부":73},"영아부":{"1부":79},"유아부":{"1부":191},"유치부":{"1부":174},"송림유년":{"1부":33},"서현유년":{"1부":208},"송림초등":{"1부":56},"서현초등":{"1부":239},"송림소년":{"1부":77},"서현소년":{"1부":246},"송림청소년부":{"1부":97},"중등부":{"1부":350},"고등부":{"1부":304}}},"youth":{"2026-01-04":{"1청년부":{"예배":653,"팀":{"2팀":{"부서모임":152,"소그룹":149},"3팀":{"부서모임":158,"소그룹":154},"4팀":{"부서모임":141,"소그룹":141}}},"2청년부":{"예배":518,"팀":{"2팀":{"부서모임":147,"소그룹":0},"3팀":{"부서모임":144,"소그룹":0}}},"3청년부":{"예배":195,"팀":{},"부서모임":195,"소그룹":195},"4청년부":{"예배":90,"팀":{},"부서모임":90,"소그룹":60}},"2026-01-11":{"1청년부":{"예배":584,"팀":{"2팀":{"부서모임":137,"소그룹":131},"3팀":{"부서모임":155,"소그룹":141},"4팀":{"부서모임":133,"소그룹":130}}},"2청년부":{"예배":521,"팀":{"2팀":{"부서모임":156,"소그룹":null},"3팀":{"부서모임":130,"소그룹":null}}},"3청년부":{"예배":176,"팀":{},"부서모임":176,"소그룹":null},"4청년부":{"예배":90,"팀":{},"부서모임":42,"소그룹":null}},"2026-01-18":{"1청년부":{"예배":567,"팀":{"2팀":{"부서모임":152,"소그룹":140},"3팀":{"부서모임":128,"소그룹":128},"4팀":{"부서모임":132,"소그룹":132}}},"2청년부":{"예배":521,"팀":{"2팀":{"부서모임":171,"소그룹":159},"3팀":{"부서모임":140,"소그룹":131}}},"3청년부":{"예배":212,"팀":{},"부서모임":212,"소그룹":212},"4청년부":{"예배":81,"팀":{},"부서모임":76,"소그룹":88}},"2026-01-25":{"1청년부":{"예배":564,"팀":{"2팀":{"부서모임":144,"소그룹":139},"3팀":{"부서모임":133,"소그룹":121},"4팀":{"부서모임":118,"소그룹":118}}},"2청년부":{"예배":476,"팀":{"2팀":{"부서모임":161,"소그룹":148},"3팀":{"부서모임":138,"소그룹":138}}},"3청년부":{"예배":182,"팀":{},"부서모임":182,"소그룹":182},"4청년부":{"예배":82,"팀":{},"부서모임":72,"소그룹":77}},"2026-02-01":{"1청년부":{"예배":584,"팀":{"2팀":{"부서모임":142,"소그룹":142},"3팀":{"부서모임":132,"소그룹":132},"4팀":{"부서모임":126,"소그룹":126}}},"2청년부":{"예배":505,"팀":{"2팀":{"부서모임":162,"소그룹":155},"3팀":{"부서모임":138,"소그룹":130}}},"3청년부":{"예배":234,"팀":{},"부서모임":234,"소그룹":234},"4청년부":{"예배":90,"팀":{},"부서모임":77,"소그룹":86}},"2026-02-08":{"1청년부":{"예배":649,"팀":{"2팀":{"부서모임":162,"소그룹":155},"3팀":{"부서모임":141,"소그룹":141},"4팀":{"부서모임":123,"소그룹":123}}},"2청년부":{"예배":518,"팀":{"2팀":{"부서모임":160,"소그룹":154},"3팀":{"부서모임":144,"소그룹":144}}},"3청년부":{"예배":231,"팀":{},"부서모임":228,"소그룹":228},"4청년부":{"예배":82,"팀":{},"부서모임":68,"소그룹":82}},"2026-02-15":{"1청년부":{"예배":465,"팀":{"2팀":{"부서모임":null,"소그룹":null},"3팀":{"부서모임":null,"소그룹":null},"4팀":{"부서모임":null,"소그룹":null}}},"2청년부":{"예배":331,"팀":{"2팀":{"부서모임":120,"소그룹":70},"3팀":{"부서모임":89,"소그룹":null}}},"3청년부":{"예배":121,"팀":{},"부서모임":121,"소그룹":null},"4청년부":{"예배":60,"팀":{},"부서모임":26,"소그룹":null}},"2026-02-22":{"1청년부":{"예배":621,"팀":{"2팀":{"부서모임":167,"소그룹":167},"3팀":{"부서모임":156,"소그룹":156},"4팀":{"부서모임":132,"소그룹":132}}},"2청년부":{"예배":513,"팀":{"2팀":{"부서모임":167,"소그룹":161},"3팀":{"부서모임":133,"소그룹":127}}},"3청년부":{"예배":226,"팀":{},"부서모임":224,"소그룹":223},"4청년부":{"예배":83,"팀":{},"부서모임":76,"소그룹":87}},"2026-03-01":{"1청년부":{"예배":625,"팀":{"2팀":{"부서모임":153,"소그룹":144},"3팀":{"부서모임":141,"소그룹":141},"4팀":{"부서모임":131,"소그룹":127}}},"2청년부":{"예배":477,"팀":{"2팀":{"부서모임":165,"소그룹":161},"3팀":{"부서모임":129,"소그룹":126}}},"3청년부":{"예배":213,"팀":{},"부서모임":210,"소그룹":208},"4청년부":{"예배":88,"팀":{},"부서모임":76,"소그룹":84}},"2026-03-08":{"1청년부":{"예배":638,"팀":{"2팀":{"부서모임":154,"소그룹":153},"3팀":{"부서모임":138,"소그룹":138},"4팀":{"부서모임":127,"소그룹":127}}},"2청년부":{"예배":534,"팀":{"2팀":{"부서모임":172,"소그룹":0},"3팀":{"부서모임":148,"소그룹":0}}},"3청년부":{"예배":227,"팀":{},"부서모임":186,"소그룹":186},"4청년부":{"예배":89,"팀":{},"부서모임":78,"소그룹":85}},"2026-03-15":{"1청년부":{"예배":610,"팀":{"2팀":{"부서모임":144,"소그룹":140},"3팀":{"부서모임":133,"소그룹":133},"4팀":{"부서모임":121,"소그룹":121}}},"2청년부":{"예배":497,"팀":{"2팀":{"부서모임":166,"소그룹":160},"3팀":{"부서모임":147,"소그룹":141}}},"3청년부":{"예배":204,"팀":{},"부서모임":189,"소그룹":186},"4청년부":{"예배":91,"팀":{},"부서모임":79,"소그룹":87}},"2026-03-22":{"1청년부":{"예배":589,"팀":{"2팀":{"부서모임":144,"소그룹":142},"3팀":{"부서모임":131,"소그룹":131},"4팀":{"부서모임":116,"소그룹":116}}},"2청년부":{"예배":521,"팀":{"2팀":{"부서모임":171,"소그룹":165},"3팀":{"부서모임":151,"소그룹":146}}},"3청년부":{"예배":184,"팀":{},"부서모임":184,"소그룹":184},"4청년부":{"예배":91,"팀":{},"부서모임":71,"소그룹":71}},"2026-03-29":{"1청년부":{"예배":575,"팀":{"2팀":{"부서모임":133,"소그룹":134},"3팀":{"부서모임":132,"소그룹":132},"4팀":{"부서모임":112,"소그룹":112}}},"2청년부":{"예배":497,"팀":{"2팀":{"부서모임":177,"소그룹":167},"3팀":{"부서모임":139,"소그룹":139}}},"3청년부":{"예배":196,"팀":{},"부서모임":181,"소그룹":181},"4청년부":{"예배":92,"팀":{},"부서모임":77,"소그룹":84}},"2026-04-05":{"1청년부":{"예배":605,"팀":{"2팀":{"부서모임":146,"소그룹":143},"3팀":{"부서모임":138,"소그룹":138},"4팀":{"부서모임":121,"소그룹":121}}},"2청년부":{"예배":463,"팀":{"2팀":{"부서모임":173,"소그룹":164},"3팀":{"부서모임":137,"소그룹":137}}},"3청년부":{"예배":212,"팀":{},"부서모임":185,"소그룹":185},"4청년부":{"예배":96,"팀":{},"부서모임":79,"소그룹":79}},"2026-04-12":{"1청년부":{"예배":562,"팀":{"2팀":{"부서모임":136,"소그룹":132},"3팀":{"부서모임":130,"소그룹":130},"4팀":{"부서모임":112,"소그룹":112}}},"2청년부":{"예배":462,"팀":{"2팀":{"부서모임":168,"소그룹":162},"3팀":{"부서모임":134,"소그룹":132}}},"3청년부":{"예배":204,"팀":{},"부서모임":185,"소그룹":185},"4청년부":{"예배":92,"팀":{},"부서모임":76,"소그룹":79}},"2026-04-19":{"1청년부":{"예배":520,"팀":{"2팀":{"부서모임":126,"소그룹":122},"3팀":{"부서모임":121,"소그룹":121},"4팀":{"부서모임":103,"소그룹":103}}},"2청년부":{"예배":462,"팀":{"2팀":{"부서모임":163,"소그룹":160},"3팀":{"부서모임":130,"소그룹":128}}},"3청년부":{"예배":195,"팀":{},"부서모임":185,"소그룹":185},"4청년부":{"예배":87,"팀":{},"부서모임":73,"소그룹":79}},"2026-04-26":{"1청년부":{"예배":488,"팀":{"2팀":{"부서모임":103,"소그룹":103},"3팀":{"부서모임":140,"소그룹":140},"4팀":{"부서모임":110,"소그룹":110}}},"2청년부":{"예배":470,"팀":{"2팀":{"부서모임":164,"소그룹":157},"3팀":{"부서모임":135,"소그룹":131}}},"3청년부":{"예배":208,"팀":{},"부서모임":190,"소그룹":190},"4청년부":{"예배":88,"팀":{},"부서모임":76,"소그룹":85}},"2026-05-03":{"1청년부":{"예배":null,"팀":{"2팀":{"부서모임":null,"소그룹":null},"3팀":{"부서모임":null,"소그룹":null},"4팀":{"부서모임":null,"소그룹":null}}},"2청년부":{"예배":null,"팀":{"2팀":{"부서모임":null,"소그룹":null},"3팀":{"부서모임":null,"소그룹":null}}},"3청년부":{"예배":null,"팀":{},"부서모임":null,"소그룹":null},"4청년부":{"예배":null,"팀":{},"부서모임":null,"소그룹":null}}}};
-
-
 
 
 // ── 과거 3년 통계 데이터 (XLS 파싱 결과) ──
@@ -1975,14 +1714,13 @@ function avg(arr) { const v=arr.filter(x=>x>0); return v.length ? Math.round(v.r
 function last4avg(arr) { return avg(arr.slice(-4)); }
 function v(x) { return x || 0; }
 
-function mkChart(id, type, labels, datasets, opts={}, plugin=null) {
+function mkChart(id, type, labels, datasets, opts={}) {
   const ctx = document.getElementById(id); if (!ctx) return;
   const ex = Chart.getChart(ctx); if (ex) ex.destroy();
   const isPct = opts.pct||false, isH = opts.horiz||false, isStack = opts.stack||false;
   const onDrill = opts.drill || null;
   const isPie = type === 'doughnut' || type === 'pie';
   const isLine = type === 'line';
-  const plugins = plugin ? [plugin] : [];
   const chart = new Chart(ctx, { type, data:{labels,datasets}, options:{
     responsive:true, maintainAspectRatio:true,
     indexAxis: isH ? 'y' : 'x',
@@ -2045,7 +1783,7 @@ function mkChart(id, type, labels, datasets, opts={}, plugin=null) {
       x:{ stacked:isStack, grid:{color:'rgba(0,0,0,0.04)'}, ticks:{maxRotation:isH?0:45,font:{size:10}} },
       y:{ stacked:isStack, grid:{color:'rgba(0,0,0,0.04)'}, ticks:{font:{size:10}, callback:n=>isPct?n+'%':fmt(n)} }
     }
-  }}, plugins});
+  }});
   if (onDrill) ctx.style.cursor = 'pointer';
   return chart;
 }
@@ -2395,25 +2133,10 @@ function initHome() {
   };
   HOME_RENDERERS['c-hm-wd'] = fw2 => {
     const _SP = new Set(['2026-04-05','2025-04-20','2025-12-28','2024-12-29','2023-12-24','2023-12-31']);
-    const bgPlugin = {
-      id: 'bgAreas',
-      afterDatasetsDraw(chart) {
-        const ctx = chart.ctx;
-        const xScale = chart.scales.x;
-        fw2.forEach((date, i) => {
-          if (_SP.has(date)) {
-            const x = xScale.getPixelForValue(i);
-            const width = (xScale.getPixelForValue(i + 0.4) || xScale.right) - x;
-            ctx.fillStyle = 'rgba(99, 91, 255, 0.08)';
-            ctx.fillRect(x - width/2, chart.chartArea.top, width, chart.chartArea.bottom - chart.chartArea.top);
-          }
-        });
-      }
-    };
     mkChart('c-hm-wd', 'line', getWL(fw2), [
       lds('수요 현장', fw2.map(w => _SP.has(w) ? null : (v(D.weekday[w]?.wed_off) || null)), C.b),
       lds('금요 현장', fw2.map(w => _SP.has(w) ? null : (v(D.weekday[w]?.fri_off) || null)), C.or),
-    ], { spanGaps: true }, bgPlugin);
+    ]);
   };
   HOME_RENDERERS['c-hm-dawn'] = fw2 => {
     mkChart('c-hm-dawn', 'line', getWL(fw2), [lds('현장 일평균', fw2.map(w => dawnAvg(w, 'off')), C.id, true)]);
@@ -2777,23 +2500,8 @@ function initWD() {
     {label:'새벽기도 현장 (주평균)',value:fmt(avg(dawnOff.filter(x=>x>0))),sub:'주별 현장 합계',color:'gold'},
   ]);
 
-  const bgPlugin = {
-    id: 'bgAreas',
-    afterDatasetsDraw(chart) {
-      const ctx = chart.ctx;
-      const xScale = chart.scales.x;
-      fw.forEach((date, i) => {
-        if (SPECIAL_WD.has(date)) {
-          const x = xScale.getPixelForValue(i);
-          const width = (xScale.getPixelForValue(i + 0.4) || xScale.right) - x;
-          ctx.fillStyle = 'rgba(99, 91, 255, 0.08)';
-          ctx.fillRect(x - width/2, chart.chartArea.top, width, chart.chartArea.bottom - chart.chartArea.top);
-        }
-      });
-    }
-  };
-  mkChart('c-wed','bar',wl,[bds('현장',wedOff,C.b),bds('온라인',wedOn,C.t)],{stack:true,spanGaps:false},bgPlugin);
-  mkChart('c-fri','bar',wl,[bds('현장',friOff,C.p),bds('온라인',friOn,C.or)],{stack:true,spanGaps:false},bgPlugin);
+  mkChart('c-wed','bar',wl,[bds('현장',wedOff,C.b),bds('온라인',wedOn,C.t)],{stack:true,spanGaps:false});
+  mkChart('c-fri','bar',wl,[bds('현장',friOff,C.p),bds('온라인',friOn,C.or)],{stack:true,spanGaps:false});
   mkChart('c-dawn-on','line',wl,[lds('온라인 합계',dawnOn,C.id,true)]);
   mkChart('c-dawn-off','line',wl,[lds('현장 합계',dawnOff,C.gr,true)]);
   const days=['월','화','수','목','금','토'];
@@ -2967,12 +2675,23 @@ function renderHolywk() {
   const data = D.special.holywk;
 
   el.innerHTML = `
-    <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">고난주간 저녁집회 — 요일별 총 인원</div><div class="cs">연도별 비교 (송림+드림 현장 합계)</div></div></div><canvas id="c-sp-holywk-total"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">고난주간 저녁집회 — 현장 장소별</div><div class="cs">송림본당 / 드림센터 / 온라인</div></div></div><canvas id="c-sp-holywk-venue"></canvas></div>
+    <div class="cg" style="margin-bottom:12px">
+      <div class="cc">
+        <div class="ch"><div><div class="ct">고난주간 저녁집회 — 요일별 총 인원</div><div class="cs">연도별 비교 (송림+드림 현장 합계)</div></div></div>
+        <canvas id="c-sp-holywk-total"></canvas>
+      </div>
+      <div class="cc">
+        <div class="ch"><div><div class="ct">고난주간 저녁집회 — 현장 장소별</div><div class="cs">송림본당 / 드림센터</div></div></div>
+        <canvas id="c-sp-holywk-venue"></canvas>
+      </div>
     </div>
-    <div class="cc"><div class="ch"><div><div class="ct">연도별 요일 세부 현황</div></div></div>
-      <div style="overflow-x:auto"><table id="t-sp-holywk"></table></div>
+    <div class="cg single">
+      <div class="cc">
+        <div class="ch"><div><div class="ct">연도별 요일 세부 현황</div></div></div>
+        <div style="overflow-x:auto">
+          <table id="t-sp-holywk"></table>
+        </div>
+      </div>
     </div>`;
 
   // 총 인원 차트 (연도별 line)
@@ -3025,7 +2744,14 @@ function renderHolywk() {
 function renderDawn() {
   const el = document.getElementById('sp-dawn');
   const data = D.special.dawn;
-  el.innerHTML = `<div class="cg">${data.map((d, di) => `<div class="cc"><div class="ch"><div><div class="ct">${d.label}</div><div class="cs">요일별 현장 출석</div></div></div><canvas id="c-sp-dawn-${di}"></canvas></div>`).join('')}</div>`;
+  el.innerHTML = `
+    <div class="cg">
+      ${data.map((d, di) => `
+      <div class="cc">
+        <div class="ch"><div><div class="ct">${d.label}</div><div class="cs">요일별 현장 출석</div></div></div>
+        <canvas id="c-sp-dawn-${di}"></canvas>
+      </div>`).join('')}
+    </div>`;
 
   data.forEach((d, di) => {
     const datasets = [];
@@ -3041,31 +2767,32 @@ function renderChristmas() {
   const el = document.getElementById('sp-christmas');
   const data = D.special.christmas;
 
+  // KPI cards
   const cardsHtml = data.map(d => `
-    <div class="cc">
-      <div class="ch"><div><div class="ct" style="font-size:13px">${d.label}</div></div></div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="background:var(--color-bg-subtle)">
-          <th style="text-align:left;padding:6px 8px;font-size:11px;font-weight:600">부</th>
-          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">서현</th>
-          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">송림</th>
-          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">온라인</th>
-          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">합계</th>
+    <div class="cc" style="margin-bottom:0">
+      <div class="ct" style="margin-bottom:12px">${d.label}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr>
+          <th style="text-align:left;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">부</th>
+          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">서현장년</th>
+          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">송림</th>
+          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">온라인PC</th>
+          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">총계</th>
         </tr></thead>
         <tbody>
           ${d.parts.map(p => `<tr>
-            <td style="padding:6px 8px">${p.name}</td>
-            <td class="nr" style="padding:6px 8px">${p.jangnyeon != null ? p.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px">${p.songrim != null ? p.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px">${p.online_pc != null ? p.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px;font-weight:600">${p.total != null ? p.total.toLocaleString() : '—'}</td>
+            <td style="padding:8px 10px;font-weight:600">${p.name}</td>
+            <td class="nr" style="padding:8px 10px">${p.jangnyeon != null ? p.jangnyeon.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px">${p.songrim != null ? p.songrim.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px">${p.online_pc != null ? p.online_pc.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px;font-weight:700">${p.total != null ? p.total.toLocaleString() : '—'}</td>
           </tr>`).join('')}
-          <tr style="background:var(--color-bg-muted)">
-            <td style="padding:6px 8px;font-weight:600">합계</td>
-            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.jangnyeon != null ? d.grand.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.songrim != null ? d.grand.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.online_pc != null ? d.grand.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px;font-weight:700">${d.grand.total != null ? d.grand.total.toLocaleString() : '—'}</td>
+          <tr style="background:var(--color-bg-subtle)">
+            <td style="padding:8px 10px;font-weight:700">합계</td>
+            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.jangnyeon != null ? d.grand.jangnyeon.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.songrim != null ? d.grand.songrim.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.online_pc != null ? d.grand.online_pc.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.total != null ? d.grand.total.toLocaleString() : '—'}</td>
           </tr>
         </tbody>
       </table>
@@ -3073,8 +2800,11 @@ function renderChristmas() {
 
   el.innerHTML = `
     <div class="cg three">${cardsHtml}</div>
-    <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">성탄예배 연도별 현장 출석</div><div class="cs">서현 + 송림 합산</div></div></div><canvas id="c-sp-christmas"></canvas></div>
+    <div class="cg" style="margin-top:12px">
+      <div class="cc">
+        <div class="ch"><div><div class="ct">성탄예배 연도별 현장 출석</div><div class="cs">서현장년 + 송림 합산</div></div></div>
+        <canvas id="c-sp-christmas"></canvas>
+      </div>
     </div>`;
 
   const years = data.map(d => d.label.split(' ')[0]);
@@ -3089,30 +2819,30 @@ function renderNewyear() {
   const data = D.special.newyear;
 
   const cardsHtml = data.map(d => `
-    <div class="cc">
-      <div class="ch"><div><div class="ct" style="font-size:13px">${d.label}</div></div></div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="background:var(--color-bg-subtle)">
-          <th style="text-align:left;padding:6px 8px;font-size:11px;font-weight:600">부</th>
-          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">서현</th>
-          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">송림</th>
-          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">온라인</th>
-          <th style="text-align:right;padding:6px 8px;font-size:11px;font-weight:600">합계</th>
+    <div class="cc" style="margin-bottom:0">
+      <div class="ct" style="margin-bottom:12px">${d.label}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr>
+          <th style="text-align:left;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">부</th>
+          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">서현장년</th>
+          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">송림</th>
+          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">온라인PC</th>
+          <th style="text-align:right;padding:6px 10px;font-size:11px;border-bottom:1px solid var(--border2)">총계</th>
         </tr></thead>
         <tbody>
           ${d.parts.map(p => `<tr>
-            <td style="padding:6px 8px">${p.name}</td>
-            <td class="nr" style="padding:6px 8px">${p.jangnyeon != null ? p.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px">${p.songrim != null ? p.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px">${p.online_pc != null ? p.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px;font-weight:600">${p.total != null ? p.total.toLocaleString() : '—'}</td>
+            <td style="padding:8px 10px;font-weight:600">${p.name}</td>
+            <td class="nr" style="padding:8px 10px">${p.jangnyeon != null ? p.jangnyeon.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px">${p.songrim != null ? p.songrim.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px">${p.online_pc != null ? p.online_pc.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px;font-weight:700">${p.total != null ? p.total.toLocaleString() : '—'}</td>
           </tr>`).join('')}
-          <tr style="background:var(--color-bg-muted)">
-            <td style="padding:6px 8px;font-weight:600">합계</td>
-            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.jangnyeon != null ? d.grand.jangnyeon.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.songrim != null ? d.grand.songrim.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px;font-weight:600">${d.grand.online_pc != null ? d.grand.online_pc.toLocaleString() : '—'}</td>
-            <td class="nr" style="padding:6px 8px;font-weight:700">${d.grand.total != null ? d.grand.total.toLocaleString() : '—'}</td>
+          <tr style="background:var(--color-bg-subtle)">
+            <td style="padding:8px 10px;font-weight:700">합계</td>
+            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.jangnyeon != null ? d.grand.jangnyeon.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.songrim != null ? d.grand.songrim.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.online_pc != null ? d.grand.online_pc.toLocaleString() : '—'}</td>
+            <td class="nr" style="padding:8px 10px;font-weight:700">${d.grand.total != null ? d.grand.total.toLocaleString() : '—'}</td>
           </tr>
         </tbody>
       </table>
@@ -3120,8 +2850,11 @@ function renderNewyear() {
 
   el.innerHTML = `
     <div class="cg three">${cardsHtml}</div>
-    <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">송구영신예배 연도별 현장 출석</div><div class="cs">서현 + 송림 합산</div></div></div><canvas id="c-sp-newyear"></canvas></div>
+    <div class="cg" style="margin-top:12px">
+      <div class="cc">
+        <div class="ch"><div><div class="ct">송구영신예배 연도별 현장 출석</div><div class="cs">서현장년 + 송림 합산</div></div></div>
+        <canvas id="c-sp-newyear"></canvas>
+      </div>
     </div>`;
 
   const years = data.map(d => d.year);
@@ -3571,313 +3304,10 @@ window.addEventListener('DOMContentLoaded', () => {
   }, 200);
 });
 
-/* Service Worker 강제 해제 — 이전 캐시 문제 회피 */
+/* Service Worker 강제 해제 */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
 }
-
-// 기간별 데이터 전환
-async function switchPeriod(period) {
-  const tabs = document.querySelectorAll('.period-tab');
-  tabs.forEach(t => t.classList.remove('on'));
-  document.querySelector(`[data-period="${period}"]`).classList.add('on');
-  
-  if (period === 'current') {
-    // 현재 데이터 유지 (원래의 D 사용)
-    renderCharts();
-  } else {
-    // 역사 데이터 사용
-    const hist = await loadDHistorical();
-    if (!hist) {
-      alert('역사 데이터를 로드할 수 없습니다');
-      return;
-    }
-    const years = hist.period_classification[period];
-    if (years && years.length > 0) {
-      const selectedYear = years[years.length - 1]; // 가장 최신 연도 선택
-      loadHistoricalYear(selectedYear);
-    }
-  }
-}
-
-// 특정 연도의 역사 데이터 로드
-async function loadHistoricalYear(year) {
-  const hist = await loadDHistorical();
-  if (!hist) {
-    alert('역사 데이터를 로드할 수 없습니다');
-    return;
-  }
-  const yearData = hist.data[year];
-  if (!yearData) {
-    alert(`${year}년 데이터가 없습니다.`);
-    return;
-  }
-  
-  // 주차별 데이터 정리
-  let sundays = {};
-  let weeks = [];
-  
-  for (const week of yearData) {
-    weeks.push(week.date);
-    
-    // 장소별 데이터 합산
-    let locationTotal = 0;
-    let bu1 = 0, bu2 = 0, bu3 = 0;
-    
-    for (const location in week.locations) {
-      const services = week.locations[location];
-      const bu1Val = parseInt(services['1부'] || 0);
-      const bu2Val = parseInt(services['2부'] || 0);
-      const bu3Val = parseInt(services['3부'] || 0);
-      
-      bu1 += bu1Val;
-      bu2 += bu2Val;
-      bu3 += bu3Val;
-      locationTotal += bu1Val + bu2Val + bu3Val;
-    }
-    
-    sundays[week.date] = {
-      offline_total: locationTotal,
-      grand_total: locationTotal,
-      bu: {
-        '1부': bu1,
-        '2부': bu2,
-        '3부': bu3
-      }
-    };
-  }
-  
-  // D 객체 업데이트
-  D.weeks = weeks;
-  D.sunday = sundays;
-  D.weekday = {}; // 주중 데이터는 없음
-  D.dawn = {}; // 새벽기도는 없음
-  D.school = {};
-  D.youth = {};
-  D.bu = {};
-  
-  // 차트 업데이트
-  document.getElementById('hm-subdate').textContent = \`\${year}년 데이터\`;
-  renderCharts();
-}
-
-// 기간 탭 표시
-function showPeriodTabs() {
-  const tabs = document.getElementById('period-tabs');
-  if (tabs) {
-    tabs.style.display = 'block';
-  }
-}
-
-// 페이지 로드 시 탭 표시
-document.addEventListener('DOMContentLoaded', () => {
-  showPeriodTabs();
-});
-
-
-
-// ===== 연도 비교 기능 =====
-
-let currentComparisonSection = 'sunday';
-
-// 부문 전환
-function switchSection(section) {
-  const tabs = document.querySelectorAll('.section-tab');
-  tabs.forEach(t => t.classList.remove('on'));
-  document.querySelector(`[data-section="${section}"]`).classList.add('on');
-  
-  // 스타일 업데이트
-  tabs.forEach(t => {
-    if (t.classList.contains('on')) {
-      t.style.background = '#3b82f6';
-      t.style.color = 'white';
-    } else {
-      t.style.background = '#e5e7eb';
-      t.style.color = 'black';
-    }
-  });
-  
-  currentComparisonSection = section;
-}
-
-// 비교 데이터 로드
-function loadComparison() {
-  const dateInput = document.getElementById('comparison-date').value;
-  const yearsBack = parseInt(document.getElementById('comparison-years').value);
-  const mode = document.getElementById('comparison-mode').value;
-  
-  if (!dateInput) {
-    alert('기준 날짜를 선택하세요');
-    return;
-  }
-  
-  const baseDate = new Date(dateInput);
-  const data = {};
-  
-  // 현재 + 지난 N년 데이터 수집
-  for (let i = 0; i <= yearsBack; i++) {
-    const targetDate = new Date(baseDate);
-    targetDate.setFullYear(targetDate.getFullYear() - i);
-    const dateStr = targetDate.toISOString().split('T')[0];
-    
-    const sectionData = D[currentComparisonSection];
-    if (sectionData && sectionData[dateStr]) {
-      const year = targetDate.getFullYear();
-      data[year] = sectionData[dateStr];
-    }
-  }
-  
-  if (Object.keys(data).length === 0) {
-    alert('해당 날짜의 데이터가 없습니다');
-    return;
-  }
-  
-  renderComparisonCharts(data, mode);
-}
-
-// 비교 차트 렌더링
-function renderComparisonCharts(data, mode) {
-  const container = document.getElementById('comparison-charts');
-  container.innerHTML = '';
-  
-  const years = Object.keys(data).sort((a, b) => b - a); // 최신순
-  const section = currentComparisonSection;
-  const sectionName = {
-    'sunday': '주일예배',
-    'school': '주일학교',
-    'youth': '청년교구',
-    'weekday': '주중예배'
-  }[section] || section;
-  
-  if (mode === 'together') {
-    // 함께 보기: 하나의 차트에 모든 연도 표시
-    renderTogetherChart(data, years, section, sectionName, container);
-  } else {
-    // 따로 보기: 연도별 차트 분리
-    renderSeparateCharts(data, years, section, sectionName, container);
-  }
-}
-
-// 함께 보기 차트
-function renderTogetherChart(data, years, section, sectionName, container) {
-  const canvas = document.createElement('canvas');
-  canvas.style.maxWidth = '100%';
-  container.appendChild(canvas);
-  
-  // 데이터셋 구성
-  const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
-  const datasets = [];
-  
-  years.forEach((year, idx) => {
-    const yearData = data[year];
-    let values = [];
-    
-    // 부문별 데이터 추출
-    if (section === 'sunday') {
-      values = [yearData.offline_total || 0];
-    } else if (section === 'school' || section === 'youth') {
-      // 하위 부서 합계
-      values = [Object.values(yearData).reduce((a, b) => a + (b || 0), 0)];
-    } else if (section === 'weekday') {
-      values = [yearData.offline_total || 0];
-    }
-    
-    datasets.push({
-      label: `${year}년`,
-      data: values,
-      borderColor: colors[idx % colors.length],
-      backgroundColor: colors[idx % colors.length] + '20',
-      tension: 0.4,
-      fill: true
-    });
-  });
-  
-  const ctx = canvas.getContext('2d');
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: ['인원'],
-      datasets: datasets
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: true },
-        title: { display: true, text: `${sectionName} - 연도별 비교` }
-      },
-      scales: {
-        y: { beginAtZero: true }
-      }
-    }
-  });
-}
-
-// 따로 보기 차트
-function renderSeparateCharts(data, years, section, sectionName, container) {
-  const grid = document.createElement('div');
-  grid.style.display = 'grid';
-  grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(300px, 1fr))';
-  grid.style.gap = '20px';
-  container.appendChild(grid);
-  
-  years.forEach(year => {
-    const yearData = data[year];
-    const wrapper = document.createElement('div');
-    const canvas = document.createElement('canvas');
-    wrapper.appendChild(canvas);
-    grid.appendChild(wrapper);
-    
-    let chartData = { labels: [], data: [] };
-    
-    if (section === 'sunday') {
-      chartData.labels = ['장년', '송림', '청년', '학교', '온라인 합'];
-      chartData.data = [
-        yearData.jangnyeon || 0,
-        yearData.songrim || 0,
-        yearData.youth || 0,
-        yearData.school || 0,
-        yearData.grand_total - yearData.offline_total || 0
-      ];
-    } else if (section === 'school' || section === 'youth') {
-      chartData.labels = Object.keys(yearData);
-      chartData.data = Object.values(yearData).map(v => v || 0);
-    }
-    
-    const ctx = canvas.getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: chartData.labels,
-        datasets: [{
-          label: `${year}년`,
-          data: chartData.data,
-          backgroundColor: '#3b82f6'
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          title: { display: true, text: `${year}년 ${sectionName}` }
-        },
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
-    });
-  });
-}
-
-// 비교 섹션 표시
-function showComparisonSection() {
-  const section = document.getElementById('comparison-section');
-  if (section) {
-    section.style.display = 'block';
-    // 기본 날짜 설정 (오늘)
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('comparison-date').value = today;
-  }
-}
-
 </script>
 </body>
 </html>
