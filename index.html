@@ -137,7 +137,7 @@ nav::-webkit-scrollbar { display: none; }
   white-space: nowrap; flex-shrink: 0; letter-spacing: -0.1px;
   display: flex; align-items: center; gap: 6px;
   transition: color var(--t-base) var(--ease-default), border-color var(--t-base) var(--ease-default), background var(--t-base);
-  border-radius: 0;
+  border-radius: 0; position: relative;
 }
 .nt:hover { color: var(--color-text-secondary); background: var(--color-bg-subtle); }
 .nt.on  { color: var(--color-accent); border-bottom-color: var(--color-accent); font-weight: 700; }
@@ -151,9 +151,21 @@ nav::-webkit-scrollbar { display: none; }
 .nt[onclick*="leader"]   { --nt-tint: rgba(8,145,178,0.06); }
 .nt[onclick*="cell"]     { --nt-tint: rgba(234,88,12,0.06); }
 .nt[onclick*="newfam"]   { --nt-tint: rgba(219,39,119,0.06); }
-.nt[onclick*="yearcomp"] { --nt-tint: rgba(100,116,139,0.06); }
+/* 특별 기능 탭: 회색톤으로 미묘하게 구분 */
+.nt[onclick*="special"]  { --nt-tint: rgba(107,114,128,0.08); padding-left: var(--s5); }
+.nt[onclick*="yearcomp"] { --nt-tint: rgba(107,114,128,0.08); }
 .nt:hover { background: var(--nt-tint, var(--color-bg-subtle)); }
 .nt.on    { background: var(--nt-tint, var(--color-accent-light)); }
+
+/* 특별 기능 탭 구분선 */
+.nt[onclick*="special"]::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  width: 1px;
+  height: 20px;
+  background: var(--color-border-default);
+}
 
 /* 주간현황 탭: 특별히 굵게 */
 .nt[onclick*="home"].on { font-weight: 800; letter-spacing: -0.3px; }
@@ -652,8 +664,21 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 
   <div class="ss on" id="sun-main">
     <div class="kg" id="kk-sun"></div>
+
+    <!-- Drill-down 배지 선택 UI -->
+    <div style="display:flex; gap:var(--s2); margin-bottom:var(--s5); flex-wrap:wrap; align-items:center;">
+      <label style="font-weight:600; color:var(--color-text-secondary); font-size:12px;">장소 선택:</label>
+      <div id="sun-drill-loc" style="display:flex; gap:var(--s2); flex-wrap:wrap;"></div>
+    </div>
+    <div id="sun-drill-bu-container" style="display:none;">
+      <div style="display:flex; gap:var(--s2); margin-bottom:var(--s5); flex-wrap:wrap; align-items:center;">
+        <label style="font-weight:600; color:var(--color-text-secondary); font-size:12px;">부 선택:</label>
+        <div id="sun-drill-bu" style="display:flex; gap:var(--s2); flex-wrap:wrap;"></div>
+      </div>
+    </div>
+
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">서현·송림 장년 출석 추이</div></div></div><canvas id="c-sun-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct" id="sun-chart-title">서현·송림 장년 출석 추이</div></div></div><canvas id="c-sun-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">온라인 포함 총계 추이</div><div class="cs">온라인 추정 접속자 포함</div></div></div><canvas id="c-sun-grand"></canvas></div>
     </div>
   </div>
@@ -917,6 +942,7 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   <div class="stabs">
     <button class="stab on" onclick="ss2('yearcomp','week')">주차별</button>
     <button class="stab" onclick="ss2('yearcomp','month')">월별</button>
+    <button class="stab" onclick="ss2('yearcomp','point')">특정날 비교</button>
   </div>
 
   <div class="ss on" id="yearcomp-week">
@@ -967,6 +993,30 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
         <canvas id="c-yc-mo-fri"></canvas>
       </div>
     </div>
+  </div>
+
+  <div class="ss" id="yearcomp-point">
+    <div style="padding:var(--s5); background:var(--color-bg-subtle); border-radius:var(--r); margin-bottom:var(--s5); display:flex; gap:var(--s5); flex-wrap:wrap; align-items:center;">
+      <div style="display:flex; gap:var(--s3); align-items:center;">
+        <label style="font-weight:600; color:var(--color-text-secondary);">기준 날짜:</label>
+        <select id="yc-point-date" onchange="updateYCPoint()" style="padding:var(--s2) var(--s3); border:1px solid var(--color-border-default); border-radius:6px; font-size:13px;">
+        </select>
+      </div>
+      <div style="display:flex; gap:var(--s3); align-items:center;">
+        <label style="font-weight:600; color:var(--color-text-secondary);">부서 선택:</label>
+        <select id="yc-point-dept" onchange="updateYCPoint()" style="padding:var(--s2) var(--s3); border:1px solid var(--color-border-default); border-radius:6px; font-size:13px;">
+        </select>
+      </div>
+      <div style="display:flex; gap:var(--s3); align-items:center;">
+        <label style="font-weight:600; color:var(--color-text-secondary);">표시 방식:</label>
+        <select id="yc-point-mode" onchange="updateYCPoint()" style="padding:var(--s2) var(--s3); border:1px solid var(--color-border-default); border-radius:6px; font-size:13px;">
+          <option value="separate">따로 보기</option>
+          <option value="overlay">겹쳐서 보기</option>
+          <option value="table">표로 보기</option>
+        </select>
+      </div>
+    </div>
+    <div id="yc-point-content" style="display:flex; flex-direction:column; gap:var(--s5);"></div>
   </div>
 </section>
 
@@ -2034,6 +2084,82 @@ function initSunday() {
       {label:'기간 내 최고',value:fmt(maxC2),sub:`${maxD2} 서현+송림`,color:'green'},
     ]);
   };
+
+  // 주일예배 drill-down UI
+  const sunDrillState = { location: null, bu: null };
+
+  const initSunDrill = () => {
+    const locDiv = document.getElementById('sun-drill-loc');
+    locDiv.innerHTML = `
+      <button class="stab on" onclick="updateSunDrill('loc','all')">전체</button>
+      <button class="stab" onclick="updateSunDrill('loc','송림')">송림</button>
+      <button class="stab" onclick="updateSunDrill('loc','서현')">서현</button>
+    `;
+  };
+
+  const updateSunDrill = (type, val) => {
+    if (type === 'loc') {
+      sunDrillState.location = val === 'all' ? null : val;
+      sunDrillState.bu = null;
+      const locButtons = document.querySelectorAll('#sun-drill-loc .stab');
+      locButtons.forEach(b => {
+        const matches = (val === 'all' && b.textContent === '전체') || (val !== 'all' && b.textContent === val);
+        b.classList.toggle('on', matches);
+      });
+      const buContainer = document.getElementById('sun-drill-bu-container');
+      if (val !== 'all') { buContainer.style.display = 'block'; renderSunBuDrill(); }
+      else { buContainer.style.display = 'none'; }
+    } else if (type === 'bu') {
+      sunDrillState.bu = val === 'all' ? null : val;
+      const buButtons = document.querySelectorAll('#sun-drill-bu .stab');
+      buButtons.forEach(b => {
+        const matches = (val === 'all' && b.textContent === '전체') || (val !== 'all' && b.textContent === val);
+        b.classList.toggle('on', matches);
+      });
+    }
+    renderSunDrillChart(fw);
+  };
+
+  const renderSunBuDrill = () => {
+    const buDiv = document.getElementById('sun-drill-bu');
+    buDiv.innerHTML = `
+      <button class="stab on" onclick="updateSunDrill('bu','all')">전체</button>
+      <button class="stab" onclick="updateSunDrill('bu','1부')">1부</button>
+      <button class="stab" onclick="updateSunDrill('bu','2부')">2부</button>
+      <button class="stab" onclick="updateSunDrill('bu','3부')">3부</button>
+    `;
+  };
+
+  const renderSunDrillChart = (fw2) => {
+    const { location, bu } = sunDrillState;
+    const wl2 = getWL(fw2);
+    let data = [], chartTitle = '서현·송림 장년 출석 추이';
+    if (!location) {
+      const j2=sunSeries('jangnyeon',fw2), s2=sunSeries('songrim',fw2);
+      data = [lds('서현',j2,C.b),lds('송림',s2,C.t)];
+    } else {
+      if (!bu) {
+        const locKey = location==='송림'?'songrim':'jangnyeon';
+        const locData = sunSeries(locKey, fw2);
+        data = [lds(location, locData, location==='송림'?C.t:C.b)];
+        const bu1=fw2.map(w=>nn(D.sunday[w]?.bu?.['1부']?.[location]));
+        const bu2=fw2.map(w=>nn(D.sunday[w]?.bu?.['2부']?.[location]));
+        const bu3=fw2.map(w=>nn(D.sunday[w]?.bu?.['3부']?.[location]));
+        data.push(ldsDash(`${location} 1부`,bu1,location==='송림'?'#67e8f9':'#60a5fa'));
+        data.push(ldsDash(`${location} 2부`,bu2,location==='송림'?'#22d3ee':'#3b82f6'));
+        data.push(ldsDash(`${location} 3부`,bu3,location==='송림'?'#06b6d4':'#1d4ed8'));
+        chartTitle = `${location} 출석 추이 (부별 구분)`;
+      } else {
+        const buData=fw2.map(w=>nn(D.sunday[w]?.bu?.[bu]?.[location]));
+        data = [lds(`${location} ${bu}`, buData, location==='송림'?C.t:C.b)];
+        chartTitle = `${location} ${bu} 출석 추이`;
+      }
+    }
+    document.getElementById('sun-chart-title').textContent = chartTitle;
+    mkChart('c-sun-trend','line',wl2,data,{fw:fw2});
+  };
+
+  initSunDrill();
   renderSunTrend(fw);
   addCardPeriod('c-sun-trend', renderSunTrend, renderSunKpi);
   mkChart('c-sun-grand','line',wl,[lds('온라인 포함 총계',grand,C.g,true)],{fw});
@@ -2633,6 +2759,193 @@ function initYearComp() {
   mkChart('c-yc-mo-youth',  'line', moLabels, moDs(youthVal),  ycOpts);
   mkChart('c-yc-mo-wed',    'line', moLabels, moDs(wedVal),    ycOpts);
   mkChart('c-yc-mo-fri',    'line', moLabels, moDs(friVal),    ycOpts);
+
+  // ── 특정날 비교 초기화 ──
+  window.YC_COLORS = COLORS;
+  window.YC_YEARS = YEARS;
+  window.YC_byYear = byYear;
+
+  function formatDateStr(dateStr) {
+    const [y, m, d] = dateStr.split('-');
+    return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`;
+  }
+
+  const dateSelect = document.getElementById('yc-point-date');
+  const deptSelect = document.getElementById('yc-point-dept');
+
+  // 날짜 선택지 생성
+  const sortedWeeks = D.weeks.slice().sort().reverse();
+  sortedWeeks.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = formatDateStr(d);
+    dateSelect.appendChild(opt);
+  });
+  if (sortedWeeks.length) dateSelect.value = sortedWeeks[0];
+
+  // 부서 목록 추출 및 선택지 생성
+  const allDepts = new Set();
+  ['주일예배', '주일학교', '청년교구', '수요예배', '금요예배'];
+  const deptCategories = {
+    '주일예배': ['1부', '2부', '3부'],
+    '주일학교': Object.keys(D.school[sortedWeeks[0]] || {}),
+    '청년교구': Object.keys(D.youth[sortedWeeks[0]] || {}),
+    '수요예배': null,
+    '금요예배': null,
+  };
+
+  const allDeptList = [
+    {label: '주일예배 - 1부', value: 'sunday:1부'},
+    {label: '주일예배 - 2부', value: 'sunday:2부'},
+    {label: '주일예배 - 3부', value: 'sunday:3부'},
+  ];
+
+  if (D.school[sortedWeeks[0]]) {
+    Object.keys(D.school[sortedWeeks[0]]).forEach(dept => {
+      allDeptList.push({label: `주일학교 - ${dept}`, value: `school:${dept}`});
+    });
+  }
+
+  if (D.youth[sortedWeeks[0]]) {
+    Object.keys(D.youth[sortedWeeks[0]]).forEach(dept => {
+      allDeptList.push({label: `청년교구 - ${dept}`, value: `youth:${dept}`});
+    });
+  }
+
+  allDeptList.push({label: '수요예배', value: 'weekday:wed'});
+  allDeptList.push({label: '금요예배', value: 'weekday:fri'});
+
+  allDeptList.forEach(dept => {
+    const opt = document.createElement('option');
+    opt.value = dept.value;
+    opt.textContent = dept.label;
+    deptSelect.appendChild(opt);
+  });
+
+  window.updateYCPoint = updateYCPoint;
+}
+
+function updateYCPoint() {
+  const dateVal = document.getElementById('yc-point-date').value;
+  const deptVal = document.getElementById('yc-point-dept').value;
+  const modeVal = document.getElementById('yc-point-mode').value;
+  const content = document.getElementById('yc-point-content');
+
+  if (!dateVal || !deptVal) return;
+
+  function formatDateStr(dateStr) {
+    const [y, m, d] = dateStr.split('-');
+    return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`;
+  }
+
+  const dateMo = parseInt(dateVal.slice(5, 7));
+  const dateDa = parseInt(dateVal.slice(8, 10));
+
+  const compareDates = [];
+  const baseYear = parseInt(dateVal.slice(0, 4));
+
+  for (let i = 0; i <= 2; i++) {
+    const y = baseYear - i;
+    const searchDate = `${y}-${String(dateMo).padStart(2, '0')}-${String(dateDa).padStart(2, '0')}`;
+    if (window.YC_byYear[y] && window.YC_byYear[y].includes(searchDate)) {
+      compareDates.push(searchDate);
+    } else {
+      compareDates.push(null);
+    }
+  }
+
+  const [dept, key] = deptVal.split(':');
+  const values = [];
+  const labels = [];
+
+  for (let i = 0; i < 3; i++) {
+    const d = compareDates[i];
+    const year = baseYear - i;
+    let val = null;
+
+    if (d) {
+      if (dept === 'sunday') {
+        const bu = D.sunday[d]?.bu || {};
+        const partData = bu[key];
+        val = partData ? v(partData['장년']) + v(partData['송림']) : null;
+      } else if (dept === 'school') {
+        const schoolData = D.school[d];
+        val = schoolData ? v(schoolData[key]?.['1부']) : null;
+      } else if (dept === 'youth') {
+        const youthData = D.youth[d];
+        val = youthData ? v(youthData[key]?.['예배']) : null;
+      } else if (dept === 'weekday') {
+        const wData = D.weekday[d];
+        val = wData ? (key === 'wed' ? v(wData.wed_tot) : v(wData.fri_tot)) : null;
+      }
+    }
+
+    values.push(val);
+    const displayMoDay = d ? formatDateStr(d).substring(5) : formatDateStr(dateVal).substring(5);
+    labels.push(`${year}년 ${displayMoDay}`);
+  }
+
+  content.innerHTML = '';
+
+  if (modeVal === 'table') {
+    const table = document.createElement('table');
+    table.style.cssText = 'width:100%; border-collapse:collapse; margin-top:var(--s3);';
+    const thead = table.createTHead();
+    const hRow = thead.insertRow();
+    hRow.style.backgroundColor = 'var(--color-bg-subtle)';
+    ['연도', '출석'].forEach(text => {
+      const th = document.createElement('th');
+      th.textContent = text;
+      th.style.cssText = 'padding:var(--s3); text-align:left; border:1px solid var(--color-border-default);';
+      hRow.appendChild(th);
+    });
+
+    const tbody = table.createTBody();
+    for (let i = 0; i < 3; i++) {
+      const row = tbody.insertRow();
+      const yearCell = row.insertCell();
+      const valCell = row.insertCell();
+      yearCell.textContent = String(baseYear - i) + '년';
+      valCell.textContent = values[i] !== null ? values[i].toLocaleString() : '–';
+      yearCell.style.cssText = 'padding:var(--s3); border:1px solid var(--color-border-default);';
+      valCell.style.cssText = 'padding:var(--s3); border:1px solid var(--color-border-default); text-align:right;';
+    }
+    content.appendChild(table);
+  } else {
+    const cId = 'c-yc-point-' + Date.now();
+    const canvas = document.createElement('canvas');
+    canvas.id = cId;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'cc';
+    wrapper.style.cssText = 'grid-column:1/-1; margin-bottom:var(--s5);';
+    const header = document.createElement('div');
+    header.className = 'ch';
+    const deptDisplay = deptVal.split(':')[1];
+    header.innerHTML = `<div><div class="ct">${deptDisplay} - ${formatDateStr(dateVal).substring(5)} 비교</div></div>`;
+    wrapper.appendChild(header);
+    wrapper.appendChild(canvas);
+    content.appendChild(wrapper);
+
+    const datasets = modeVal === 'overlay'
+      ? [{ label: '출석', data: values, borderColor: '#635bff', backgroundColor: '#635bff22', borderWidth: 2, pointRadius: 4 }]
+      : window.YC_YEARS.map((y, i) => ({
+          label: String(y) + '년',
+          data: [values[i]],
+          borderColor: window.YC_COLORS[y],
+          backgroundColor: window.YC_COLORS[y] + '22',
+          borderWidth: 2,
+          pointRadius: 4,
+        }));
+
+    const chartLabels = modeVal === 'overlay' ? labels : [deptDisplay];
+
+    mkChart(cId, 'bar', chartLabels, datasets, {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: { legend: { position: 'top' } },
+      scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } } },
+    });
+  }
 }
 
 // ── 특별예배 ──
