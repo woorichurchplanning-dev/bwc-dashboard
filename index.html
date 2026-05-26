@@ -665,6 +665,16 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   <div class="ss on" id="sun-main">
     <div class="kg" id="kk-sun"></div>
 
+    <!-- 주 선택 네비게이션 -->
+    <div style="display:flex; gap:var(--s2); margin-bottom:var(--s5); align-items:center; justify-content:center;">
+      <button class="stab" onclick="sunWeekNav(-1)" style="flex-grow:0">← 이전주</button>
+      <span id="sun-week-label" style="font-weight:600; min-width:180px; text-align:center; font-size:14px;">2026년 5월 18-24주</span>
+      <button class="stab" onclick="sunWeekNav(1)" style="flex-grow:0">다음주 →</button>
+    </div>
+
+    <!-- 선택된 주의 세부 비교 정보 -->
+    <div id="sun-comparison-info" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:var(--s3); margin-bottom:var(--s5);"></div>
+
     <!-- Drill-down 배지 선택 UI -->
     <div style="display:flex; gap:var(--s2); margin-bottom:var(--s5); flex-wrap:wrap; align-items:center;">
       <label style="font-weight:600; color:var(--color-text-secondary); font-size:12px;">장소 선택:</label>
@@ -680,6 +690,27 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct" id="sun-chart-title">서현·송림 장년 출석 추이</div></div></div><canvas id="c-sun-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">온라인 포함 총계 추이</div><div class="cs">온라인 추정 접속자 포함</div></div></div><canvas id="c-sun-grand"></canvas></div>
+    </div>
+
+    <!-- 추세 분석 섹션 -->
+    <div style="margin-top:var(--s5); padding-top:var(--s5); border-top:1px solid var(--color-border);">
+      <div style="display:flex; gap:var(--s2); margin-bottom:var(--s5); align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:600; color:var(--color-text-secondary);">지난 12주 추이 선택:</label>
+        <select id="sun-trend-select" onchange="renderSunTrendAnalysis()" style="padding:8px 12px; border:1px solid var(--color-border); border-radius:4px; font-size:13px;">
+          <option value="all">전체 예배</option>
+          <option value="jangnyeon">서현 전체</option>
+          <option value="songrim">송림 전체</option>
+          <option value="jangnyeon-1">서현 1부</option>
+          <option value="jangnyeon-2">서현 2부</option>
+          <option value="jangnyeon-3">서현 3부</option>
+          <option value="songrim-1">송림 1부</option>
+          <option value="songrim-2">송림 2부</option>
+          <option value="songrim-3">송림 3부</option>
+        </select>
+      </div>
+      <div class="cg">
+        <div class="cc"><div class="ch"><div><div class="ct" id="sun-trend-title">지난 12주 추이</div></div></div><canvas id="c-sun-trend-period"></canvas></div>
+      </div>
     </div>
   </div>
 
@@ -2085,6 +2116,13 @@ function initSunday() {
     ]);
   };
   renderSunTrend(fw);
+
+  // 주 선택 초기화
+  sunWeekState.fw = fw;
+  sunWeekState.weekIndex = fw.length - 1;
+  renderSunWeekComparison();
+  renderSunTrendAnalysis();
+
   sunDrillState.fw = fw;
   initSunDrill();
   addCardPeriod('c-sun-trend', renderSunTrend, renderSunKpi);
@@ -2119,6 +2157,106 @@ function initSunday() {
   mkTable('t-sr',['날짜','송림1부','송림2부','송림3부','소계'],
     fw.map(w=>[w,fmt(v(D.sunday[w]?.bu?.['1부']?.송림)),fmt(v(D.sunday[w]?.bu?.['2부']?.송림)),fmt(v(D.sunday[w]?.bu?.['3부']?.송림)),
       fmt(v(D.sunday[w]?.bu?.['1부']?.송림)+v(D.sunday[w]?.bu?.['2부']?.송림)+v(D.sunday[w]?.bu?.['3부']?.송림))]));
+}
+
+// ── SUNDAY WEEK NAVIGATION ──
+let sunWeekState = { fw: [], weekIndex: -1 };
+
+function sunWeekNav(offset) {
+  const newIdx = sunWeekState.weekIndex + offset;
+  if (newIdx >= 0 && newIdx < sunWeekState.fw.length) {
+    sunWeekState.weekIndex = newIdx;
+    renderSunWeekComparison();
+    // 주 선택 시 drill-down 리셋
+    updateSunDrill('loc', 'all');
+  }
+}
+
+function renderSunWeekComparison() {
+  const fw = sunWeekState.fw;
+  const idx = sunWeekState.weekIndex;
+  if (idx < 0 || idx >= fw.length) return;
+
+  const week = fw[idx];
+  const wd = new Date(week);
+  const weekEnd = new Date(wd);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const weekLabel = `${wd.getFullYear()}년 ${wd.getMonth()+1}월 ${wd.getDate()}-${weekEnd.getDate()}일`;
+  document.getElementById('sun-week-label').textContent = weekLabel;
+
+  const sunData = D.sunday[week] || {};
+  const sh1 = v(sunData.bu?.['1부']?.장년);
+  const sh2 = v(sunData.bu?.['2부']?.장년);
+  const sh3 = v(sunData.bu?.['3부']?.장년);
+  const shTotal = sh1 + sh2 + sh3;
+
+  const sr1 = v(sunData.bu?.['1부']?.송림);
+  const sr2 = v(sunData.bu?.['2부']?.송림);
+  const sr3 = v(sunData.bu?.['3부']?.송림);
+  const srTotal = sr1 + sr2 + sr3;
+
+  const grandTotal = shTotal + srTotal;
+  const shPct = grandTotal > 0 ? Math.round(shTotal / grandTotal * 100) : 0;
+  const srPct = 100 - shPct;
+
+  const infoDiv = document.getElementById('sun-comparison-info');
+  infoDiv.innerHTML = `
+    <div style="padding:var(--s3); background:var(--color-surface); border-radius:8px; border-left:4px solid var(--color-accent-blue);">
+      <div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:4px;">서현 전체</div>
+      <div style="font-size:22px; font-weight:700; color:var(--color-text); margin-bottom:8px;">${fmt(shTotal)}</div>
+      <div style="font-size:12px; color:var(--color-text-secondary);">${shPct}% · 1부 ${fmt(sh1)} / 2부 ${fmt(sh2)} / 3부 ${fmt(sh3)}</div>
+    </div>
+    <div style="padding:var(--s3); background:var(--color-surface); border-radius:8px; border-left:4px solid var(--color-accent-teal);">
+      <div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:4px;">송림 전체</div>
+      <div style="font-size:22px; font-weight:700; color:var(--color-text); margin-bottom:8px;">${fmt(srTotal)}</div>
+      <div style="font-size:12px; color:var(--color-text-secondary);">${srPct}% · 1부 ${fmt(sr1)} / 2부 ${fmt(sr2)} / 3부 ${fmt(sr3)}</div>
+    </div>
+    <div style="padding:var(--s3); background:var(--color-surface); border-radius:8px; border-left:4px solid var(--color-accent-green);">
+      <div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:4px;">현장 합계</div>
+      <div style="font-size:22px; font-weight:700; color:var(--color-text); margin-bottom:8px;">${fmt(grandTotal)}</div>
+      <div style="font-size:12px; color:var(--color-text-secondary);">서현 ${shPct}% · 송림 ${srPct}%</div>
+    </div>
+  `;
+}
+
+function renderSunTrendAnalysis() {
+  const fw = sunWeekState.fw;
+  const select = document.getElementById('sun-trend-select');
+  const type = select.value;
+
+  // 지난 12주 데이터 (fw의 마지막 12주)
+  const fw12 = fw.slice(Math.max(0, fw.length - 12));
+  const wl12 = getWL(fw12);
+
+  let data = [], title = '';
+
+  if (type === 'all') {
+    const j12 = sunSeries('jangnyeon', fw12);
+    const s12 = sunSeries('songrim', fw12);
+    data = [lds('서현', j12, C.b), lds('송림', s12, C.t)];
+    title = '전체 예배 (지난 12주)';
+  } else if (type === 'jangnyeon') {
+    const j12 = sunSeries('jangnyeon', fw12);
+    data = [lds('서현 전체', j12, C.b)];
+    title = '서현 예배 (지난 12주)';
+  } else if (type === 'songrim') {
+    const s12 = sunSeries('songrim', fw12);
+    data = [lds('송림 전체', s12, C.t)];
+    title = '송림 예배 (지난 12주)';
+  } else if (type.startsWith('jangnyeon-')) {
+    const bu = type.split('-')[1] + '부';
+    const bu12 = fw12.map(w => nn(D.sunday[w]?.bu?.[bu]?.장년));
+    data = [lds(`서현 ${bu}`, bu12, C.b)];
+    title = `서현 ${bu} (지난 12주)`;
+  } else if (type.startsWith('songrim-')) {
+    const bu = type.split('-')[1] + '부';
+    const bu12 = fw12.map(w => nn(D.sunday[w]?.bu?.[bu]?.송림));
+    data = [lds(`송림 ${bu}`, bu12, C.t)];
+    title = `송림 ${bu} (지난 12주)`;
+  }
+
+  document.getElementById('sun-trend-title').textContent = title;
+  mkChart('c-sun-trend-period', 'line', wl12, data, { fw: fw12 });
 }
 
 // ── SUNDAY DRILL-DOWN ──
