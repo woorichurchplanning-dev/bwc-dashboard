@@ -663,8 +663,6 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   </div>
 
   <div class="ss on" id="sun-main">
-    <div class="kg" id="kk-sun"></div>
-
     <!-- 주 선택 네비게이션 -->
     <div style="display:flex; gap:var(--s2); margin-bottom:var(--s5); align-items:center; justify-content:center;">
       <button class="stab" onclick="sunWeekNav(-1)" style="flex-grow:0">← 이전주</button>
@@ -673,7 +671,7 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
     </div>
 
     <!-- 선택된 주의 세부 비교 정보 -->
-    <div id="sun-comparison-info" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:var(--s3); margin-bottom:var(--s5);"></div>
+    <div id="sun-comparison-info" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:var(--s3); margin-bottom:var(--s5);"></div>
 
     <!-- Drill-down 배지 선택 UI -->
     <div style="display:flex; gap:var(--s2); margin-bottom:var(--s5); flex-wrap:wrap; align-items:center;">
@@ -688,29 +686,8 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
     </div>
 
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct" id="sun-chart-title">서현·송림 장년 출석 추이</div></div></div><canvas id="c-sun-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">온라인 포함 총계 추이</div><div class="cs">온라인 추정 접속자 포함</div></div></div><canvas id="c-sun-grand"></canvas></div>
-    </div>
-
-    <!-- 추세 분석 섹션 -->
-    <div style="margin-top:var(--s5); padding-top:var(--s5); border-top:1px solid var(--color-border);">
-      <div style="display:flex; gap:var(--s2); margin-bottom:var(--s5); align-items:center; flex-wrap:wrap;">
-        <label style="font-weight:600; color:var(--color-text-secondary);">지난 12주 추이 선택:</label>
-        <select id="sun-trend-select" onchange="renderSunTrendAnalysis()" style="padding:8px 12px; border:1px solid var(--color-border); border-radius:4px; font-size:13px;">
-          <option value="all">전체 예배</option>
-          <option value="jangnyeon">서현 전체</option>
-          <option value="songrim">송림 전체</option>
-          <option value="jangnyeon-1">서현 1부</option>
-          <option value="jangnyeon-2">서현 2부</option>
-          <option value="jangnyeon-3">서현 3부</option>
-          <option value="songrim-1">송림 1부</option>
-          <option value="songrim-2">송림 2부</option>
-          <option value="songrim-3">송림 3부</option>
-        </select>
-      </div>
-      <div class="cg">
-        <div class="cc"><div class="ch"><div><div class="ct" id="sun-trend-title">지난 12주 추이</div></div></div><canvas id="c-sun-trend-period"></canvas></div>
-      </div>
+      <div class="cc"><div class="ch"><div><div class="ct" id="sun-chart-title">서현·송림 장년 출석 추이 (지난 12주)</div></div></div><canvas id="c-sun-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">온라인 예배 추이</div><div class="cs">현장 인원만 제외</div></div></div><canvas id="c-sun-grand"></canvas></div>
     </div>
   </div>
 
@@ -2045,24 +2022,9 @@ function initHome() {
 
 // ── SUNDAY ──
 function initSunday() {
-  const fw=getFW(); const wl=getWL(fw); if(!fw.length) return;
-  const j=sunSeries('jangnyeon',fw), s=sunSeries('songrim',fw), grand=sunSeries('grand_total',fw);
-  const latestJ=j[j.length-1], prevJ=j[j.length-2]||latestJ;
-  const latestS=s[s.length-1], prevS=s[s.length-2]||latestS;
-  const dJ=latestJ-prevJ, dS=latestS-prevS;
-  const combined=fw.map((_,i)=>(j[i]!==null||s[i]!==null)?v(j[i])+v(s[i]):null);
-  const maxCombined=Math.max(...combined.filter(x=>x!==null&&x>0));
-  const maxW=fw[combined.findIndex(x=>x===maxCombined)];
-  const maxDate=maxW?`${new Date(maxW).getMonth()+1}/${new Date(maxW).getDate()}`:'';
-
-  mkKPI('kk-sun',[
-    {label:'서현 장년 (최근)',value:fmt(latestJ),sub:`${fw.length}주 평균 ${fmt(avg(j))}명`,color:'blue',
-      trend:`${dJ>=0?'▲':'▼'} 전주 ${dJ>=0?'+':''}${fmt(dJ)}`,td:dJ>=0?'up':'dn'},
-    {label:'송림 (최근)',value:fmt(latestS),sub:`${fw.length}주 평균 ${fmt(avg(s))}명`,color:'teal',
-      trend:`${dS>=0?'▲':'▼'} 전주 ${dS>=0?'+':''}${fmt(dS)}`,td:dS>=0?'up':'dn'},
-    {label:'온라인 총계 (최근)',value:fmt(grand[grand.length-1]),sub:'온라인 추정 포함',color:'gold'},
-    {label:'기간 내 최고',value:fmt(maxCombined),sub:`${maxDate} 서현+송림`,color:'green'},
-  ]);
+  const fw_all=getFW(); if(!fw_all.length) return;
+  const fw=fw_all.slice(Math.max(0, fw_all.length-12)); // 지난 12주만
+  const wl=getWL(fw);
 
   const sunDrill = (label, idx) => {
     const w=fw[idx]; if(!w) return;
@@ -2118,15 +2080,17 @@ function initSunday() {
   renderSunTrend(fw);
 
   // 주 선택 초기화
-  sunWeekState.fw = fw;
-  sunWeekState.weekIndex = fw.length - 1;
+  sunWeekState.fw = fw_all;
+  sunWeekState.weekIndex = fw_all.length - 1;
   renderSunWeekComparison();
-  renderSunTrendAnalysis();
 
   sunDrillState.fw = fw;
   initSunDrill();
   addCardPeriod('c-sun-trend', renderSunTrend, renderSunKpi);
-  mkChart('c-sun-grand','line',wl,[lds('온라인 포함 총계',grand,C.g,true)],{fw});
+
+  // 온라인 데이터만 표시
+  const online=fw.map(w=>nn(D.sunday[w]?.online));
+  mkChart('c-sun-grand','line',wl,[lds('온라인',online,C.g,true)],{fw});
 
   const sh1=buSeries('장년','1부',fw),sh2=buSeries('장년','2부',fw),sh3=buSeries('장년','3부',fw);
   const renderShTrend = (fw2) => {
@@ -2201,20 +2165,26 @@ function renderSunWeekComparison() {
 
   const infoDiv = document.getElementById('sun-comparison-info');
   infoDiv.innerHTML = `
-    <div style="padding:var(--s3); background:var(--color-surface); border-radius:8px; border-left:4px solid var(--color-accent-blue);">
-      <div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:4px;">서현 전체</div>
-      <div style="font-size:22px; font-weight:700; color:var(--color-text); margin-bottom:8px;">${fmt(shTotal)}</div>
-      <div style="font-size:12px; color:var(--color-text-secondary);">${shPct}% · 1부 ${fmt(sh1)} / 2부 ${fmt(sh2)} / 3부 ${fmt(sh3)}</div>
+    <div style="padding:16px; background:linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.02)); border:1px solid rgba(59,130,246,0.2); border-radius:12px;">
+      <div style="font-size:11px; color:var(--color-text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">서현 장년</div>
+      <div style="font-size:28px; font-weight:800; color:#3b82f6; margin-bottom:4px;">${fmt(shTotal)}</div>
+      <div style="font-size:13px; color:var(--color-text-secondary); line-height:1.5;">
+        <span style="font-weight:600; color:var(--color-text);">${shPct}%</span> · 1부 <span style="font-weight:600;">${fmt(sh1)}</span> / 2부 <span style="font-weight:600;">${fmt(sh2)}</span> / 3부 <span style="font-weight:600;">${fmt(sh3)}</span>
+      </div>
     </div>
-    <div style="padding:var(--s3); background:var(--color-surface); border-radius:8px; border-left:4px solid var(--color-accent-teal);">
-      <div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:4px;">송림 전체</div>
-      <div style="font-size:22px; font-weight:700; color:var(--color-text); margin-bottom:8px;">${fmt(srTotal)}</div>
-      <div style="font-size:12px; color:var(--color-text-secondary);">${srPct}% · 1부 ${fmt(sr1)} / 2부 ${fmt(sr2)} / 3부 ${fmt(sr3)}</div>
+    <div style="padding:16px; background:linear-gradient(135deg, rgba(20,184,166,0.08), rgba(20,184,166,0.02)); border:1px solid rgba(20,184,166,0.2); border-radius:12px;">
+      <div style="font-size:11px; color:var(--color-text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">송림</div>
+      <div style="font-size:28px; font-weight:800; color:#14b8a6; margin-bottom:4px;">${fmt(srTotal)}</div>
+      <div style="font-size:13px; color:var(--color-text-secondary); line-height:1.5;">
+        <span style="font-weight:600; color:var(--color-text);">${srPct}%</span> · 1부 <span style="font-weight:600;">${fmt(sr1)}</span> / 2부 <span style="font-weight:600;">${fmt(sr2)}</span> / 3부 <span style="font-weight:600;">${fmt(sr3)}</span>
+      </div>
     </div>
-    <div style="padding:var(--s3); background:var(--color-surface); border-radius:8px; border-left:4px solid var(--color-accent-green);">
-      <div style="font-size:12px; color:var(--color-text-secondary); margin-bottom:4px;">현장 합계</div>
-      <div style="font-size:22px; font-weight:700; color:var(--color-text); margin-bottom:8px;">${fmt(grandTotal)}</div>
-      <div style="font-size:12px; color:var(--color-text-secondary);">서현 ${shPct}% · 송림 ${srPct}%</div>
+    <div style="padding:16px; background:linear-gradient(135deg, rgba(34,197,94,0.08), rgba(34,197,94,0.02)); border:1px solid rgba(34,197,94,0.2); border-radius:12px;">
+      <div style="font-size:11px; color:var(--color-text-secondary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">현장 합계</div>
+      <div style="font-size:28px; font-weight:800; color:#22c55e; margin-bottom:4px;">${fmt(grandTotal)}</div>
+      <div style="font-size:13px; color:var(--color-text-secondary); line-height:1.5;">
+        서현 <span style="font-weight:600; color:#3b82f6;">${shPct}%</span> · 송림 <span style="font-weight:600; color:#14b8a6;">${srPct}%</span>
+      </div>
     </div>
   `;
 }
