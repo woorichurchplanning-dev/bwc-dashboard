@@ -2084,83 +2084,9 @@ function initSunday() {
       {label:'기간 내 최고',value:fmt(maxC2),sub:`${maxD2} 서현+송림`,color:'green'},
     ]);
   };
-
-  // 주일예배 drill-down UI
-  const sunDrillState = { location: null, bu: null };
-
-  const initSunDrill = () => {
-    const locDiv = document.getElementById('sun-drill-loc');
-    locDiv.innerHTML = `
-      <button class="stab on" onclick="updateSunDrill('loc','all')">전체</button>
-      <button class="stab" onclick="updateSunDrill('loc','송림')">송림</button>
-      <button class="stab" onclick="updateSunDrill('loc','서현')">서현</button>
-    `;
-  };
-
-  const updateSunDrill = (type, val) => {
-    if (type === 'loc') {
-      sunDrillState.location = val === 'all' ? null : val;
-      sunDrillState.bu = null;
-      const locButtons = document.querySelectorAll('#sun-drill-loc .stab');
-      locButtons.forEach(b => {
-        const matches = (val === 'all' && b.textContent === '전체') || (val !== 'all' && b.textContent === val);
-        b.classList.toggle('on', matches);
-      });
-      const buContainer = document.getElementById('sun-drill-bu-container');
-      if (val !== 'all') { buContainer.style.display = 'block'; renderSunBuDrill(); }
-      else { buContainer.style.display = 'none'; }
-    } else if (type === 'bu') {
-      sunDrillState.bu = val === 'all' ? null : val;
-      const buButtons = document.querySelectorAll('#sun-drill-bu .stab');
-      buButtons.forEach(b => {
-        const matches = (val === 'all' && b.textContent === '전체') || (val !== 'all' && b.textContent === val);
-        b.classList.toggle('on', matches);
-      });
-    }
-    renderSunDrillChart(fw);
-  };
-
-  const renderSunBuDrill = () => {
-    const buDiv = document.getElementById('sun-drill-bu');
-    buDiv.innerHTML = `
-      <button class="stab on" onclick="updateSunDrill('bu','all')">전체</button>
-      <button class="stab" onclick="updateSunDrill('bu','1부')">1부</button>
-      <button class="stab" onclick="updateSunDrill('bu','2부')">2부</button>
-      <button class="stab" onclick="updateSunDrill('bu','3부')">3부</button>
-    `;
-  };
-
-  const renderSunDrillChart = (fw2) => {
-    const { location, bu } = sunDrillState;
-    const wl2 = getWL(fw2);
-    let data = [], chartTitle = '서현·송림 장년 출석 추이';
-    if (!location) {
-      const j2=sunSeries('jangnyeon',fw2), s2=sunSeries('songrim',fw2);
-      data = [lds('서현',j2,C.b),lds('송림',s2,C.t)];
-    } else {
-      if (!bu) {
-        const locKey = location==='송림'?'songrim':'jangnyeon';
-        const locData = sunSeries(locKey, fw2);
-        data = [lds(location, locData, location==='송림'?C.t:C.b)];
-        const bu1=fw2.map(w=>nn(D.sunday[w]?.bu?.['1부']?.[location]));
-        const bu2=fw2.map(w=>nn(D.sunday[w]?.bu?.['2부']?.[location]));
-        const bu3=fw2.map(w=>nn(D.sunday[w]?.bu?.['3부']?.[location]));
-        data.push(ldsDash(`${location} 1부`,bu1,location==='송림'?'#67e8f9':'#60a5fa'));
-        data.push(ldsDash(`${location} 2부`,bu2,location==='송림'?'#22d3ee':'#3b82f6'));
-        data.push(ldsDash(`${location} 3부`,bu3,location==='송림'?'#06b6d4':'#1d4ed8'));
-        chartTitle = `${location} 출석 추이 (부별 구분)`;
-      } else {
-        const buData=fw2.map(w=>nn(D.sunday[w]?.bu?.[bu]?.[location]));
-        data = [lds(`${location} ${bu}`, buData, location==='송림'?C.t:C.b)];
-        chartTitle = `${location} ${bu} 출석 추이`;
-      }
-    }
-    document.getElementById('sun-chart-title').textContent = chartTitle;
-    mkChart('c-sun-trend','line',wl2,data,{fw:fw2});
-  };
-
-  initSunDrill();
   renderSunTrend(fw);
+  sunDrillState.fw = fw;
+  initSunDrill();
   addCardPeriod('c-sun-trend', renderSunTrend, renderSunKpi);
   mkChart('c-sun-grand','line',wl,[lds('온라인 포함 총계',grand,C.g,true)],{fw});
 
@@ -2193,6 +2119,80 @@ function initSunday() {
   mkTable('t-sr',['날짜','송림1부','송림2부','송림3부','소계'],
     fw.map(w=>[w,fmt(v(D.sunday[w]?.bu?.['1부']?.송림)),fmt(v(D.sunday[w]?.bu?.['2부']?.송림)),fmt(v(D.sunday[w]?.bu?.['3부']?.송림)),
       fmt(v(D.sunday[w]?.bu?.['1부']?.송림)+v(D.sunday[w]?.bu?.['2부']?.송림)+v(D.sunday[w]?.bu?.['3부']?.송림))]));
+}
+
+// ── SUNDAY DRILL-DOWN ──
+let sunDrillState = { location: null, bu: null, fw: null };
+
+function initSunDrill() {
+  const locDiv = document.getElementById('sun-drill-loc');
+  locDiv.innerHTML = `
+    <button class="stab on" onclick="updateSunDrill('loc','all')">전체</button>
+    <button class="stab" onclick="updateSunDrill('loc','송림')">송림</button>
+    <button class="stab" onclick="updateSunDrill('loc','서현')">서현</button>
+  `;
+}
+
+function updateSunDrill(type, val) {
+  if (type === 'loc') {
+    sunDrillState.location = val === 'all' ? null : val;
+    sunDrillState.bu = null;
+    const locButtons = document.querySelectorAll('#sun-drill-loc .stab');
+    locButtons.forEach(b => {
+      const matches = (val === 'all' && b.textContent === '전체') || (val !== 'all' && b.textContent === val);
+      b.classList.toggle('on', matches);
+    });
+    const buContainer = document.getElementById('sun-drill-bu-container');
+    if (val !== 'all') { buContainer.style.display = 'block'; renderSunBuDrill(); }
+    else { buContainer.style.display = 'none'; }
+  } else if (type === 'bu') {
+    sunDrillState.bu = val === 'all' ? null : val;
+    const buButtons = document.querySelectorAll('#sun-drill-bu .stab');
+    buButtons.forEach(b => {
+      const matches = (val === 'all' && b.textContent === '전체') || (val !== 'all' && b.textContent === val);
+      b.classList.toggle('on', matches);
+    });
+  }
+  if (sunDrillState.fw) renderSunDrillChart(sunDrillState.fw);
+}
+
+function renderSunBuDrill() {
+  const buDiv = document.getElementById('sun-drill-bu');
+  buDiv.innerHTML = `
+    <button class="stab on" onclick="updateSunDrill('bu','all')">전체</button>
+    <button class="stab" onclick="updateSunDrill('bu','1부')">1부</button>
+    <button class="stab" onclick="updateSunDrill('bu','2부')">2부</button>
+    <button class="stab" onclick="updateSunDrill('bu','3부')">3부</button>
+  `;
+}
+
+function renderSunDrillChart(fw2) {
+  const { location, bu } = sunDrillState;
+  const wl2 = getWL(fw2);
+  let data = [], chartTitle = '서현·송림 장년 출석 추이';
+  if (!location) {
+    const j2=sunSeries('jangnyeon',fw2), s2=sunSeries('songrim',fw2);
+    data = [lds('서현',j2,C.b),lds('송림',s2,C.t)];
+  } else {
+    if (!bu) {
+      const locKey = location==='송림'?'songrim':'jangnyeon';
+      const locData = sunSeries(locKey, fw2);
+      data = [lds(location, locData, location==='송림'?C.t:C.b)];
+      const bu1=fw2.map(w=>nn(D.sunday[w]?.bu?.['1부']?.[location]));
+      const bu2=fw2.map(w=>nn(D.sunday[w]?.bu?.['2부']?.[location]));
+      const bu3=fw2.map(w=>nn(D.sunday[w]?.bu?.['3부']?.[location]));
+      data.push(ldsDash(`${location} 1부`,bu1,location==='송림'?'#67e8f9':'#60a5fa'));
+      data.push(ldsDash(`${location} 2부`,bu2,location==='송림'?'#22d3ee':'#3b82f6'));
+      data.push(ldsDash(`${location} 3부`,bu3,location==='송림'?'#06b6d4':'#1d4ed8'));
+      chartTitle = `${location} 출석 추이 (부별 구분)`;
+    } else {
+      const buData=fw2.map(w=>nn(D.sunday[w]?.bu?.[bu]?.[location]));
+      data = [lds(`${location} ${bu}`, buData, location==='송림'?C.t:C.b)];
+      chartTitle = `${location} ${bu} 출석 추이`;
+    }
+  }
+  document.getElementById('sun-chart-title').textContent = chartTitle;
+  mkChart('c-sun-trend','line',wl2,data,{fw:fw2});
 }
 
 // ── YOUTH ──
