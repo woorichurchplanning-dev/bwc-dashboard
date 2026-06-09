@@ -3158,71 +3158,103 @@ const SCHOOL_DEPT_MAP = {
 
 /* 새 GAS 응답을 D 오브젝트에 반영 */
 function applyNewData(data) {
-  Object.entries(data).forEach(([date, entry]) => {
-    if (!entry || typeof entry !== 'object') return;
+  Object.entries(data).forEach(([date, rec]) => {
+    if (!rec || typeof rec !== 'object') return;
     if (!D.weeks.includes(date)) D.weeks.push(date);
 
     // ── 주일예배 ──
-    const sun = entry['주일예배'] || {};
-    // GAS 스프레드시트의 서현/송림 컬럼명이 실제와 반대로 입력되어 있음
-    // GAS의 "송림" 키 = 실제 서현(장년) 데이터, GAS의 "서현" 키 = 실제 송림 데이터
-    const sh  = sun['송림'] || sun['송림교회'] || {};
-    const sr  = sun['서현'] || sun['서현교회'] || {};
-    const shTotal = sh['총계'] != null ? sh['총계'] : ((sh['1부']||0)+(sh['2부']||0)+(sh['3부']||0)) || null;
-    const srTotal = sr['총계'] != null ? sr['총계'] : ((sr['1부']||0)+(sr['2부']||0)+(sr['3부']||0)) || null;
-
-    D.sunday[date] = {
-      jangnyeon:     shTotal,
-      songrim:       srTotal,
-      youth:         D.sunday[date]?.youth  ?? null,
-      school:        D.sunday[date]?.school ?? null,
-      offline_total: (shTotal||0)+(srTotal||0) || null,
-      grand_total:   (shTotal||0)+(srTotal||0) || null,
-      note:          sh['메모'] ?? null,
-      bu: {
-        '1부': { 장년: sh['1부']??null, 송림: sr['1부']??null },
-        '2부': { 장년: sh['2부']??null, 송림: sr['2부']??null },
-        '3부': { 장년: sh['3부']??null, 송림: sr['3부']??null },
-        '4부': { 장년: null, 송림: null },
-        '5부': { 장년: null, 송림: null },
-      }
-    };
+    const sun = rec['주일예배'] || {};
+    // GAS "송림" = 실제 서현(장년) 데이터, GAS "서현" = 실제 송림 데이터 (컬럼명 반전)
+    const sh = sun['송림'] || sun['송림교회'] || {};
+    const sr = sun['서현'] || sun['서현교회'] || {};
+    if (Object.keys(sh).length || Object.keys(sr).length) {
+      const shTotal = sh['총계'] != null ? sh['총계'] : ((sh['1부']||0)+(sh['2부']||0)+(sh['3부']||0)) || null;
+      const srTotal = sr['총계'] != null ? sr['총계'] : ((sr['1부']||0)+(sr['2부']||0)+(sr['3부']||0)) || null;
+      D.sunday[date] = {
+        jangnyeon:     shTotal,
+        songrim:       srTotal,
+        youth:         D.sunday[date]?.youth  ?? null,
+        school:        D.sunday[date]?.school ?? null,
+        offline_total: (shTotal||0)+(srTotal||0) || null,
+        grand_total:   (shTotal||0)+(srTotal||0) || null,
+        online:        D.sunday[date]?.online ?? null,
+        note:          sh['note'] ?? sr['note'] ?? null,
+        bu: {
+          '1부': { 장년: sh['1부']??null, 송림: sr['1부']??null },
+          '2부': { 장년: sh['2부']??null, 송림: sr['2부']??null },
+          '3부': { 장년: sh['3부']??null, 송림: sr['3부']??null },
+          '4부': { 장년: null, 송림: null },
+          '5부': { 장년: null, 송림: null },
+        }
+      };
+    }
 
     // ── 주일학교 ──
-    const school = entry['주일학교'] || {};
+    const school = rec['주일학교'] || {};
     if (Object.keys(school).length > 0) {
       D.school[date] = D.school[date] || {};
       Object.entries(school).forEach(([dept, val]) => {
+        if (!val || typeof val !== 'object') return;
         const key = SCHOOL_DEPT_MAP[dept] || dept;
-        D.school[date][key] = { '1부': val['합계'] ?? val['1부'] ?? 0 };
+        // 합계 필드 우선, 없으면 "학생" 포함 필드 합산
+        let count = val['합계'] ?? null;
+        if (count == null) {
+          const studentSum = Object.entries(val)
+            .filter(([k]) => k.includes('학생'))
+            .reduce((a, [, v]) => a + (Number(v)||0), 0);
+          if (studentSum > 0) count = studentSum;
+        }
+        D.school[date][key] = { '1부': count };
       });
     }
 
     // ── 청년교구 ──
-    const youth = entry['청년교구'] || {};
+    const youth = rec['청년교구'] || {};
     if (Object.keys(youth).length > 0) {
       D.youth[date] = D.youth[date] || {};
-      ['1청년부','2청년부','3청년부','4청년부'].forEach(dept => {
-        if (youth[dept]) {
-          D.youth[date][dept] = { 예배: youth[dept]['예배인원'] ?? youth[dept] ?? null, 팀: {} };
+      Object.entries(youth).forEach(([sub, val]) => {
+        if (!val || typeof val !== 'object') return;
+        // "1청년부" / "1청년부 (예배)" / "3청년부" 등 → 예배 + 3/4청년부 직접 필드
+        const worshipM = sub.match(/^([1-4]청년부)\s*(?:\(예배\))?$/);
+        if (worshipM) {
+          const dept = worshipM[1];
+          if (!D.youth[date][dept]) D.youth[date][dept] = { 예배: null, 팀: {} };
+          if (val['예배인원'] != null) D.youth[date][dept].예배 = val['예배인원'];
+          if (val['부서모임'] != null) D.youth[date][dept].부서모임 = val['부서모임'];
+          if (val['소그룹']  != null) D.youth[date][dept].소그룹  = val['소그룹'];
+          return;
         }
+        // "1청년부 2팀" / "2청년부 3팀" 등 → 팀별 데이터
+        const teamM = sub.match(/^([1-4]청년부)\s+(\d팀)/);
+        if (teamM) {
+          const dept = teamM[1];
+          const team = teamM[2];
+          if (!D.youth[date][dept]) D.youth[date][dept] = { 예배: null, 팀: {} };
+          if (!D.youth[date][dept].팀) D.youth[date][dept].팀 = {};
+          D.youth[date][dept].팀[team] = {
+            부서모임: val['부서모임'] ?? null,
+            소그룹:  val['소그룹']  ?? null,
+          };
+        }
+        // 그 외("106 (예배)" 등 구형 키) → 무시
       });
     }
 
     // ── 주중예배/새벽기도 ──
-    const wd   = entry['주중예배/새벽기도'] || {};
-    const wed  = wd['수요예배']   || {};
-    const fri  = wd['금요기도회'] || {};
-    const dawn = wd['새벽기도']   || {};
+    const wd     = rec['주중예배/새벽기도'] || {};
+    const wed    = wd['수요예배']   || {};
+    const fri    = wd['금요기도회'] || {};
+    const dawn   = wd['새벽기도']   || {};
+    const online = wd['온라인예배'] || {};
 
     if (Object.keys(wd).length > 0) {
       D.weekday[date] = {
-        wed_off: wed['현장']   ?? wed['합계'] ?? null,
-        wed_on:  wed['온라인'] ?? null,
-        wed_tot: wed['합계']   ?? null,
-        fri_off: fri['현장']   ?? fri['합계'] ?? null,
-        fri_on:  fri['온라인'] ?? null,
-        fri_tot: fri['합계']   ?? null,
+        wed_off: wed['인원'] ?? wed['현장'] ?? wed['합계'] ?? null,
+        wed_on:  online['수요 온라인'] ?? null,
+        wed_tot: wed['합계'] ?? null,
+        fri_off: fri['인원'] ?? fri['현장'] ?? fri['합계'] ?? null,
+        fri_on:  online['금요 온라인'] ?? null,
+        fri_tot: fri['합계'] ?? null,
       };
     }
 
@@ -3232,8 +3264,80 @@ function applyNewData(data) {
         online:  { 월:0, 화:0, 수:0, 목:0, 금:0, 토:0 },
       };
     }
+
+    // 주일 온라인 → D.sunday
+    const jOnline = online['주일 온라인'];
+    if (jOnline != null) {
+      if (!D.sunday[date]) D.sunday[date] = {};
+      D.sunday[date].online = jOnline;
+    }
+
+    // ── 교구 다락방 → D.cell ──
+    const dalak = rec['교구 다락방'] || {};
+    if (Object.keys(dalak).length > 0) {
+      const dists = {};
+      let totalChul = 0;
+      Object.entries(dalak).forEach(([교구, val]) => {
+        if (!val || typeof val !== 'object') return;
+        const chul = (Number(val['여성'])||0) + (Number(val['남성'])||0)
+                   + (Number(val['직장인'])||0) + (Number(val['부부'])||0);
+        dists[교구] = { juk: 0, chul };
+        totalChul += chul;
+      });
+      const cellRec = { date, totalJuk: 0, totalChul, dists };
+      const ci = D.cell.findIndex(r => r.date === date);
+      if (ci >= 0) D.cell[ci] = cellRec; else D.cell.push(cellRec);
+    }
+
+    // ── 교구 순장반 → D.leader ──
+    const sunjang = rec['교구 순장반'] || {};
+    if (Object.keys(sunjang).length > 0) {
+      const dists = {};
+      let totalChul = 0;
+      Object.entries(sunjang).forEach(([교구, val]) => {
+        if (!val || typeof val !== 'object') return;
+        const chul = (Number(val['화요순장반'])||0) + (Number(val['직장인순장반'])||0);
+        dists[교구] = { juk: 0, chul, fJuk: 0, fChul: 0, mJuk: 0, mChul: 0 };
+        totalChul += chul;
+      });
+      const leaderRec = { date, totalJuk: 0, totalChul, dists };
+      const li = D.leader.findIndex(r => r.date === date);
+      if (li >= 0) D.leader[li] = leaderRec; else D.leader.push(leaderRec);
+    }
+
+    // ── 새가족 → D.newFamily ──
+    const nf = rec['새가족'] || {};
+    if (Object.keys(nf).length > 0) {
+      const adult = nf['장년'] || {};
+      const young = nf['청년'] || {};
+      const nfRec = {
+        date,
+        adult_visit:    Number(adult['방문'])     || 0,
+        adult_reg:      Number(adult['등록'])     || 0,
+        adult_comp:     Number(adult['수료'])     || 0,
+        adult_new:      Number(adult['새신자'])   || 0,
+        adult_cold:     Number(adult['냉담회복']) || 0,
+        adult_move:     Number(adult['이사'])     || 0,
+        adult_couple:   Number(adult['부부동반']) || 0,
+        adult_marriage: Number(adult['혼인'])     || 0,
+        adult_other:    Number(adult['기타'])     || 0,
+        youth_visit:    Number(young['방문'])     || 0,
+        youth_reg:      Number(young['등록'])     || 0,
+        youth_comp:     Number(young['수료'])     || 0,
+        youth_new:      Number(young['새신자'])   || 0,
+        youth_cold:     Number(young['냉담회복']) || 0,
+        youth_move:     Number(young['이사'])     || 0,
+        youth_other:    Number(young['기타'])     || 0,
+      };
+      const ni = D.newFamily.findIndex(r => r.date === date);
+      if (ni >= 0) D.newFamily[ni] = nfRec; else D.newFamily.push(nfRec);
+    }
   });
+
   D.weeks.sort();
+  D.cell.sort((a, b) => a.date < b.date ? -1 : 1);
+  D.leader.sort((a, b) => a.date < b.date ? -1 : 1);
+  D.newFamily.sort((a, b) => a.date < b.date ? -1 : 1);
 }
 
 async function fetchFromSheets() {
