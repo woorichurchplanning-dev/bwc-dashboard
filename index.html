@@ -3146,6 +3146,16 @@ function genSundays(weeksBack) {
   return out;
 }
 
+/* 주일학교 부서명 매핑: 새 GAS → 대시보드 D 오브젝트 */
+const SCHOOL_DEPT_MAP = {
+  '사랑부': '사랑부', '영아부': '영아부', '유아부': '유아부', '유치부': '유치부',
+  '서현유년부': '서현유년', '송림유년부': '송림유년',
+  '서현초등부': '서현초등', '송림초등부': '송림초등',
+  '서현소년부': '서현소년', '송림소년부': '송림소년',
+  '송림청소년부': '송림청소년부',
+  '서현중등부': '중등부', '서현고등부': '고등부',
+};
+
 /* 새 GAS 응답을 D 오브젝트에 반영 */
 function applyNewData(data) {
   Object.entries(data).forEach(([date, entry]) => {
@@ -3154,19 +3164,19 @@ function applyNewData(data) {
 
     // ── 주일예배 ──
     const sun = entry['주일예배'] || {};
-    const sh  = sun['서현교회'] || {};
-    const sr  = sun['송림교회'] || {};
-    const srSum   = (sr['1부']||0) + (sr['2부']||0) + (sr['3부']||0);
-    const srTotal = sr['총계'] != null ? sr['총계'] : (srSum || null);
-    const shTotal = sh['총계'] != null ? sh['총계'] : null;
+    // 키 이름이 '서현'/'서현교회' 두 가지로 올 수 있어 둘 다 처리
+    const sh  = sun['서현'] || sun['서현교회'] || {};
+    const sr  = sun['송림'] || sun['송림교회'] || {};
+    const shTotal = sh['총계'] != null ? sh['총계'] : ((sh['1부']||0)+(sh['2부']||0)+(sh['3부']||0)) || null;
+    const srTotal = sr['총계'] != null ? sr['총계'] : ((sr['1부']||0)+(sr['2부']||0)+(sr['3부']||0)) || null;
 
     D.sunday[date] = {
       jangnyeon:     shTotal,
       songrim:       srTotal,
       youth:         D.sunday[date]?.youth  ?? null,
       school:        D.sunday[date]?.school ?? null,
-      offline_total: shTotal != null || srTotal != null ? (shTotal||0)+(srTotal||0) : null,
-      grand_total:   shTotal != null || srTotal != null ? (shTotal||0)+(srTotal||0) : null,
+      offline_total: (shTotal||0)+(srTotal||0) || null,
+      grand_total:   (shTotal||0)+(srTotal||0) || null,
       note:          sh['메모'] ?? null,
       bu: {
         '1부': { 장년: sh['1부']??null, 송림: sr['1부']??null },
@@ -3177,20 +3187,43 @@ function applyNewData(data) {
       }
     };
 
+    // ── 주일학교 ──
+    const school = entry['주일학교'] || {};
+    if (Object.keys(school).length > 0) {
+      D.school[date] = D.school[date] || {};
+      Object.entries(school).forEach(([dept, val]) => {
+        const key = SCHOOL_DEPT_MAP[dept] || dept;
+        D.school[date][key] = { '1부': val['합계'] ?? val['1부'] ?? 0 };
+      });
+    }
+
+    // ── 청년교구 ──
+    const youth = entry['청년교구'] || {};
+    if (Object.keys(youth).length > 0) {
+      D.youth[date] = D.youth[date] || {};
+      ['1청년부','2청년부','3청년부','4청년부'].forEach(dept => {
+        if (youth[dept]) {
+          D.youth[date][dept] = { 예배: youth[dept]['예배인원'] ?? youth[dept] ?? null, 팀: {} };
+        }
+      });
+    }
+
     // ── 주중예배/새벽기도 ──
     const wd   = entry['주중예배/새벽기도'] || {};
     const wed  = wd['수요예배']   || {};
     const fri  = wd['금요기도회'] || {};
     const dawn = wd['새벽기도']   || {};
 
-    D.weekday[date] = {
-      wed_off: wed['현장']   ?? wed['합계'] ?? null,
-      wed_on:  wed['온라인'] ?? null,
-      wed_tot: wed['합계']   ?? null,
-      fri_off: fri['현장']   ?? fri['합계'] ?? null,
-      fri_on:  fri['온라인'] ?? null,
-      fri_tot: fri['합계']   ?? null,
-    };
+    if (Object.keys(wd).length > 0) {
+      D.weekday[date] = {
+        wed_off: wed['현장']   ?? wed['합계'] ?? null,
+        wed_on:  wed['온라인'] ?? null,
+        wed_tot: wed['합계']   ?? null,
+        fri_off: fri['현장']   ?? fri['합계'] ?? null,
+        fri_on:  fri['온라인'] ?? null,
+        fri_tot: fri['합계']   ?? null,
+      };
+    }
 
     if (Object.keys(dawn).length > 0) {
       D.dawn[date] = {
