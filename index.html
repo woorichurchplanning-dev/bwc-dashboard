@@ -737,7 +737,7 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   <div class="ss" id="youth-y1">
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">1청년부 예배 출석 추이</div></div></div><canvas id="c-y1-worship"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">1청년부 팀별 부서모임 · 소그룹</div><div class="cs">2·3·4팀 (소그룹 없는 주 = 소그룹 미진행)</div></div></div><canvas id="c-y1-cell"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">1청년부 팀별 부서모임 · 소그룹</div><div class="cs">1·2·3·4팀 (소그룹 없는 주 = 소그룹 미진행)</div></div></div><canvas id="c-y1-cell"></canvas></div>
     </div>
     <div class="cc"><div class="ch"><div><div class="ct">1청년부 주별 상세</div></div></div>
       <div style="overflow-x:auto"><table id="t-y1"></table></div>
@@ -746,6 +746,7 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 
   <div class="ss" id="youth-y1team">
     <div class="cg three">
+      <div class="cc"><div class="ch"><div><div class="ct">1청년부 1팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y1t1"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">1청년부 2팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y1t2"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">1청년부 3팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y1t3"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">1청년부 4팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y1t4"></canvas></div>
@@ -755,7 +756,7 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   <div class="ss" id="youth-y2">
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">2청년부 예배 출석 추이</div></div></div><canvas id="c-y2-worship"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">2청년부 팀별 부서모임 · 소그룹</div><div class="cs">2~3팀</div></div></div><canvas id="c-y2-cell"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">2청년부 팀별 부서모임 · 소그룹</div><div class="cs">1~3팀</div></div></div><canvas id="c-y2-cell"></canvas></div>
     </div>
     <div class="cc"><div class="ch"><div><div class="ct">2청년부 주별 상세</div></div></div>
       <div style="overflow-x:auto"><table id="t-y2"></table></div>
@@ -763,7 +764,8 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   </div>
 
   <div class="ss" id="youth-y2team">
-    <div class="cg">
+    <div class="cg three">
+      <div class="cc"><div class="ch"><div><div class="ct">2청년부 1팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y2t1"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">2청년부 2팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y2t2"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">2청년부 3팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y2t3"></canvas></div>
     </div>
@@ -2346,41 +2348,49 @@ function initYouth() {
   mkChart('c-youth-pie','doughnut',['1청년부','2청년부','3청년부','4청년부'],dnut(['1청년부','2청년부','3청년부','4청년부'],[y1s,y2s,y3s,y4s],[C.b,C.p,C.or,C.gr]),{});
 
   mkChart('c-y1-worship','line',wl,[lds('예배 출석',y1,C.b,true)]);
+  const t1m=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['1팀']?.부서모임));
   const t2m=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['2팀']?.부서모임));
   const t3m=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['3팀']?.부서모임));
   const t4m=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['4팀']?.부서모임));
+  const t1c=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['1팀']?.소그룹));
   const t2c=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['2팀']?.소그룹));
   const t3c=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['3팀']?.소그룹));
   const t4c=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['4팀']?.소그룹));
   mkChart('c-y1-cell','line',wl,[
-    lds('2팀 부서모임',t2m,C.b),lds('3팀 부서모임',t3m,C.p),lds('4팀 부서모임',t4m,C.or),
-    lds('2팀 소그룹',t2c,C.t),lds('3팀 소그룹',t3c,C.pk),lds('4팀 소그룹',t4c,C.lm),
+    lds('1팀 부서모임',t1m,C.gr),lds('2팀 부서모임',t2m,C.b),lds('3팀 부서모임',t3m,C.p),lds('4팀 부서모임',t4m,C.or),
+    lds('1팀 소그룹',t1c,C.id),lds('2팀 소그룹',t2c,C.t),lds('3팀 소그룹',t3c,C.pk),lds('4팀 소그룹',t4c,C.lm),
   ]);
-  mkTable('t-y1',['날짜','예배','2팀모임','2팀소그룹','3팀모임','3팀소그룹','4팀모임','4팀소그룹'],
+  mkTable('t-y1',['날짜','예배','1팀모임','1팀소그룹','2팀모임','2팀소그룹','3팀모임','3팀소그룹','4팀모임','4팀소그룹'],
     fw.map(w=>[w,fmt(v(D.youth[w]?.['1청년부']?.예배)),
+      fmt(v(D.youth[w]?.['1청년부']?.팀?.['1팀']?.부서모임)),fmt(v(D.youth[w]?.['1청년부']?.팀?.['1팀']?.소그룹)),
       fmt(v(D.youth[w]?.['1청년부']?.팀?.['2팀']?.부서모임)),fmt(v(D.youth[w]?.['1청년부']?.팀?.['2팀']?.소그룹)),
       fmt(v(D.youth[w]?.['1청년부']?.팀?.['3팀']?.부서모임)),fmt(v(D.youth[w]?.['1청년부']?.팀?.['3팀']?.소그룹)),
       fmt(v(D.youth[w]?.['1청년부']?.팀?.['4팀']?.부서모임)),fmt(v(D.youth[w]?.['1청년부']?.팀?.['4팀']?.소그룹))]));
 
   // 1청년부 팀별 탭 차트
+  mkChart('c-y1t1','line',wl,[lds('부서모임',t1m,C.gr),lds('소그룹',t1c,C.id)]);
   mkChart('c-y1t2','line',wl,[lds('부서모임',t2m,C.b),lds('소그룹',t2c,C.t)]);
   mkChart('c-y1t3','line',wl,[lds('부서모임',t3m,C.p),lds('소그룹',t3c,C.pk)]);
   mkChart('c-y1t4','line',wl,[lds('부서모임',t4m,C.or),lds('소그룹',t4c,C.lm)]);
 
   mkChart('c-y2-worship','line',wl,[lds('예배 출석',y2,C.p,true)]);
+  const y2t0m=fw.map(w=>v(D.youth[w]?.['2청년부']?.팀?.['1팀']?.부서모임));
   const y2t1m=fw.map(w=>v(D.youth[w]?.['2청년부']?.팀?.['2팀']?.부서모임));
   const y2t2m=fw.map(w=>v(D.youth[w]?.['2청년부']?.팀?.['3팀']?.부서모임));
+  const y2t0c=fw.map(w=>v(D.youth[w]?.['2청년부']?.팀?.['1팀']?.소그룹));
   const y2t1c=fw.map(w=>v(D.youth[w]?.['2청년부']?.팀?.['2팀']?.소그룹));
   const y2t2c=fw.map(w=>v(D.youth[w]?.['2청년부']?.팀?.['3팀']?.소그룹));
   mkChart('c-y2-cell','line',wl,[
-    lds('2팀 부서모임',y2t1m,C.p),lds('3팀 부서모임',y2t2m,C.pk),
-    lds('2팀 소그룹',y2t1c,C.id),lds('3팀 소그룹',y2t2c,C.lm),
+    lds('1팀 부서모임',y2t0m,C.gr),lds('2팀 부서모임',y2t1m,C.p),lds('3팀 부서모임',y2t2m,C.pk),
+    lds('1팀 소그룹',y2t0c,C.id),lds('2팀 소그룹',y2t1c,C.id),lds('3팀 소그룹',y2t2c,C.lm),
   ]);
   // 2청년부 팀별 탭 차트
+  mkChart('c-y2t1','line',wl,[lds('부서모임',y2t0m,C.gr),lds('소그룹',y2t0c,C.id)]);
   mkChart('c-y2t2','line',wl,[lds('부서모임',y2t1m,C.p),lds('소그룹',y2t1c,C.id)]);
   mkChart('c-y2t3','line',wl,[lds('부서모임',y2t2m,C.pk),lds('소그룹',y2t2c,C.lm)]);
-  mkTable('t-y2',['날짜','예배','2팀모임','2팀소그룹','3팀모임','3팀소그룹'],
+  mkTable('t-y2',['날짜','예배','1팀모임','1팀소그룹','2팀모임','2팀소그룹','3팀모임','3팀소그룹'],
     fw.map(w=>[w,fmt(v(D.youth[w]?.['2청년부']?.예배)),
+      fmt(v(D.youth[w]?.['2청년부']?.팀?.['1팀']?.부서모임)),fmt(v(D.youth[w]?.['2청년부']?.팀?.['1팀']?.소그룹)),
       fmt(v(D.youth[w]?.['2청년부']?.팀?.['2팀']?.부서모임)),fmt(v(D.youth[w]?.['2청년부']?.팀?.['2팀']?.소그룹)),
       fmt(v(D.youth[w]?.['2청년부']?.팀?.['3팀']?.부서모임)),fmt(v(D.youth[w]?.['2청년부']?.팀?.['3팀']?.소그룹))]));
 
