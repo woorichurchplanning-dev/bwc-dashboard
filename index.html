@@ -3130,23 +3130,80 @@ function ss2(sec,sub){
 }
 
 // ── 구글 시트 연동 (JSONP) ──
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx3-mtmbSgskWnKcqRDywd6Vzyi6Zvzynx65zQT_dwTnbJUw8uxvWPRPWyoic3XqK5uBQ/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJ1NDZxTpDsaVkb7GqlesBvlM_9lBBv2s4f53chZdqbHVnLZqOfVT1qzXVfsXW7qxA/exec';
 
-function jsonp(url) {
-  return new Promise((resolve, reject) => {
-    const cb = 'gsCb' + Date.now();
-    const s  = document.createElement('script');
-    s.src    = url + '&callback=' + cb;
-    const t  = setTimeout(() => { cleanup(); reject(new Error('요청 시간 초과 (15초)')); }, 15000);
-    function cleanup() { clearTimeout(t); delete window[cb]; s.parentNode && s.parentNode.removeChild(s); }
-    window[cb] = data => { cleanup(); resolve(data); };
-    s.onerror  = () => { cleanup(); reject(new Error('스크립트 로드 실패')); };
-    document.head.appendChild(s);
+/* 오늘 기준으로 최근 N주의 일요일 날짜 배열 생성 */
+function genSundays(weeksBack) {
+  const out = [];
+  const today = new Date();
+  const base = new Date(today);
+  base.setDate(today.getDate() - today.getDay()); // 가장 최근 일요일
+  for (let i = 0; i < weeksBack; i++) {
+    const d = new Date(base);
+    d.setDate(base.getDate() - i * 7);
+    out.push(d.toISOString().split('T')[0]);
+  }
+  return out;
+}
+
+/* 새 GAS 응답을 D 오브젝트에 반영 */
+function applyNewData(data) {
+  Object.entries(data).forEach(([date, entry]) => {
+    if (!entry || typeof entry !== 'object') return;
+    if (!D.weeks.includes(date)) D.weeks.push(date);
+
+    // ── 주일예배 ──
+    const sun = entry['주일예배'] || {};
+    const sh  = sun['서현교회'] || {};
+    const sr  = sun['송림교회'] || {};
+    const srSum   = (sr['1부']||0) + (sr['2부']||0) + (sr['3부']||0);
+    const srTotal = sr['총계'] != null ? sr['총계'] : (srSum || null);
+    const shTotal = sh['총계'] != null ? sh['총계'] : null;
+
+    D.sunday[date] = {
+      jangnyeon:     shTotal,
+      songrim:       srTotal,
+      youth:         D.sunday[date]?.youth  ?? null,
+      school:        D.sunday[date]?.school ?? null,
+      offline_total: shTotal != null || srTotal != null ? (shTotal||0)+(srTotal||0) : null,
+      grand_total:   shTotal != null || srTotal != null ? (shTotal||0)+(srTotal||0) : null,
+      note:          sh['메모'] ?? null,
+      bu: {
+        '1부': { 장년: sh['1부']??null, 송림: sr['1부']??null },
+        '2부': { 장년: sh['2부']??null, 송림: sr['2부']??null },
+        '3부': { 장년: sh['3부']??null, 송림: sr['3부']??null },
+        '4부': { 장년: null, 송림: null },
+        '5부': { 장년: null, 송림: null },
+      }
+    };
+
+    // ── 주중예배/새벽기도 ──
+    const wd   = entry['주중예배/새벽기도'] || {};
+    const wed  = wd['수요예배']   || {};
+    const fri  = wd['금요기도회'] || {};
+    const dawn = wd['새벽기도']   || {};
+
+    D.weekday[date] = {
+      wed_off: wed['현장']   ?? wed['합계'] ?? null,
+      wed_on:  wed['온라인'] ?? null,
+      wed_tot: wed['합계']   ?? null,
+      fri_off: fri['현장']   ?? fri['합계'] ?? null,
+      fri_on:  fri['온라인'] ?? null,
+      fri_tot: fri['합계']   ?? null,
+    };
+
+    if (Object.keys(dawn).length > 0) {
+      D.dawn[date] = {
+        offline: { 월:dawn['월']??0, 화:dawn['화']??0, 수:dawn['수']??0, 목:dawn['목']??0, 금:dawn['금']??0, 토:dawn['토']??0 },
+        online:  { 월:0, 화:0, 수:0, 목:0, 금:0, 토:0 },
+      };
+    }
   });
+  D.weeks.sort();
 }
 
 async function fetchFromSheets() {
-  const btn = document.getElementById('refresh-btn');
+  const btn    = document.getElementById('refresh-btn');
   const status = document.getElementById('sync-status');
   btn.textContent = '연동 중...';
   btn.disabled = true;
@@ -3154,114 +3211,25 @@ async function fetchFromSheets() {
   status.style.color = '';
 
   try {
-    const raw = await jsonp(APPS_SCRIPT_URL + '?type=all');
-    if (raw.error) throw new Error(raw.error);
+    const sundays = genSundays(104); // 최근 2년
+    const batches = [];
+    for (let i = 0; i < sundays.length; i += 12) batches.push(sundays.slice(i, i + 12));
 
-    // weeks 배열 교체 (API가 전체 날짜 목록을 반환)
-    if (raw.weeks && Array.isArray(raw.weeks) && raw.weeks.length > 0) {
-      D.weeks = raw.weeks.slice().sort();
-    }
-
-    // 주일예배 업데이트
-    if (raw.sunday && Array.isArray(raw.sunday)) {
-      raw.sunday.forEach(r => {
-        if (!r.date) return;
-        D.sunday[r.date] = {
-          jangnyeon:     r.sh     ?? null,
-          songrim:       r.sr     ?? null,
-          youth:         r.yu     ?? null,
-          school:        r.school ?? null,
-          offline_total: r.total  ?? null,
-          grand_total:   r.grand_total ?? r.total ?? null,
-          bu: {
-            '1부': {장년: r.sh1 ?? null, 송림: r.sr1 ?? null},
-            '2부': {장년: r.sh2 ?? null, 송림: r.sr2 ?? null},
-            '3부': {장년: r.sh3 ?? null, 송림: r.sr3 ?? null},
-            '4부': {장년: null, 송림: null},
-            '5부': {장년: null, 송림: null},
-          }
-        };
-        if (!D.weeks.includes(r.date)) D.weeks.push(r.date);
-      });
-      if (!raw.weeks) D.weeks.sort();
-    }
-
-    // 주중예배 업데이트
-    if (raw.weekday && Array.isArray(raw.weekday)) {
-      raw.weekday.forEach(r => {
-        if (!r.date) return;
-        D.weekday[r.date] = {
-          wed_off: r.wed_off ?? null,
-          wed_on:  r.wed_on  ?? null,
-          wed_tot: r.wed_tot ?? null,
-          fri_off: r.fri_off ?? null,
-          fri_on:  r.fri_on  ?? null,
-          fri_tot: r.fri_tot ?? null,
-        };
-      });
-    }
-
-    // 순장반 업데이트
-    if (raw.leader && Array.isArray(raw.leader) && raw.leader.length > 0) {
-      D.leader = raw.leader;
-    }
-
-    // 다락방 업데이트
-    if (raw.cell && Array.isArray(raw.cell) && raw.cell.length > 0) {
-      D.cell = raw.cell;
-    }
-
-    // 새가족 업데이트
-    if (raw.newFamily && Array.isArray(raw.newFamily) && raw.newFamily.length > 0) {
-      D.newFamily = raw.newFamily;
-    }
-
-    // 새벽기도 업데이트
-    if (raw.dawn && Array.isArray(raw.dawn) && raw.dawn.length > 0) {
-      raw.dawn.forEach(r => {
-        if (!r.date) return;
-        D.dawn[r.date] = {
-          online:  { 월: r['월on']??0,  화: r['화on']??0,  수: r['수on']??0,  목: r['목on']??0,  금: r['금on']??0,  토: r['토on']??0  },
-          offline: { 월: r['월off']??0, 화: r['화off']??0, 수: r['수off']??0, 목: r['목off']??0, 금: r['금off']??0, 토: r['토off']??0 },
-        };
-        if (!D.weeks.includes(r.date)) D.weeks.push(r.date);
-      });
-      D.weeks.sort();
-    }
-
-    // 주일학교 업데이트
-    const SDEPTS = ['사랑부','영아부','유아부','유치부','송림유년','서현유년','송림초등','서현초등','송림소년','서현소년','송림청소년부','중등부','고등부'];
-    if (raw.school && Array.isArray(raw.school) && raw.school.length > 0) {
-      raw.school.forEach(r => {
-        if (!r.date) return;
-        D.school[r.date] = {};
-        SDEPTS.forEach(d => { D.school[r.date][d] = { '1부': r[d] ?? 0 }; });
-      });
-    }
-
-    // 청년교구 업데이트
-    if (raw.youth && Array.isArray(raw.youth) && raw.youth.length > 0) {
-      raw.youth.forEach(r => {
-        if (!r.date) return;
-        const n = v => (v === '' || v === null || v === undefined) ? null : v;
-        D.youth[r.date] = {
-          '1청년부': { 예배: n(r['1청년부_예배']), 팀: {
-            '2팀': { 부서모임: n(r['1청_2팀모임']), 소그룹: n(r['1청_2팀소그룹']) },
-            '3팀': { 부서모임: n(r['1청_3팀모임']), 소그룹: n(r['1청_3팀소그룹']) },
-            '4팀': { 부서모임: n(r['1청_4팀모임']), 소그룹: n(r['1청_4팀소그룹']) },
-          }},
-          '2청년부': { 예배: n(r['2청년부_예배']), 팀: {
-            '2팀': { 부서모임: n(r['2청_2팀모임']), 소그룹: n(r['2청_2팀소그룹']) },
-            '3팀': { 부서모임: n(r['2청_3팀모임']), 소그룹: n(r['2청_3팀소그룹']) },
-          }},
-          '3청년부': { 예배: n(r['3청년부_예배']), 팀: {}, 부서모임: n(r['3청_부서모임']), 소그룹: n(r['3청_소그룹']) },
-          '4청년부': { 예배: n(r['4청년부_예배']), 팀: {}, 부서모임: n(r['4청_부서모임']), 소그룹: n(r['4청_소그룹']) },
-        };
-      });
+    let loaded = 0;
+    for (const batch of batches) {
+      const url = APPS_SCRIPT_URL + '?weekKeys=' + batch.join(',');
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const raw = await res.json();
+      if (raw.error) throw new Error(raw.error);
+      if (raw.success && raw.data && Object.keys(raw.data).length > 0) {
+        applyNewData(raw.data);
+        loaded += Object.keys(raw.data).length;
+      }
+      status.textContent = `불러오는 중... (${Math.round((batches.indexOf(batch)+1)/batches.length*100)}%)`;
     }
 
     mergeHist();
-    // 차트 캐시 리셋 후 현재 탭 재렌더
     Object.keys(DONE).forEach(k => { DONE[k] = false; });
     const cur = document.querySelector('.nt.on');
     if (cur) {
@@ -3269,7 +3237,7 @@ async function fetchFromSheets() {
       if (idx >= 0) { DONE[TABS[idx]] = true; setTimeout(() => INITS[TABS[idx]](), 60); }
     }
 
-    const now = new Date().toLocaleString('ko-KR', {month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'});
+    const now = new Date().toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     status.textContent = '연동됨 · ' + now;
     status.style.color = '#059669';
   } catch (e) {
