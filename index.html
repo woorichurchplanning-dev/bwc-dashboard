@@ -3164,9 +3164,10 @@ function applyNewData(data) {
 
     // ── 주일예배 ──
     const sun = entry['주일예배'] || {};
-    // 키 이름이 '서현'/'서현교회' 두 가지로 올 수 있어 둘 다 처리
-    const sh  = sun['서현'] || sun['서현교회'] || {};
-    const sr  = sun['송림'] || sun['송림교회'] || {};
+    // GAS 스프레드시트의 서현/송림 컬럼명이 실제와 반대로 입력되어 있음
+    // GAS의 "송림" 키 = 실제 서현(장년) 데이터, GAS의 "서현" 키 = 실제 송림 데이터
+    const sh  = sun['송림'] || sun['송림교회'] || {};
+    const sr  = sun['서현'] || sun['서현교회'] || {};
     const shTotal = sh['총계'] != null ? sh['총계'] : ((sh['1부']||0)+(sh['2부']||0)+(sh['3부']||0)) || null;
     const srTotal = sr['총계'] != null ? sr['총계'] : ((sr['1부']||0)+(sr['2부']||0)+(sr['3부']||0)) || null;
 
