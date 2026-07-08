@@ -1761,6 +1761,8 @@ function initHome() {
     const sum = vals.reduce((a, b) => a + (b || 0), 0);
     return sum > 0 ? Math.round(sum / 6) : null;
   };
+  const youthTotal = w => ['1청년부','2청년부','3청년부','4청년부']
+    .reduce((a,d) => a + v(D.youth[w]?.[d]?.예배), 0) || null;
   // 전년 동기 날짜 찾기
   const yoyKey = w => {
     const dt = new Date(w); dt.setDate(dt.getDate() - 364);
@@ -1804,12 +1806,12 @@ function initHome() {
   const sunAdult    = adultBu(lW);
   const sunSeohyeon = seohyeonBu(lW);
   const sunSongrim  = songrimBu(lW);
-  const sunYouth    = v(D.sunday[lW]?.youth);
+  const sunYouth    = youthTotal(lW) ?? nn(D.sunday[lW]?.youth);
   const sunSchool   = schoolTot(lW);
   const pSunAdult   = pW ? adultBu(pW) : null;
   const ySunAdult   = yW ? adultBu(yW) : null;
-  const pSunYouth   = pW ? v(D.sunday[pW]?.youth) : null;
-  const ySunYouth   = yW ? v(D.sunday[yW]?.youth) : null;
+  const pSunYouth   = pW ? (youthTotal(pW) ?? nn(D.sunday[pW]?.youth)) : null;
+  const ySunYouth   = yW ? (youthTotal(yW) ?? nn(D.sunday[yW]?.youth)) : null;
   const pSunSchool  = pW ? schoolTot(pW) : null;
   const ySunSchool  = yW ? schoolTot(yW) : null;
 
@@ -1959,8 +1961,6 @@ function initHome() {
   mkChart('c-hm-school', 'line', wl8, [lds('주일학교', sc, C.g, true)]);
 
   // 3. 청년교구 추이 (합계 기본)
-  const youthTotal = w => ['1청년부','2청년부','3청년부','4청년부']
-    .reduce((a,d) => a + v(D.youth[w]?.[d]?.예배), 0) || null;
   mkChart('c-hm-youth', 'line', wl8, [lds('청년 합계', fw8.map(youthTotal), C.p, true)]);
 
   // 4. 주중예배 추이 (수요/금요 현장)
@@ -3220,8 +3220,9 @@ function applyNewData(data) {
           const dept = worshipM[1];
           if (!D.youth[date][dept]) D.youth[date][dept] = { 예배: null, 팀: {} };
           if (val['예배인원'] != null) D.youth[date][dept].예배 = val['예배인원'];
-          if (val['부서모임'] != null) D.youth[date][dept].부서모임 = val['부서모임'];
-          if (val['소그룹']  != null) D.youth[date][dept].소그룹  = val['소그룹'];
+          if (val['부서모임'] != null || val['팀모임'] != null) D.youth[date][dept].부서모임 = val['부서모임'] ?? val['팀모임'];
+          if (val['소그룹']  != null || val['순모임인원'] != null || val['순모임 인원'] != null)
+            D.youth[date][dept].소그룹 = val['소그룹'] ?? val['순모임인원'] ?? val['순모임 인원'];
           return;
         }
         // "1청년부 2팀" / "2청년부 3팀" 등 → 팀별 데이터
@@ -3232,12 +3233,18 @@ function applyNewData(data) {
           if (!D.youth[date][dept]) D.youth[date][dept] = { 예배: null, 팀: {} };
           if (!D.youth[date][dept].팀) D.youth[date][dept].팀 = {};
           D.youth[date][dept].팀[team] = {
-            부서모임: val['부서모임'] ?? null,
-            소그룹:  val['소그룹']  ?? null,
+            부서모임: val['부서모임'] ?? val['팀모임 인원'] ?? val['팀모임'] ?? null,
+            소그룹:  val['소그룹']  ?? val['순모임 인원'] ?? val['순모임인원'] ?? null,
           };
         }
         // 그 외("106 (예배)" 등 구형 키) → 무시
       });
+      const youthSum = ['1청년부','2청년부','3청년부','4청년부']
+        .reduce((sum, dept) => sum + (Number(D.youth[date]?.[dept]?.예배) || 0), 0);
+      if (youthSum > 0) {
+        if (!D.sunday[date]) D.sunday[date] = {};
+        D.sunday[date].youth = youthSum;
+      }
     }
 
     // ── 주중예배/새벽기도 ──
@@ -3249,10 +3256,10 @@ function applyNewData(data) {
 
     if (Object.keys(wd).length > 0) {
       D.weekday[date] = {
-        wed_off: wed['인원'] ?? wed['현장'] ?? wed['합계'] ?? null,
+        wed_off: wed['인원'] ?? wed['현장'] ?? null,
         wed_on:  online['수요 온라인'] ?? null,
         wed_tot: wed['합계'] ?? null,
-        fri_off: fri['인원'] ?? fri['현장'] ?? fri['합계'] ?? null,
+        fri_off: fri['인원'] ?? fri['현장'] ?? null,
         fri_on:  online['금요 온라인'] ?? null,
         fri_tot: fri['합계'] ?? null,
       };
