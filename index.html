@@ -1703,7 +1703,15 @@ function nn(val) { return (val === null || val === undefined || val === '') ? nu
 function sunSeries(key, fw)      { return (fw||getFW()).map(w => nn(D.sunday[w]?.[key])); }
 function buSeries(camp, bu, fw)  { return (fw||getFW()).map(w => nn(D.sunday[w]?.bu?.[bu]?.[camp])); }
 function youthSeries(dept, fw)   { return (fw||getFW()).map(w => nn(D.youth[w]?.[dept]?.예배)); }
-function schoolSeries(dept, fw)  { return (fw||getFW()).map(w => nn(D.school[w]?.[dept]?.['1부'])); }
+function schoolDeptTotal(w, dept) {
+  const rec = D.school[w]?.[dept];
+  if (!rec) return null;
+  if (rec['합계'] != null) return v(rec['합계']);
+  const total = v(rec['1부']) + v(rec['2부']);
+  return total || null;
+}
+function schoolDeptValue(w, dept) { return v(schoolDeptTotal(w, dept)); }
+function schoolSeries(dept, fw)  { return (fw||getFW()).map(w => nn(schoolDeptTotal(w, dept))); }
 function dawnOnline(fw)  {
   return (fw||getFW()).map(w => {
     if (!D.dawn[w]) return null;
@@ -1738,7 +1746,7 @@ function initHome() {
   const schoolTot = w => {
     if (!D.school[w]) return null;
     if (D.school[w]._total != null) return D.school[w]._total;
-    return SCHOOL_DEPTS.reduce((a, d) => a + v(D.school[w]?.[d]?.['1부']), 0);
+    return SCHOOL_DEPTS.reduce((a, d) => a + schoolDeptValue(w, d), 0);
   };
   // 장년 현장 (1-3부 장년+송림)
   const adultBu = w => {
@@ -1898,7 +1906,7 @@ function initHome() {
             { name:'청소년', depts:['송림청소년부','중등부','고등부'] },
           ];
           const items = groups.map(g => {
-            const n = g.depts.reduce((a,d) => a + v(D.school[lW]?.[d]?.['1부']), 0);
+            const n = g.depts.reduce((a,d) => a + schoolDeptValue(lW,d), 0);
             return n ? `<div class="wk-bd-item"><span class="wk-bd-name">${g.name}</span><span class="wk-bd-num">${fmt(n)}</span></div>` : '';
           }).join('');
           return items ? `<div class="wk-breakdown">${items}</div>` : '';
@@ -2402,7 +2410,7 @@ function initYouth() {
 // ── SCHOOL ──
 function initSchool() {
   const fw=getFW(); const wl=getWL(fw); if(!fw.length) return;
-  const totals = fw.map(w => SCHOOL_DEPTS.reduce((a,d)=>a+v(D.school[w]?.[d]?.['1부']),0));
+  const totals = fw.map(w => SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0));
   const latest = totals[totals.length-1], prev = totals[totals.length-2]||latest;
   const dTot = latest-prev;
   const maxTot = Math.max(...totals);
@@ -2414,16 +2422,16 @@ function initSchool() {
   mkKPI('kk-school',[
     {label:'주일학교 합계 (최근)',value:fmt(latest),sub:`${fw.length}주 평균 ${fmt(avg(totals))}명`,color:'blue',
       trend:`${dTot>=0?'▲':'▼'} 전주 ${dTot>=0?'+':''}${fmt(dTot)}`,td:dTot>=0?'up':'dn'},
-    {label:'중등부 (최근)',value:fmt(v(D.school[lW]?.중등부?.['1부'])),sub:'최대 부서',color:'purple'},
-    {label:'고등부 (최근)',value:fmt(v(D.school[lW]?.고등부?.['1부'])),sub:'',color:'teal'},
+    {label:'중등부 (최근)',value:fmt(schoolDeptValue(lW,'중등부')),sub:'최대 부서',color:'purple'},
+    {label:'고등부 (최근)',value:fmt(schoolDeptValue(lW,'고등부')),sub:'',color:'teal'},
     {label:'기간 내 최고',value:fmt(maxTot),sub:maxDate,color:'gold'},
   ]);
   const renderSchoolTrend = (fw2) => {
-    const tots2=fw2.map(w=>SCHOOL_DEPTS.reduce((a,d)=>a+v(D.school[w]?.[d]?.['1부']),0));
+    const tots2=fw2.map(w=>SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0));
     mkChart('c-school-trend','line',getWL(fw2),[lds('주일학교 합계',tots2,C.b,true)]);
   };
   const renderSchoolKpi = (fw2) => {
-    const tots2=fw2.map(w=>SCHOOL_DEPTS.reduce((a,d)=>a+v(D.school[w]?.[d]?.['1부']),0));
+    const tots2=fw2.map(w=>SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0));
     const lat2=tots2[tots2.length-1], prv2=tots2[tots2.length-2]||lat2, dT2=lat2-prv2;
     const maxT2=Math.max(...tots2), maxW2=fw2[tots2.indexOf(maxT2)];
     const maxD2=maxW2?`${new Date(maxW2).getMonth()+1}/${new Date(maxW2).getDate()}`:'';
@@ -2431,36 +2439,36 @@ function initSchool() {
     mkKPI('kk-school',[
       {label:'주일학교 합계 (최근)',value:fmt(lat2),sub:`${fw2.length}주 평균 ${fmt(avg(tots2))}명`,color:'blue',
         trend:`${dT2>=0?'▲':'▼'} 전주 ${dT2>=0?'+':''}${fmt(dT2)}`,td:dT2>=0?'up':'dn'},
-      {label:'중등부 (최근)',value:fmt(v(D.school[lW2]?.중등부?.['1부'])),sub:'최대 부서',color:'purple'},
-      {label:'고등부 (최근)',value:fmt(v(D.school[lW2]?.고등부?.['1부'])),sub:'',color:'teal'},
+      {label:'중등부 (최근)',value:fmt(schoolDeptValue(lW2,'중등부')),sub:'최대 부서',color:'purple'},
+      {label:'고등부 (최근)',value:fmt(schoolDeptValue(lW2,'고등부')),sub:'',color:'teal'},
       {label:'기간 내 최고',value:fmt(maxT2),sub:maxD2,color:'gold'},
     ]);
   };
   renderSchoolTrend(fw);
   addCardPeriod('c-school-trend', renderSchoolTrend, renderSchoolKpi);
-  const deptSums = SCHOOL_DEPTS.map(d=>fw.reduce((a,w)=>a+v(D.school[w]?.[d]?.['1부']),0));
+  const deptSums = SCHOOL_DEPTS.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
   mkChart('c-school-pie','doughnut',SCHOOL_DEPTS,dnut(SCHOOL_DEPTS,deptSums,SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length])),{});
-  const avgs4 = SCHOOL_DEPTS.map(d=>last4avg(fw.map(w=>v(D.school[w]?.[d]?.['1부']))));
+  const avgs4 = SCHOOL_DEPTS.map(d=>last4avg(fw.map(w=>schoolDeptValue(w,d))));
   mkChart('c-school-bar','bar',SCHOOL_DEPTS,[{data:avgs4,backgroundColor:SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
   mkTable('t-school',['날짜',...SCHOOL_DEPTS,'합계'],
-    fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmt(v(D.school[w]?.[d]?.['1부']))),
-      fmt(SCHOOL_DEPTS.reduce((a,d)=>a+v(D.school[w]?.[d]?.['1부']),0))]));
+    fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmt(schoolDeptValue(w,d))),
+      fmt(SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0))]));
 
   // 그룹별 서브탭
   Object.entries(SCHOOL_GROUPS).forEach(([key, grp]) => {
     const depts = grp.depts;
     const colors = depts.map((_,i)=>CA[i%CA.length]);
-    const groupTotals = fw.map(w=>depts.reduce((a,d)=>a+v(D.school[w]?.[d]?.['1부']),0));
+    const groupTotals = fw.map(w=>depts.reduce((a,d)=>a+schoolDeptValue(w,d),0));
     const gLatest = groupTotals[groupTotals.length-1];
     const gPrev   = groupTotals[groupTotals.length-2]||gLatest;
     const gDiff   = gLatest-gPrev;
-    const gSums   = depts.map(d=>fw.reduce((a,w)=>a+v(D.school[w]?.[d]?.['1부']),0));
+    const gSums   = depts.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
     mkKPI(`kk-school-${key}`,[
       {label:`${grp.label} 합계 (최근)`,value:fmt(gLatest),sub:`평균 ${fmt(avg(groupTotals))}명`,color:grp.color,
         trend:`${gDiff>=0?'▲':'▼'} 전주 ${gDiff>=0?'+':''}${fmt(gDiff)}`,td:gDiff>=0?'up':'dn'},
-      ...depts.slice(0,3).map(d=>({label:d+' (최근)',value:fmt(v(D.school[lW]?.[d]?.['1부'])),sub:'',color:'teal'})),
+      ...depts.slice(0,3).map(d=>({label:d+' (최근)',value:fmt(schoolDeptValue(lW,d)),sub:'',color:'teal'})),
     ]);
-    mkChart(`c-school-${key}-trend`,'line',wl,depts.map((d,i)=>lds(d,fw.map(w=>v(D.school[w]?.[d]?.['1부'])),colors[i])));
+    mkChart(`c-school-${key}-trend`,'line',wl,depts.map((d,i)=>lds(d,fw.map(w=>schoolDeptValue(w,d)),colors[i])));
     mkChart(`c-school-${key}-pie`,'doughnut',depts,dnut(depts,gSums,colors),{});
   });
 }
@@ -2471,21 +2479,21 @@ function renderSchoolDept() {
   const dept = sel?.value || '';
   if (!dept) {
     // 전체 선택 시 전체 추이 복원
-    const tots=fw.map(w=>SCHOOL_DEPTS.reduce((a,d)=>a+v(D.school[w]?.[d]?.['1부']),0));
+    const tots=fw.map(w=>SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0));
     mkChart('c-school-trend','line',wl,[lds('주일학교 합계',tots,C.b,true)]);
-    const deptSums=SCHOOL_DEPTS.map(d=>fw.reduce((a,w)=>a+v(D.school[w]?.[d]?.['1부']),0));
+    const deptSums=SCHOOL_DEPTS.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
     mkChart('c-school-pie','doughnut',SCHOOL_DEPTS,dnut(SCHOOL_DEPTS,deptSums,SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length])),{});
-    const avgs4=SCHOOL_DEPTS.map(d=>last4avg(fw.map(w=>v(D.school[w]?.[d]?.['1부']))));
+    const avgs4=SCHOOL_DEPTS.map(d=>last4avg(fw.map(w=>schoolDeptValue(w,d))));
     mkChart('c-school-bar','bar',SCHOOL_DEPTS,[{data:avgs4,backgroundColor:SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
     mkTable('t-school',['날짜',...SCHOOL_DEPTS,'합계'],
-      fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmt(v(D.school[w]?.[d]?.['1부']))),
-        fmt(SCHOOL_DEPTS.reduce((a,d)=>a+v(D.school[w]?.[d]?.['1부']),0))]));
+      fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmt(schoolDeptValue(w,d))),
+        fmt(SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0))]));
     return;
   }
   // 특정 부서 선택
   const ci = SCHOOL_DEPTS.indexOf(dept);
   const color = CA[ci >= 0 ? ci % CA.length : 0];
-  const series = fw.map(w=>v(D.school[w]?.[dept]?.['1부']));
+  const series = fw.map(w=>schoolDeptValue(w,dept));
   const latest = series[series.length-1];
   const prev = series[series.length-2]||latest;
   const diff = latest-prev;
@@ -2498,11 +2506,11 @@ function renderSchoolDept() {
   ]);
   mkChart('c-school-trend','line',wl,[lds(dept, series, color, true)]);
   mkChart('c-school-pie','doughnut',[dept,'기타'],dnut([dept,'기타'],
-    [fw.reduce((a,w)=>a+v(D.school[w]?.[dept]?.['1부']),0),
-     fw.reduce((a,w)=>a+SCHOOL_DEPTS.filter(d=>d!==dept).reduce((s,d2)=>s+v(D.school[w]?.[d2]?.['1부']),0),0)],
+    [fw.reduce((a,w)=>a+schoolDeptValue(w,dept),0),
+     fw.reduce((a,w)=>a+SCHOOL_DEPTS.filter(d=>d!==dept).reduce((s,d2)=>s+schoolDeptValue(w,d2),0),0)],
     [color, '#e2e8f0']),{});
   mkChart('c-school-bar','bar',['최근 4주 평균'],[{data:[last4avg(series)],backgroundColor:[color],borderRadius:4,borderWidth:0}],{horiz:true});
-  mkTable('t-school',['날짜',dept],fw.map(w=>[w,fmt(v(D.school[w]?.[dept]?.['1부']))]));
+  mkTable('t-school',['날짜',dept],fw.map(w=>[w,fmt(schoolDeptValue(w,dept))]));
 }
 
 // ── WEEKDAY ──
@@ -2983,8 +2991,7 @@ function updateYCPoint() {
         const partData = bu[key];
         val = partData ? v(partData['장년']) + v(partData['송림']) : null;
       } else if (dept === 'school') {
-        const schoolData = D.school[d];
-        val = schoolData ? v(schoolData[key]?.['1부']) : null;
+        val = schoolDeptTotal(d, key);
       } else if (dept === 'youth') {
         const youthData = D.youth[d];
         val = youthData ? v(youthData[key]?.['예배']) : null;
@@ -3202,15 +3209,29 @@ function applyNewData(data) {
       Object.entries(school).forEach(([dept, val]) => {
         if (!val || typeof val !== 'object') return;
         const key = SCHOOL_DEPT_MAP[dept] || dept;
-        // 합계 필드 우선, 없으면 "학생" 포함 필드 합산
-        let count = val['합계'] ?? null;
-        if (count == null) {
-          const studentSum = Object.entries(val)
-            .filter(([k]) => k.includes('학생'))
-            .reduce((a, [, v]) => a + (Number(v)||0), 0);
-          if (studentSum > 0) count = studentSum;
+        const partTotal = part => {
+          const student = Number(val[`${part} 학생`]) || 0;
+          const teacher = Number(val[`${part} 교사`]) || 0;
+          return student + teacher;
+        };
+        const one = partTotal('1부');
+        const two = partTotal('2부');
+        let total = val['합계'] ?? null;
+        if (total == null) {
+          total = one + two;
+          if (!total) {
+            total = Object.entries(val)
+              .filter(([k]) => k.includes('학생'))
+              .reduce((a, [, v]) => a + (Number(v)||0), 0);
+          }
         }
-        D.school[date][key] = { '1부': count };
+        D.school[date][key] = {
+          '1부': one || null,
+          '2부': two || null,
+          '합계': Number(total) || null,
+          학생: (Number(val['1부 학생'])||0) + (Number(val['2부 학생'])||0) || null,
+          교사: (Number(val['1부 교사'])||0) + (Number(val['2부 교사'])||0) || null,
+        };
       });
     }
 
