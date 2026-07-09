@@ -119,6 +119,11 @@ body {
 }
 .sync-btn:hover { background: var(--color-accent-dark); }
 .sync-btn:disabled { opacity:.5; cursor:default; }
+.sync-btn.secondary {
+  background: #fff; color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-default);
+}
+.sync-btn.secondary:hover { background: var(--color-bg-subtle); }
 .sync-status { font-size:11px; color:var(--color-text-tertiary); white-space:nowrap; }
 
 /* ── NAV ── */
@@ -579,6 +584,7 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   <div class="hdr-r">
     <span class="sync-status" id="sync-status">구글 시트 연동 대기 중</span>
     <button class="sync-btn" id="refresh-btn" onclick="fetchFromSheets()">새로고침</button>
+    <button class="sync-btn secondary" id="full-refresh-btn" onclick="fetchFromSheets(104, true)">전체 재연동</button>
   </div>
 </header>
 
@@ -3347,16 +3353,44 @@ function applyNewData(data) {
   D.newFamily.sort((a, b) => a.date < b.date ? -1 : 1);
 }
 
-async function fetchFromSheets() {
-  const btn    = document.getElementById('refresh-btn');
+function getLatestInputGaps() {
+  const latest = D.weeks[D.weeks.length - 1];
+  if (!latest) return [];
+  const gaps = [];
+  const sunday = D.sunday[latest] || {};
+  const weekday = D.weekday[latest] || {};
+  const dawn = D.dawn[latest];
+  const youth = D.youth[latest] || {};
+
+  if (sunday.jangnyeon == null) gaps.push('주일예배 서현');
+  if (sunday.songrim == null) gaps.push('주일예배 송림');
+  ['1청년부','2청년부','3청년부','4청년부'].forEach(dept => {
+    if (youth[dept]?.예배 == null) gaps.push(dept);
+  });
+  if (weekday.wed_off == null) gaps.push('수요예배 현장');
+  if (weekday.fri_off == null) gaps.push('금요기도회 현장');
+  if (!dawn || !Object.values(dawn.offline || {}).some(v => Number(v) > 0)) gaps.push('새벽기도');
+  if (!D.cell.some(r => r.date === latest)) gaps.push('교구 다락방');
+  if (!D.leader.some(r => r.date === latest)) gaps.push('교구 순장반');
+  if (!D.newFamily.some(r => r.date === latest)) gaps.push('새가족');
+
+  return gaps;
+}
+
+async function fetchFromSheets(weeksBack = 12, fullRefresh = false) {
+  const btn    = document.getElementById(fullRefresh ? 'full-refresh-btn' : 'refresh-btn');
+  const refreshBtn = document.getElementById('refresh-btn');
+  const fullBtn = document.getElementById('full-refresh-btn');
   const status = document.getElementById('sync-status');
-  btn.textContent = '연동 중...';
-  btn.disabled = true;
-  status.textContent = '데이터 불러오는 중...';
+  const originalText = btn?.textContent || '새로고침';
+  if (btn) btn.textContent = fullRefresh ? '전체 연동 중...' : '연동 중...';
+  if (refreshBtn) refreshBtn.disabled = true;
+  if (fullBtn) fullBtn.disabled = true;
+  status.textContent = fullRefresh ? '최근 2년 데이터 불러오는 중...' : `최근 ${weeksBack}주 데이터 불러오는 중...`;
   status.style.color = '';
 
   try {
-    const sundays = genSundays(104); // 최근 2년
+    const sundays = genSundays(weeksBack);
     const batches = [];
     for (let i = 0; i < sundays.length; i += 12) batches.push(sundays.slice(i, i + 12));
 
@@ -3379,15 +3413,19 @@ async function fetchFromSheets() {
     }
 
     const now = new Date().toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    status.textContent = '연동됨 · ' + now;
-    status.style.color = '#059669';
+    const gaps = getLatestInputGaps();
+    const gapText = gaps.length ? ` · 누락 ${gaps.length}개` : ' · 입력 완료';
+    status.textContent = `${fullRefresh ? '전체 재연동됨' : `최근 ${weeksBack}주 연동됨`} · ${now}${gapText}`;
+    status.title = gaps.length ? `누락 항목: ${gaps.join(', ')}` : '최신 주차 주요 항목 입력 완료';
+    status.style.color = gaps.length ? '#a16207' : '#059669';
   } catch (e) {
     status.textContent = '연동 실패 — ' + e.message;
     status.style.color = '#dc2626';
     console.error('Sheets 연동 오류:', e);
   } finally {
-    btn.textContent = '새로고침';
-    btn.disabled = false;
+    if (btn) btn.textContent = originalText;
+    if (refreshBtn) refreshBtn.disabled = false;
+    if (fullBtn) fullBtn.disabled = false;
   }
 }
 
