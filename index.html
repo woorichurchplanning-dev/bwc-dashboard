@@ -156,21 +156,10 @@ nav::-webkit-scrollbar { display: none; }
 .nt[onclick*="leader"]   { --nt-tint: rgba(8,145,178,0.06); }
 .nt[onclick*="cell"]     { --nt-tint: rgba(234,88,12,0.06); }
 .nt[onclick*="newfam"]   { --nt-tint: rgba(219,39,119,0.06); }
-/* 특별 기능 탭: 회색톤으로 미묘하게 구분 */
-.nt[onclick*="special"]  { --nt-tint: rgba(107,114,128,0.08); padding-left: var(--s5); }
+.nt[onclick*="special"]  { --nt-tint: rgba(107,114,128,0.08); }
 .nt[onclick*="yearcomp"] { --nt-tint: rgba(107,114,128,0.08); }
 .nt:hover { background: var(--nt-tint, var(--color-bg-subtle)); }
 .nt.on    { background: var(--nt-tint, var(--color-accent-light)); }
-
-/* 특별 기능 탭 구분선 */
-.nt[onclick*="special"]::before {
-  content: '';
-  position: absolute;
-  left: 8px;
-  width: 1px;
-  height: 20px;
-  background: var(--color-border-default);
-}
 
 /* 주간현황 탭: 특별히 굵게 */
 .nt[onclick*="home"].on { font-weight: 800; letter-spacing: -0.3px; }
@@ -260,6 +249,26 @@ main { padding: var(--s6) var(--s8) var(--s12); max-width:1440px; margin:0 auto;
   color:var(--color-text-primary); letter-spacing:-0.5px; line-height:1.2;
 }
 .page-hdr-title p { font-size:12px; color:var(--color-text-tertiary); margin-top:4px; }
+.week-nav {
+  display:flex; align-items:center; gap:var(--s2); flex-wrap:wrap;
+}
+.week-nav-btn {
+  height:34px; padding:0 12px; border:1px solid var(--color-border-default);
+  background:var(--color-bg-surface); color:var(--color-text-secondary);
+  border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;
+  font-family:var(--font-body); transition:all var(--t-fast) var(--ease-default);
+}
+.week-nav-btn:hover:not(:disabled) {
+  border-color:var(--color-accent); color:var(--color-accent);
+  background:var(--color-accent-light);
+}
+.week-nav-btn:disabled { opacity:.4; cursor:default; }
+.week-nav-date {
+  height:34px; border:1px solid var(--color-border-default); border-radius:8px;
+  background:var(--color-bg-surface); color:var(--color-text-primary);
+  font-size:12px; font-weight:700; padding:0 10px; font-family:var(--font-body);
+}
+.week-nav-date:focus { outline:none; border-color:var(--color-accent); box-shadow:0 0 0 2px rgba(99,91,255,0.15); }
 
 /* ── KPI CARDS ── */
 .kg { display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:var(--s3); margin-bottom:var(--s6); }
@@ -555,39 +564,6 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 .wk-mini-num { font-family:var(--font-mono); font-size:22px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:1; }
 .wk-mini-unit { font-size:11px; color:var(--text3); margin-top:3px; }
 
-.detail-guide {
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
-  gap:var(--s3);
-  margin:0 0 var(--s5);
-}
-.detail-guide-card {
-  border:1px solid var(--color-border-default);
-  background:var(--color-bg-surface);
-  border-radius:var(--r);
-  padding:13px 15px;
-  text-align:left;
-  cursor:pointer;
-  font-family:var(--font-body);
-  transition:all var(--t-fast) var(--ease-default);
-}
-.detail-guide-card:hover {
-  border-color:var(--color-accent);
-  background:var(--color-accent-light);
-  transform:translateY(-1px);
-}
-.detail-guide-title {
-  font-size:13px;
-  font-weight:700;
-  color:var(--color-text-primary);
-  margin-bottom:4px;
-}
-.detail-guide-desc {
-  font-size:11px;
-  line-height:1.45;
-  color:var(--color-text-tertiary);
-}
-
 @media (max-width:1200px) {
   .wk-grid { grid-template-columns:repeat(3,1fr); }
 }
@@ -616,7 +592,7 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   </div>
   <div class="hdr-r">
     <span class="sync-status" id="sync-status">구글 시트 연동 대기 중</span>
-    <button class="sync-btn" id="refresh-btn" onclick="fetchFromSheets()">새로고침</button>
+    <button class="sync-btn" id="refresh-btn" onclick="fetchFromSheets(4)">새로고침</button>
     <button class="sync-btn secondary" id="full-refresh-btn" onclick="fetchFromSheets(104, true)">전체 재연동</button>
   </div>
 </header>
@@ -670,21 +646,15 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
       <h2>주간 현황</h2>
       <p id="hm-subdate"></p>
     </div>
+    <div class="week-nav" aria-label="주간현황 주차 선택">
+      <button class="week-nav-btn" id="home-prev-week" onclick="shiftHomeWeek(-1)">‹ 이전 주</button>
+      <input class="week-nav-date" type="date" id="home-week-date" onchange="selectHomeWeekDate(this.value)" aria-label="주간현황 날짜 선택">
+      <button class="week-nav-btn" id="home-next-week" onclick="shiftHomeWeek(1)">다음 주 ›</button>
+    </div>
   </div>
 
   <!-- 주간 현황 카드 -->
   <div class="wk-report" id="wk-report"></div>
-
-  <div class="detail-guide" aria-label="세부현황 바로가기">
-    <button class="detail-guide-card" onclick="sw('sunday')"><div class="detail-guide-title">주일예배</div><div class="detail-guide-desc">서현·송림 1-3부와 온라인 흐름을 비교합니다</div></button>
-    <button class="detail-guide-card" onclick="sw('youth')"><div class="detail-guide-title">청년교구</div><div class="detail-guide-desc">청년부별 예배, 팀모임, 순모임을 확인합니다</div></button>
-    <button class="detail-guide-card" onclick="sw('school')"><div class="detail-guide-title">주일학교</div><div class="detail-guide-desc">부서별 1부·2부 합계와 연령대별 흐름을 봅니다</div></button>
-    <button class="detail-guide-card" onclick="sw('wd')"><div class="detail-guide-title">주중·새벽</div><div class="detail-guide-desc">수요·금요 현장/온라인, 새벽기도 패턴을 봅니다</div></button>
-    <button class="detail-guide-card" onclick="sw('leader')"><div class="detail-guide-title">리더십</div><div class="detail-guide-desc">교구별 순장반 출석 흐름을 비교합니다</div></button>
-    <button class="detail-guide-card" onclick="sw('cell')"><div class="detail-guide-title">소그룹</div><div class="detail-guide-desc">교구별 다락방 출석과 참여 흐름을 확인합니다</div></button>
-    <button class="detail-guide-card" onclick="sw('newfam')"><div class="detail-guide-title">새가족</div><div class="detail-guide-desc">장년·청년 방문, 등록, 수료 흐름을 봅니다</div></button>
-    <button class="detail-guide-card" onclick="sw('yearcomp')"><div class="detail-guide-title">연도 비교</div><div class="detail-guide-desc">같은 주차·월 기준으로 연도별 추이를 비교합니다</div></button>
-  </div>
 
   <!-- 추이 차트 (6개) -->
   <div class="cg">
@@ -1187,6 +1157,7 @@ let FILTER_N = 0; // 지난 N주 모드
 const HOME_RENDERERS = {};  // 홈 차트 개별 기간 렌더러
 const HCP_STEPS = [4, 8, 13, 26, 52, 0]; // 0 = 전체
 const HOME_PERIODS = {}; // 차트별 현재 기간 (주)
+let HOME_WEEK_KEY = ''; // 주간현황에서 보고 있는 주차
 
 function getFW() {
   const w = D.weeks;
@@ -1198,6 +1169,57 @@ function getFW() {
 
 function getWL(fw) {
   return fw.map(w => { const d=new Date(w); return `${d.getMonth()+1}/${d.getDate()}`; });
+}
+
+function getHomeWeekKey(fw) {
+  if (HOME_WEEK_KEY && fw.includes(HOME_WEEK_KEY)) return HOME_WEEK_KEY;
+  HOME_WEEK_KEY = fw[fw.length - 1] || '';
+  return HOME_WEEK_KEY;
+}
+
+function updateHomeWeekControls(fw, weekKey) {
+  const idx = fw.indexOf(weekKey);
+  const prevBtn = document.getElementById('home-prev-week');
+  const nextBtn = document.getElementById('home-next-week');
+  const dateInput = document.getElementById('home-week-date');
+  if (prevBtn) prevBtn.disabled = idx <= 0;
+  if (nextBtn) nextBtn.disabled = idx < 0 || idx >= fw.length - 1;
+  if (dateInput) {
+    dateInput.value = weekKey || '';
+    if (fw.length) {
+      dateInput.min = fw[0];
+      dateInput.max = fw[fw.length - 1];
+    }
+  }
+}
+
+function toWeekKeyFromDate(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, day] = dateStr.split('-').map(Number);
+  const d = new Date(y, m - 1, day);
+  if (Number.isNaN(d.getTime())) return '';
+  d.setDate(d.getDate() - d.getDay());
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function selectHomeWeekDate(dateStr) {
+  const fw = getFW();
+  const sundayKey = toWeekKeyFromDate(dateStr);
+  if (!sundayKey || !fw.length) return;
+  HOME_WEEK_KEY = fw.includes(sundayKey)
+    ? sundayKey
+    : fw.reduce((best, cur) => Math.abs(new Date(cur) - new Date(sundayKey)) < Math.abs(new Date(best) - new Date(sundayKey)) ? cur : best, fw[0]);
+  initHome();
+}
+
+function shiftHomeWeek(offset) {
+  const fw = getFW();
+  if (!fw.length) return;
+  const current = getHomeWeekKey(fw);
+  const idx = fw.indexOf(current);
+  const nextIdx = Math.max(0, Math.min(fw.length - 1, idx + offset));
+  HOME_WEEK_KEY = fw[nextIdx];
+  initHome();
 }
 
 function updatePeriodLabel(fw) {
@@ -1844,10 +1866,12 @@ function initHome() {
   };
 
   // ── 최신 / 전주 / 전년 ────────────────────────────────────────────────
-  const lW  = fw[fw.length - 1];
-  const pW  = fw[fw.length - 2] || null;
+  const lW  = getHomeWeekKey(fw);
+  const weekIdx = fw.indexOf(lW);
+  const pW  = weekIdx > 0 ? fw[weekIdx - 1] : null;
   const yW  = yoyKey(lW);
   const lDt = new Date(lW);
+  updateHomeWeekControls(fw, lW);
 
   // 기간 계산 (월~일)
   const monDt = new Date(lDt); monDt.setDate(lDt.getDate() - 6);
@@ -3485,7 +3509,7 @@ function loadSheetCache() {
   }
 }
 
-async function fetchFromSheets(weeksBack = 12, fullRefresh = false) {
+async function fetchFromSheets(weeksBack = 4, fullRefresh = false) {
   const btn    = document.getElementById(fullRefresh ? 'full-refresh-btn' : 'refresh-btn');
   const refreshBtn = document.getElementById('refresh-btn');
   const fullBtn = document.getElementById('full-refresh-btn');
@@ -3524,7 +3548,7 @@ async function fetchFromSheets(weeksBack = 12, fullRefresh = false) {
 
     const now = new Date().toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     const gaps = getLatestInputGaps();
-    const gapText = gaps.length ? ` · 누락 ${gaps.length}개` : ' · 입력 완료';
+    const gapText = gaps.length ? ` · 미입력 항목 ${gaps.length}개` : ' · 입력 완료';
     status.textContent = `${fullRefresh ? '전체 재연동됨' : `최근 ${weeksBack}주 연동됨`} · ${now}${gapText}`;
     status.title = gaps.length ? `누락 항목: ${gaps.join(', ')}` : '최신 주차 주요 항목 입력 완료';
     status.style.color = gaps.length ? '#a16207' : '#059669';
@@ -3548,7 +3572,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const fb = document.querySelector('.flt-bar');
   if (fb) fb.style.display = 'none';
   setTimeout(initHome, 80);
-  fetchFromSheets();
+  fetchFromSheets(4);
   // 테이블 카드 접기 — 테이블을 포함한 .cc에 적용
   setTimeout(() => {
     document.querySelectorAll('.cc').forEach(card => {
