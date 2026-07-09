@@ -555,6 +555,39 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 .wk-mini-num { font-family:var(--font-mono); font-size:22px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:1; }
 .wk-mini-unit { font-size:11px; color:var(--text3); margin-top:3px; }
 
+.detail-guide {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:var(--s3);
+  margin:0 0 var(--s5);
+}
+.detail-guide-card {
+  border:1px solid var(--color-border-default);
+  background:var(--color-bg-surface);
+  border-radius:var(--r);
+  padding:13px 15px;
+  text-align:left;
+  cursor:pointer;
+  font-family:var(--font-body);
+  transition:all var(--t-fast) var(--ease-default);
+}
+.detail-guide-card:hover {
+  border-color:var(--color-accent);
+  background:var(--color-accent-light);
+  transform:translateY(-1px);
+}
+.detail-guide-title {
+  font-size:13px;
+  font-weight:700;
+  color:var(--color-text-primary);
+  margin-bottom:4px;
+}
+.detail-guide-desc {
+  font-size:11px;
+  line-height:1.45;
+  color:var(--color-text-tertiary);
+}
+
 @media (max-width:1200px) {
   .wk-grid { grid-template-columns:repeat(3,1fr); }
 }
@@ -641,6 +674,17 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 
   <!-- 주간 현황 카드 -->
   <div class="wk-report" id="wk-report"></div>
+
+  <div class="detail-guide" aria-label="세부현황 바로가기">
+    <button class="detail-guide-card" onclick="sw('sunday')"><div class="detail-guide-title">주일예배</div><div class="detail-guide-desc">서현·송림 1-3부와 온라인 흐름을 비교합니다</div></button>
+    <button class="detail-guide-card" onclick="sw('youth')"><div class="detail-guide-title">청년교구</div><div class="detail-guide-desc">청년부별 예배, 팀모임, 순모임을 확인합니다</div></button>
+    <button class="detail-guide-card" onclick="sw('school')"><div class="detail-guide-title">주일학교</div><div class="detail-guide-desc">부서별 1부·2부 합계와 연령대별 흐름을 봅니다</div></button>
+    <button class="detail-guide-card" onclick="sw('wd')"><div class="detail-guide-title">주중·새벽</div><div class="detail-guide-desc">수요·금요 현장/온라인, 새벽기도 패턴을 봅니다</div></button>
+    <button class="detail-guide-card" onclick="sw('leader')"><div class="detail-guide-title">리더십</div><div class="detail-guide-desc">교구별 순장반 출석 흐름을 비교합니다</div></button>
+    <button class="detail-guide-card" onclick="sw('cell')"><div class="detail-guide-title">소그룹</div><div class="detail-guide-desc">교구별 다락방 출석과 참여 흐름을 확인합니다</div></button>
+    <button class="detail-guide-card" onclick="sw('newfam')"><div class="detail-guide-title">새가족</div><div class="detail-guide-desc">장년·청년 방문, 등록, 수료 흐름을 봅니다</div></button>
+    <button class="detail-guide-card" onclick="sw('yearcomp')"><div class="detail-guide-title">연도 비교</div><div class="detail-guide-desc">같은 주차·월 기준으로 연도별 추이를 비교합니다</div></button>
+  </div>
 
   <!-- 추이 차트 (6개) -->
   <div class="cg">
