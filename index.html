@@ -1171,24 +1171,50 @@ function getWL(fw) {
   return fw.map(w => { const d=new Date(w); return `${d.getMonth()+1}/${d.getDate()}`; });
 }
 
+function parseWeekDate(weekKey) {
+  const [y, m, d] = weekKey.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function formatWeekKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
+function shiftWeekKey(weekKey, offsetWeeks) {
+  const d = parseWeekDate(weekKey);
+  d.setDate(d.getDate() + offsetWeeks * 7);
+  return formatWeekKey(d);
+}
+
+function getHomeRange(fw) {
+  const weeks = fw.length ? fw : D.weeks;
+  return {
+    min: weeks[0] || '',
+    max: weeks[weeks.length - 1] || ''
+  };
+}
+
 function getHomeWeekKey(fw) {
-  if (HOME_WEEK_KEY && fw.includes(HOME_WEEK_KEY)) return HOME_WEEK_KEY;
-  HOME_WEEK_KEY = fw[fw.length - 1] || '';
+  const { min, max } = getHomeRange(fw);
+  if (HOME_WEEK_KEY) {
+    if ((!min || HOME_WEEK_KEY >= min) && (!max || HOME_WEEK_KEY <= max)) return HOME_WEEK_KEY;
+  }
+  HOME_WEEK_KEY = max || '';
   return HOME_WEEK_KEY;
 }
 
 function updateHomeWeekControls(fw, weekKey) {
-  const idx = fw.indexOf(weekKey);
+  const { min, max } = getHomeRange(fw);
   const prevBtn = document.getElementById('home-prev-week');
   const nextBtn = document.getElementById('home-next-week');
   const dateInput = document.getElementById('home-week-date');
-  if (prevBtn) prevBtn.disabled = idx <= 0;
-  if (nextBtn) nextBtn.disabled = idx < 0 || idx >= fw.length - 1;
+  if (prevBtn) prevBtn.disabled = !!min && weekKey <= min;
+  if (nextBtn) nextBtn.disabled = !!max && weekKey >= max;
   if (dateInput) {
     dateInput.value = weekKey || '';
-    if (fw.length) {
-      dateInput.min = fw[0];
-      dateInput.max = fw[fw.length - 1];
+    if (min && max) {
+      dateInput.min = min;
+      dateInput.max = max;
     }
   }
 }
@@ -1206,20 +1232,41 @@ function selectHomeWeekDate(dateStr) {
   const fw = getFW();
   const sundayKey = toWeekKeyFromDate(dateStr);
   if (!sundayKey || !fw.length) return;
-  HOME_WEEK_KEY = fw.includes(sundayKey)
-    ? sundayKey
-    : fw.reduce((best, cur) => Math.abs(new Date(cur) - new Date(sundayKey)) < Math.abs(new Date(best) - new Date(sundayKey)) ? cur : best, fw[0]);
+  const { min, max } = getHomeRange(fw);
+  HOME_WEEK_KEY = sundayKey < min ? min : sundayKey > max ? max : sundayKey;
   initHome();
 }
 
 function shiftHomeWeek(offset) {
   const fw = getFW();
-  if (!fw.length) return;
+  if (!fw.length && !D.weeks.length) return;
+  const { min, max } = getHomeRange(fw);
   const current = getHomeWeekKey(fw);
-  const idx = fw.indexOf(current);
-  const nextIdx = Math.max(0, Math.min(fw.length - 1, idx + offset));
-  HOME_WEEK_KEY = fw[nextIdx];
+  let next = shiftWeekKey(current, offset);
+  if (min && next < min) next = min;
+  if (max && next > max) next = max;
+  HOME_WEEK_KEY = next;
   initHome();
+}
+
+function getContinuousWeeksEnding(endWeekKey, nWeeks) {
+  if (!endWeekKey) return [];
+  const count = nWeeks === 0
+    ? Math.max(1, Math.round((parseWeekDate(endWeekKey) - parseWeekDate(D.weeks[0] || endWeekKey)) / (7 * 86400000)) + 1)
+    : nWeeks;
+  const weeks = [];
+  for (let i = count - 1; i >= 0; i--) {
+    weeks.push(shiftWeekKey(endWeekKey, -i));
+  }
+  return weeks;
+}
+
+function getHomeChartWeeks(nWeeks) {
+  return getContinuousWeeksEnding(getHomeWeekKey(getFW()), nWeeks);
+}
+
+function homeChartOpts(fw, extra = {}) {
+  return { ...extra, fw, focusWeek: getHomeWeekKey(getFW()) };
 }
 
 function updatePeriodLabel(fw) {
@@ -1737,7 +1784,16 @@ function mkChart(id, type, labels, datasets, opts={}) {
       }
     },
     scales: isPie ? {} : {
-      x:{ stacked:isStack, grid:{color:'rgba(0,0,0,0.04)'}, ticks:{maxRotation:isH?0:45,font:{size:10}} },
+      x:{ stacked:isStack, grid:{color:'rgba(0,0,0,0.04)'}, ticks:{
+        maxRotation:isH?0:45,
+        color: c => !isH && opts.fw?.[c.index] === opts.focusWeek ? '#0f172a' : '#64748b',
+        font: c => ({ size:10, weight: !isH && opts.fw?.[c.index] === opts.focusWeek ? '800' : '400' }),
+        callback: function(value, index) {
+          if (isH) return isPct ? value + '%' : fmt(value);
+          const label = this.getLabelForValue(value);
+          return opts.fw?.[index] === opts.focusWeek ? [label, '기준'] : label;
+        }
+      } },
       y:{ stacked:isStack, grid:{color:'rgba(0,0,0,0.04)'}, ticks:{font:{size:10}, callback:n=>isPct?n+'%':fmt(n)} }
     }
   }});
@@ -1883,10 +1939,9 @@ function initHome() {
 
   // ── 최신 / 전주 / 전년 ────────────────────────────────────────────────
   const lW  = getHomeWeekKey(fw);
-  const weekIdx = fw.indexOf(lW);
-  const pW  = weekIdx > 0 ? fw[weekIdx - 1] : null;
+  const pW  = shiftWeekKey(lW, -1);
   const yW  = yoyKey(lW);
-  const lDt = new Date(lW);
+  const lDt = parseWeekDate(lW);
   updateHomeWeekControls(fw, lW);
 
   // 기간 계산 (월~일)
@@ -2047,75 +2102,78 @@ function initHome() {
 
   // ── 추이 차트 (기본 8주) ────────────────────────────────────────────────
   const IDS8 = ['c-hm-adult','c-hm-school','c-hm-youth','c-hm-wd','c-hm-dawn','c-hm-newfam'];
-  IDS8.forEach(id => { HOME_PERIODS[id] = 8; });
-  const fw8 = D.weeks.slice(-Math.min(8, D.weeks.length));
+  IDS8.forEach(id => { if (HOME_PERIODS[id] == null) HOME_PERIODS[id] = 8; });
+  const fw8 = getHomeChartWeeks(8);
   const wl8 = getWL(fw8);
 
   // 1. 주일예배 장년 추이
-  mkChart('c-hm-adult', 'line', wl8, [lds('장년 현장', fw8.map(w => adultBu(w)), C.b, true)]);
+  mkChart('c-hm-adult', 'line', wl8, [lds('장년 현장', fw8.map(w => adultBu(w)), C.b, true)], homeChartOpts(fw8));
 
   // 2. 주일학교 추이
   const sc = fw8.map(w => nn(schoolTot(w)));
-  mkChart('c-hm-school', 'line', wl8, [lds('주일학교', sc, C.g, true)]);
+  mkChart('c-hm-school', 'line', wl8, [lds('주일학교', sc, C.g, true)], homeChartOpts(fw8));
 
   // 3. 청년교구 추이 (합계 기본)
-  mkChart('c-hm-youth', 'line', wl8, [lds('청년 합계', fw8.map(youthTotal), C.p, true)]);
+  mkChart('c-hm-youth', 'line', wl8, [lds('청년 합계', fw8.map(youthTotal), C.p, true)], homeChartOpts(fw8));
 
   // 4. 주중예배 추이 (수요/금요 현장)
   mkChart('c-hm-wd', 'line', wl8, [
     lds('수요 현장', fw8.map(w => v(D.weekday[w]?.wed_off) || null), C.b),
     lds('금요 현장', fw8.map(w => v(D.weekday[w]?.fri_off) || null), C.or),
-  ]);
+  ], homeChartOpts(fw8));
 
   // 5. 새벽기도 추이 (현장 일평균)
   mkChart('c-hm-dawn', 'line', wl8, [
     lds('현장 일평균', fw8.map(w => dawnAvg(w, 'off')), C.id, true),
-  ]);
+  ], homeChartOpts(fw8));
 
   // 5. 새가족 추이
   if (D.newFamily && D.newFamily.length > 0) {
-    const nfFiltered = D.newFamily.filter(r => fw.includes(r.date));
-    const nfDates = nfFiltered.map(r => { const d=new Date(r.date); return `${d.getMonth()+1}/${d.getDate()}`; });
-    const nfRequest = nfFiltered.map(r => nfRequestTotal(r, 'adult') + nfRequestTotal(r, 'youth'));
-    const nfAvailable = nfFiltered.map(r => nfVal(r, 'adult', 'available') + nfVal(r, 'youth', 'available'));
-    if (nfFiltered.length > 0) {
-      mkChart('c-hm-newfam', 'bar', nfDates, [
-        bds('등록요청자', nfRequest, C.b),
-        bds('등록가능자', nfAvailable, C.gr),
-      ], {stack: true});
-    }
+    const nfByWeek = w => D.newFamily.find(r => r.date === w);
+    mkChart('c-hm-newfam', 'bar', wl8, [
+      bds('등록요청자', fw8.map(w => {
+        const r = nfByWeek(w); return r ? nfRequestTotal(r, 'adult') + nfRequestTotal(r, 'youth') : null;
+      }), C.b),
+      bds('등록가능자', fw8.map(w => {
+        const r = nfByWeek(w); return r ? nfVal(r, 'adult', 'available') + nfVal(r, 'youth', 'available') : null;
+      }), C.gr),
+    ], homeChartOpts(fw8, {stack: true}));
   }
 
   // ── 홈 차트 개별 기간 렌더러 등록 ─────────────────────────────────────────
   HOME_RENDERERS['c-hm-adult'] = fw2 => {
-    mkChart('c-hm-adult', 'line', getWL(fw2), [lds('장년 현장', fw2.map(w => adultBu(w)), C.b, true)]);
+    mkChart('c-hm-adult', 'line', getWL(fw2), [lds('장년 현장', fw2.map(w => adultBu(w)), C.b, true)], homeChartOpts(fw2));
   };
   HOME_RENDERERS['c-hm-school'] = fw2 => {
     const sc2 = fw2.map(w => nn(schoolTot(w)));
-    mkChart('c-hm-school', 'line', getWL(fw2), [lds('주일학교', sc2, C.g, true)]);
+    mkChart('c-hm-school', 'line', getWL(fw2), [lds('주일학교', sc2, C.g, true)], homeChartOpts(fw2));
   };
   HOME_RENDERERS['c-hm-youth'] = fw2 => {
-    mkChart('c-hm-youth', 'line', getWL(fw2), [lds('청년 합계', fw2.map(youthTotal), C.p, true)]);
+    mkChart('c-hm-youth', 'line', getWL(fw2), [lds('청년 합계', fw2.map(youthTotal), C.p, true)], homeChartOpts(fw2));
   };
   HOME_RENDERERS['c-hm-wd'] = fw2 => {
     mkChart('c-hm-wd', 'line', getWL(fw2), [
       lds('수요 현장', fw2.map(w => v(D.weekday[w]?.wed_off) || null), C.b),
       lds('금요 현장', fw2.map(w => v(D.weekday[w]?.fri_off) || null), C.or),
-    ]);
+    ], homeChartOpts(fw2));
   };
   HOME_RENDERERS['c-hm-dawn'] = fw2 => {
-    mkChart('c-hm-dawn', 'line', getWL(fw2), [lds('현장 일평균', fw2.map(w => dawnAvg(w, 'off')), C.id, true)]);
+    mkChart('c-hm-dawn', 'line', getWL(fw2), [lds('현장 일평균', fw2.map(w => dawnAvg(w, 'off')), C.id, true)], homeChartOpts(fw2));
   };
   HOME_RENDERERS['c-hm-newfam'] = fw2 => {
     if (!D.newFamily?.length) return;
-    const nf2 = D.newFamily.filter(r => fw2.includes(r.date));
-    if (!nf2.length) return;
-    const nd2 = nf2.map(r => { const d=new Date(r.date); return `${d.getMonth()+1}/${d.getDate()}`; });
-    mkChart('c-hm-newfam', 'bar', nd2, [
-      bds('등록요청자', nf2.map(r=>nfRequestTotal(r,'adult')+nfRequestTotal(r,'youth')), C.b),
-      bds('등록가능자', nf2.map(r=>nfVal(r,'adult','available')+nfVal(r,'youth','available')), C.gr),
-    ], {stack:true});
+    const nfByWeek = w => D.newFamily.find(r => r.date === w);
+    mkChart('c-hm-newfam', 'bar', getWL(fw2), [
+      bds('등록요청자', fw2.map(w=>{
+        const r = nfByWeek(w); return r ? nfRequestTotal(r,'adult')+nfRequestTotal(r,'youth') : null;
+      }), C.b),
+      bds('등록가능자', fw2.map(w=>{
+        const r = nfByWeek(w); return r ? nfVal(r,'adult','available')+nfVal(r,'youth','available') : null;
+      }), C.gr),
+    ], homeChartOpts(fw2, {stack:true}));
   };
+
+  IDS8.forEach(id => setHCPStep(id, HOME_PERIODS[id] ?? 8));
 }
 
 // ── SUNDAY ──
@@ -3238,7 +3296,7 @@ function setHCPStep(chartId, nWeeks) {
   HOME_PERIODS[chartId] = nWeeks;
   const el = document.getElementById('hcp-val-' + chartId);
   if (el) el.textContent = nWeeks === 0 ? '전체' : nWeeks + '주';
-  const fw2 = nWeeks === 0 ? D.weeks : D.weeks.slice(-Math.min(nWeeks, D.weeks.length));
+  const fw2 = getHomeChartWeeks(nWeeks);
   if (HOME_RENDERERS[chartId]) HOME_RENDERERS[chartId](fw2);
 }
 function incrHCP(chartId, dir) {
