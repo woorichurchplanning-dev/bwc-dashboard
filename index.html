@@ -667,7 +667,7 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   </div>
   <div class="cg">
     <div class="cc"><div class="ch"><div><div class="ct">새벽기도 추이</div><div class="cs">일 평균 현장 인원</div></div><div class="cpf"><button class="cpb" onclick="sw('wd')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-dawn',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-dawn">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-dawn',1)">▲</button></div></div></div><canvas id="c-hm-dawn"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct">새가족 현황</div><div class="cs">방문자·수료자</div></div><div class="cpf"><button class="cpb" onclick="sw('newfam')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-newfam',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-newfam">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-newfam',1)">▲</button></div></div></div><canvas id="c-hm-newfam"></canvas></div>
+    <div class="cc"><div class="ch"><div><div class="ct">새가족 현황</div><div class="cs">등록요청자·등록가능자</div></div><div class="cpf"><button class="cpb" onclick="sw('newfam')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-newfam',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-newfam">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-newfam',1)">▲</button></div></div></div><canvas id="c-hm-newfam"></canvas></div>
   </div>
 </section>
 
@@ -918,7 +918,7 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 <!-- ═══ NEWFAM ═══ -->
 <section class="sec" id="s-newfam">
   <div class="page-hdr">
-    <div class="page-hdr-title"><h2>새가족</h2><p>새가족 방문·등록·수료·정착 현황</p></div>
+    <div class="page-hdr-title"><h2>새가족</h2><p>등록요청자·등록가능 여부·등록 가능 사유 현황</p></div>
   </div>
   <div class="stabs">
     <button class="stab on" onclick="ss2('newfam','adult')">장년</button>
@@ -928,10 +928,10 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   <div class="ss on" id="newfam-adult">
     <div class="kg" id="kk-newfam-adult"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">장년 새가족 방문·등록·수료 추이</div></div></div><canvas id="c-nf-adult-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">장년 등록 경로 (누적)</div><div class="cs">냉담회복·이사·새신자 등</div></div></div><canvas id="c-nf-adult-route"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">장년 등록요청자 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-adult-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">장년 등록 가능 사유 (누적)</div><div class="cs">냉담기·이사·짝믿음·결혼·초신자 등</div></div></div><canvas id="c-nf-adult-route"></canvas></div>
     </div>
-    <div class="cc"><div class="ch"><div><div class="ct">장년 방문 → 등록 → 수료 퍼널</div></div></div>
+    <div class="cc"><div class="ch"><div><div class="ct">장년 등록요청자 구성</div></div></div>
       <div class="fw" id="fw-adult"></div>
     </div>
   </div>
@@ -939,8 +939,8 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   <div class="ss" id="newfam-youth">
     <div class="kg" id="kk-newfam-youth"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">청년 새가족 방문·등록·수료 추이</div></div></div><canvas id="c-nf-youth-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">청년 등록 경로 (누적)</div><div class="cs">냉담회복·이사·새신자 등</div></div></div><canvas id="c-nf-youth-route"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">청년 등록요청자 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-youth-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">청년 등록 가능 사유 (누적)</div><div class="cs">냉담기·이사·짝믿음·결혼·초신자 등</div></div></div><canvas id="c-nf-youth-route"></canvas></div>
     </div>
   </div>
 </section>
@@ -1398,8 +1398,24 @@ function exportCSV() {
   } else if (tab === 'newfam') {
     name = '새가족';
     const fd = filterByMode(D.newFamily);
-    rows.push(['날짜','구분','방문','등록','수료','정착']);
-    fd.forEach(r => rows.push([r.date||'', r.type||'', v(r.visit), v(r.reg), v(r.complete), v(r.settle)]));
+    rows.push(['날짜','구분','등록요청자','등록 가능','등록 불가능','냉담기','이사','짝믿음','기타(이단 등)','결혼(부부)','초신자']);
+    fd.forEach(r => {
+      ['adult','youth'].forEach(type => {
+        rows.push([
+          r.date || '',
+          type === 'adult' ? '장년' : '청년',
+          nfRequestTotal(r, type),
+          nfVal(r, type, 'available'),
+          nfVal(r, type, 'unavailable'),
+          nfVal(r, type, 'cold'),
+          nfVal(r, type, 'move'),
+          nfVal(r, type, 'mixed_belief'),
+          nfVal(r, type, 'other'),
+          nfVal(r, type, 'marriage'),
+          nfVal(r, type, 'new_believer')
+        ]);
+      });
+    });
   }
 
   if (!rows.length) { alert('내보낼 데이터가 없습니다.'); return; }
@@ -2060,12 +2076,12 @@ function initHome() {
   if (D.newFamily && D.newFamily.length > 0) {
     const nfFiltered = D.newFamily.filter(r => fw.includes(r.date));
     const nfDates = nfFiltered.map(r => { const d=new Date(r.date); return `${d.getMonth()+1}/${d.getDate()}`; });
-    const nfVisit = nfFiltered.map(r => (r.adult_visit||0) + (r.youth_visit||0));
-    const nfComp  = nfFiltered.map(r => (r.adult_comp||0)  + (r.youth_comp||0));
+    const nfRequest = nfFiltered.map(r => nfRequestTotal(r, 'adult') + nfRequestTotal(r, 'youth'));
+    const nfAvailable = nfFiltered.map(r => nfVal(r, 'adult', 'available') + nfVal(r, 'youth', 'available'));
     if (nfFiltered.length > 0) {
       mkChart('c-hm-newfam', 'bar', nfDates, [
-        bds('방문자', nfVisit, C.b),
-        bds('수료자', nfComp,  C.gr),
+        bds('등록요청자', nfRequest, C.b),
+        bds('등록가능자', nfAvailable, C.gr),
       ], {stack: true});
     }
   }
@@ -2096,8 +2112,8 @@ function initHome() {
     if (!nf2.length) return;
     const nd2 = nf2.map(r => { const d=new Date(r.date); return `${d.getMonth()+1}/${d.getDate()}`; });
     mkChart('c-hm-newfam', 'bar', nd2, [
-      bds('방문자', nf2.map(r=>(r.adult_visit||0)+(r.youth_visit||0)), C.b),
-      bds('수료자', nf2.map(r=>(r.adult_comp||0)+(r.youth_comp||0)), C.gr),
+      bds('등록요청자', nf2.map(r=>nfRequestTotal(r,'adult')+nfRequestTotal(r,'youth')), C.b),
+      bds('등록가능자', nf2.map(r=>nfVal(r,'adult','available')+nfVal(r,'youth','available')), C.gr),
     ], {stack:true});
   };
 }
@@ -2753,93 +2769,124 @@ function renderCellDist() {
 }
 
 // ── NEWFAM ──
+function nfVal(row, type, key) {
+  const modern = row?.[`${type}_${key}`];
+  if (modern != null) return Number(modern) || 0;
+  if (key === 'available') return Number(row?.[`${type}_reg`]) || 0;
+  if (key === 'unavailable') {
+    const visit = Number(row?.[`${type}_visit`]) || 0;
+    const reg = Number(row?.[`${type}_reg`]) || 0;
+    return Math.max(0, visit - reg);
+  }
+  if (key === 'new_believer') return Number(row?.[`${type}_new`]) || 0;
+  if (key === 'cold') return Number(row?.[`${type}_cold`]) || 0;
+  if (key === 'move') return Number(row?.[`${type}_move`]) || 0;
+  if (key === 'mixed_belief') return Number(row?.[`${type}_couple`]) || 0;
+  if (key === 'marriage') return Number(row?.[`${type}_marriage`]) || 0;
+  if (key === 'other') return Number(row?.[`${type}_other`]) || 0;
+  return 0;
+}
+
+function nfRequestTotal(row, type) {
+  const modernTotal = nfVal(row, type, 'available') + nfVal(row, type, 'unavailable');
+  if (modernTotal > 0) return modernTotal;
+  return Number(row?.[`${type}_visit`]) || 0;
+}
+
+function nfReasonTotals(rows, type) {
+  return {
+    '냉담기': rows.reduce((a,r)=>a+nfVal(r,type,'cold'),0),
+    '이사': rows.reduce((a,r)=>a+nfVal(r,type,'move'),0),
+    '짝믿음': rows.reduce((a,r)=>a+nfVal(r,type,'mixed_belief'),0),
+    '기타(이단 등)': rows.reduce((a,r)=>a+nfVal(r,type,'other'),0),
+    '결혼(부부)': rows.reduce((a,r)=>a+nfVal(r,type,'marriage'),0),
+    '초신자': rows.reduce((a,r)=>a+nfVal(r,type,'new_believer'),0),
+  };
+}
+
 function initNewFam() {
   if (!D.newFamily || D.newFamily.length === 0) {
     document.getElementById('kk-newfam-adult').innerHTML = `<div class="kc bl" style="grid-column:1/-1;animation-delay:0s">
       <div class="kc-accent-bar"></div><div class="kl">데이터 연동 필요</div>
       <div class="kv" style="font-size:18px;color:var(--text2)">새가족 데이터 없음</div>
       <div class="ks" style="margin-top:8px;line-height:1.6">
-        구글 시트 <b>새가족</b> 탭에 날짜·방문·등록·수료 데이터를 입력한 후<br>
+        구글 시트 <b>새가족</b> 탭에 등록 가능·등록 불가능·사유별 데이터를 입력한 후<br>
         상단 <b>새로고침</b> 버튼을 누르면 자동으로 표시됩니다.
       </div></div>`;
     return;
   }
-  const dates = D.newFamily.map(r => { const d=new Date(r.date); return `${d.getMonth()+1}/${d.getDate()}`; });
+  const fwRows = D.newFamily.filter(r => getFW().includes(r.date));
   const rColors = [C.b, C.p, C.g, C.or, C.t, C.pk];
 
   // 장년
-  const aVisit = D.newFamily.map(r => r.adult_visit||0);
-  const aReg   = D.newFamily.map(r => r.adult_reg||0);
-  const aComp  = D.newFamily.map(r => r.adult_comp||0);
-  const totAV = aVisit.reduce((a,b)=>a+b,0);
-  const totAR = aReg.reduce((a,b)=>a+b,0);
-  const totAC = aComp.reduce((a,b)=>a+b,0);
+  const latestAdult = D.newFamily[D.newFamily.length - 1];
+  const totAReq = fwRows.reduce((a,r)=>a+nfRequestTotal(r,'adult'),0);
+  const totAAv = fwRows.reduce((a,r)=>a+nfVal(r,'adult','available'),0);
+  const totAUn = fwRows.reduce((a,r)=>a+nfVal(r,'adult','unavailable'),0);
+  const latestAReq = nfRequestTotal(latestAdult,'adult');
+  const latestAAv = nfVal(latestAdult,'adult','available');
 
   mkKPI('kk-newfam-adult', [
-    {label:'장년 방문 (누적)', value:fmt(totAV), sub:'집계 기간 합계', color:'blue'},
-    {label:'장년 등록 (누적)', value:fmt(totAR), sub:'집계 기간 합계', color:'green'},
-    {label:'장년 수료 (누적)', value:fmt(totAC), sub:'집계 기간 합계', color:'gold'},
-    {label:'등록→수료 전환율', value:totAR>0?Math.round(totAC/totAR*100)+'%':'–', sub:'', color:'teal'},
+    {label:'이번 주 등록요청자', value:fmt(latestAReq), sub:'등록 가능 + 등록 불가능', color:'blue'},
+    {label:'이번 주 등록가능자', value:fmt(latestAAv), sub:latestAReq>0?`${Math.round(latestAAv/latestAReq*100)}% 가능`:'', color:'green'},
+    {label:'기간 등록요청자', value:fmt(totAReq), sub:'선택 기간 누계', color:'gold'},
+    {label:'기간 등록불가능자', value:fmt(totAUn), sub:'선택 기간 누계', color:'teal'},
   ]);
 
   const renderAdultTrend = (fw2) => {
     const d2=D.newFamily.filter(r=>fw2.includes(r.date));
     const dt2=d2.map(r=>{const d=new Date(r.date);return `${d.getMonth()+1}/${d.getDate()}`;});
-    mkChart('c-nf-adult-trend','line',dt2,[lds('방문',d2.map(r=>r.adult_visit||0),C.b),lds('등록',d2.map(r=>r.adult_reg||0),C.gr),lds('수료',d2.map(r=>r.adult_comp||0),C.or)]);
+    mkChart('c-nf-adult-trend','line',dt2,[
+      lds('등록요청자',d2.map(r=>nfRequestTotal(r,'adult')),C.b),
+      lds('등록가능자',d2.map(r=>nfVal(r,'adult','available')),C.gr),
+      lds('등록불가능자',d2.map(r=>nfVal(r,'adult','unavailable')),C.or)
+    ]);
   };
   renderAdultTrend(getFW());
   addCardPeriod('c-nf-adult-trend', renderAdultTrend);
 
-  const aRoutes = {
-    '새신자': D.newFamily.reduce((a,r)=>a+(r.adult_new||0),0),
-    '냉담회복': D.newFamily.reduce((a,r)=>a+(r.adult_cold||0),0),
-    '이사': D.newFamily.reduce((a,r)=>a+(r.adult_move||0),0),
-    '부부동반': D.newFamily.reduce((a,r)=>a+(r.adult_couple||0),0),
-    '혼인': D.newFamily.reduce((a,r)=>a+(r.adult_marriage||0),0),
-    '기타': D.newFamily.reduce((a,r)=>a+(r.adult_other||0),0),
-  };
+  const aRoutes = nfReasonTotals(fwRows, 'adult');
   const rLabels = Object.keys(aRoutes).filter(k=>aRoutes[k]>0);
   const rData   = rLabels.map(k=>aRoutes[k]);
   if (rLabels.length) mkChart('c-nf-adult-route', 'doughnut', rLabels, dnut(rLabels, rData, rColors.slice(0,rLabels.length)), {});
 
   const fw = document.getElementById('fw-adult');
-  if (fw && totAV > 0) {
-    fw.innerHTML = [{label:'방문',val:totAV,color:'#2563eb'},{label:'등록',val:totAR,color:'#059669'},{label:'수료',val:totAC,color:'#d97706'}]
+  if (fw && totAReq > 0) {
+    fw.innerHTML = [{label:'등록요청',val:totAReq,color:'#2563eb'},{label:'등록 가능',val:totAAv,color:'#059669'},{label:'등록 불가능',val:totAUn,color:'#d97706'}]
       .map(({label,val,color}) => {
-        const p = Math.round(val/totAV*100)||0;
+        const p = Math.round(val/totAReq*100)||0;
         return `<div class="fr"><div class="fl">${label}</div><div class="fbo"><div class="fbi" style="width:${p}%;background:${color}">${fmt(val)}</div></div><div class="fp">${p}%</div></div>`;
       }).join('');
   }
 
   // 청년
-  const yVisit = D.newFamily.map(r => r.youth_visit||0);
-  const yReg   = D.newFamily.map(r => r.youth_reg||0);
-  const yComp  = D.newFamily.map(r => r.youth_comp||0);
-  const totYV = yVisit.reduce((a,b)=>a+b,0);
-  const totYR = yReg.reduce((a,b)=>a+b,0);
-  const totYC = yComp.reduce((a,b)=>a+b,0);
+  const latestYouth = D.newFamily[D.newFamily.length - 1];
+  const totYReq = fwRows.reduce((a,r)=>a+nfRequestTotal(r,'youth'),0);
+  const totYAv = fwRows.reduce((a,r)=>a+nfVal(r,'youth','available'),0);
+  const totYUn = fwRows.reduce((a,r)=>a+nfVal(r,'youth','unavailable'),0);
+  const latestYReq = nfRequestTotal(latestYouth,'youth');
+  const latestYAv = nfVal(latestYouth,'youth','available');
 
   mkKPI('kk-newfam-youth', [
-    {label:'청년 방문 (누적)', value:fmt(totYV), sub:'집계 기간 합계', color:'purple'},
-    {label:'청년 등록 (누적)', value:fmt(totYR), sub:'집계 기간 합계', color:'green'},
-    {label:'청년 수료 (누적)', value:fmt(totYC), sub:'집계 기간 합계', color:'gold'},
-    {label:'등록→수료 전환율', value:totYR>0?Math.round(totYC/totYR*100)+'%':'–', sub:'', color:'teal'},
+    {label:'이번 주 등록요청자', value:fmt(latestYReq), sub:'등록 가능 + 등록 불가능', color:'purple'},
+    {label:'이번 주 등록가능자', value:fmt(latestYAv), sub:latestYReq>0?`${Math.round(latestYAv/latestYReq*100)}% 가능`:'', color:'green'},
+    {label:'기간 등록요청자', value:fmt(totYReq), sub:'선택 기간 누계', color:'gold'},
+    {label:'기간 등록불가능자', value:fmt(totYUn), sub:'선택 기간 누계', color:'teal'},
   ]);
 
   const renderYouthFamTrend = (fw2) => {
     const d2=D.newFamily.filter(r=>fw2.includes(r.date));
     const dt2=d2.map(r=>{const d=new Date(r.date);return `${d.getMonth()+1}/${d.getDate()}`;});
-    mkChart('c-nf-youth-trend','line',dt2,[lds('방문',d2.map(r=>r.youth_visit||0),C.p),lds('등록',d2.map(r=>r.youth_reg||0),C.gr),lds('수료',d2.map(r=>r.youth_comp||0),C.or)]);
+    mkChart('c-nf-youth-trend','line',dt2,[
+      lds('등록요청자',d2.map(r=>nfRequestTotal(r,'youth')),C.p),
+      lds('등록가능자',d2.map(r=>nfVal(r,'youth','available')),C.gr),
+      lds('등록불가능자',d2.map(r=>nfVal(r,'youth','unavailable')),C.or)
+    ]);
   };
   renderYouthFamTrend(getFW());
   addCardPeriod('c-nf-youth-trend', renderYouthFamTrend);
 
-  const yRoutes = {
-    '새신자': D.newFamily.reduce((a,r)=>a+(r.youth_new||0),0),
-    '냉담회복': D.newFamily.reduce((a,r)=>a+(r.youth_cold||0),0),
-    '이사': D.newFamily.reduce((a,r)=>a+(r.youth_move||0),0),
-    '기타': D.newFamily.reduce((a,r)=>a+(r.youth_other||0),0),
-  };
+  const yRoutes = nfReasonTotals(fwRows, 'youth');
   const yrLabels = Object.keys(yRoutes).filter(k=>yRoutes[k]>0);
   const yrData   = yrLabels.map(k=>yRoutes[k]);
   if (yrLabels.length) mkChart('c-nf-youth-route', 'doughnut', yrLabels, dnut(yrLabels, yrData, rColors.slice(0,yrLabels.length)), {});
@@ -3410,26 +3457,38 @@ function applyNewData(data) {
     // ── 새가족 → D.newFamily ──
     const nf = rec['새가족'] || {};
     if (Object.keys(nf).length > 0) {
-      const adult = nf['장년'] || {};
-      const young = nf['청년'] || {};
+      const adult = nf['장년 새가족'] || nf['장년'] || {};
+      const young = nf['청년 새가족'] || nf['청년'] || {};
+      const n = (...vals) => {
+        for (const val of vals) {
+          if (val !== undefined && val !== null && val !== '') return Number(val) || 0;
+        }
+        return 0;
+      };
       const nfRec = {
         date,
-        adult_visit:    Number(adult['방문'])     || 0,
-        adult_reg:      Number(adult['등록'])     || 0,
-        adult_comp:     Number(adult['수료'])     || 0,
-        adult_new:      Number(adult['새신자'])   || 0,
-        adult_cold:     Number(adult['냉담회복']) || 0,
-        adult_move:     Number(adult['이사'])     || 0,
-        adult_couple:   Number(adult['부부동반']) || 0,
-        adult_marriage: Number(adult['혼인'])     || 0,
-        adult_other:    Number(adult['기타'])     || 0,
-        youth_visit:    Number(young['방문'])     || 0,
-        youth_reg:      Number(young['등록'])     || 0,
-        youth_comp:     Number(young['수료'])     || 0,
-        youth_new:      Number(young['새신자'])   || 0,
-        youth_cold:     Number(young['냉담회복']) || 0,
-        youth_move:     Number(young['이사'])     || 0,
-        youth_other:    Number(young['기타'])     || 0,
+        adult_available:    n(adult['등록 가능'], adult['등록가능'], adult['등록']),
+        adult_unavailable:  n(adult['등록 불가능'], adult['등록불가능']),
+        adult_cold:         n(adult['냉담기'], adult['냉담회복']),
+        adult_move:         n(adult['이사']),
+        adult_mixed_belief: n(adult['짝믿음'], adult['부부동반']),
+        adult_other:        n(adult['기타(이단 등)'], adult['기타']),
+        adult_marriage:     n(adult['결혼(부부)'], adult['혼인']),
+        adult_new_believer: n(adult['초신자'], adult['새신자']),
+        youth_available:    n(young['등록 가능'], young['등록가능'], young['등록']),
+        youth_unavailable:  n(young['등록 불가능'], young['등록불가능']),
+        youth_cold:         n(young['냉담기'], young['냉담회복']),
+        youth_move:         n(young['이사']),
+        youth_mixed_belief: n(young['짝믿음'], young['부부동반']),
+        youth_other:        n(young['기타(이단 등)'], young['기타']),
+        youth_marriage:     n(young['결혼(부부)'], young['혼인']),
+        youth_new_believer: n(young['초신자'], young['새신자']),
+        adult_visit:        n(adult['방문']),
+        adult_reg:          n(adult['등록']),
+        adult_comp:         n(adult['수료']),
+        youth_visit:        n(young['방문']),
+        youth_reg:          n(young['등록']),
+        youth_comp:         n(young['수료']),
       };
       const ni = D.newFamily.findIndex(r => r.date === date);
       if (ni >= 0) D.newFamily[ni] = nfRec; else D.newFamily.push(nfRec);
