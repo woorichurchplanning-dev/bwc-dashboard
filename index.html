@@ -1158,6 +1158,8 @@ const HOME_RENDERERS = {};  // 홈 차트 개별 기간 렌더러
 const HCP_STEPS = [4, 8, 13, 26, 52, 0]; // 0 = 전체
 const HOME_PERIODS = {}; // 차트별 현재 기간 (주)
 let HOME_WEEK_KEY = ''; // 주간현황에서 보고 있는 주차
+const HOME_AUTO_FETCHED_WEEKS = new Set();
+let HOME_AUTO_FETCHING = false;
 
 function getFW() {
   const w = D.weeks;
@@ -1267,6 +1269,57 @@ function getHomeChartWeeks(nWeeks) {
 
 function homeChartOpts(fw, extra = {}) {
   return { ...extra, fw, focusWeek: getHomeWeekKey(getFW()) };
+}
+
+function hasAnyDashboardData(weekKey) {
+  return !!(
+    D.sunday[weekKey] ||
+    D.weekday[weekKey] ||
+    D.dawn[weekKey] ||
+    D.school[weekKey] ||
+    D.youth[weekKey] ||
+    D.cell?.some(r => r.date === weekKey) ||
+    D.leader?.some(r => r.date === weekKey) ||
+    D.newFamily?.some(r => r.date === weekKey)
+  );
+}
+
+function getHomeAutoFetchWeeks() {
+  const periods = Object.values(HOME_PERIODS).filter(v => v !== undefined);
+  const wantedWeeks = periods.length
+    ? Math.min(13, Math.max(...periods.map(v => v === 0 ? 13 : v)))
+    : 8;
+  return getHomeChartWeeks(wantedWeeks).filter(weekKey =>
+    !hasAnyDashboardData(weekKey) && !HOME_AUTO_FETCHED_WEEKS.has(weekKey)
+  );
+}
+
+async function fetchMissingHomeWeeks() {
+  if (HOME_AUTO_FETCHING) return;
+  const home = document.getElementById('s-home');
+  if (!home?.classList.contains('on')) return;
+  const missingWeeks = getHomeAutoFetchWeeks();
+  if (!missingWeeks.length) return;
+
+  missingWeeks.forEach(w => HOME_AUTO_FETCHED_WEEKS.add(w));
+  HOME_AUTO_FETCHING = true;
+  try {
+    const batches = [];
+    for (let i = 0; i < missingWeeks.length; i += 12) batches.push(missingWeeks.slice(i, i + 12));
+    const results = await Promise.all(batches.map(batch =>
+      fetch(APPS_SCRIPT_URL + '?weekKeys=' + batch.join(','))
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    ));
+    results.forEach(raw => {
+      if (raw?.success && raw.data && Object.keys(raw.data).length > 0) applyNewData(raw.data);
+    });
+    mergeHist();
+    initHome();
+  } catch (e) {
+    console.warn('홈 그래프 추가 주차 조회 실패:', e);
+  } finally {
+    HOME_AUTO_FETCHING = false;
+  }
 }
 
 function updatePeriodLabel(fw) {
@@ -2174,6 +2227,7 @@ function initHome() {
   };
 
   IDS8.forEach(id => setHCPStep(id, HOME_PERIODS[id] ?? 8));
+  setTimeout(fetchMissingHomeWeeks, 0);
 }
 
 // ── SUNDAY ──
