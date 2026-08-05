@@ -3716,6 +3716,9 @@ async function fetchFromSheets(weeksBack = 4, fullRefresh = false) {
     if (!fullRefresh && Object.keys(mergedData).length > 0) saveSheetCache(mergedData, weeksBack);
 
     mergeHist();
+    // 새로고침 후 홈 기준 주차를 최신 주차로 이동 (방금 연동한 데이터가 바로 보이도록)
+    const { max: latestWeek } = getHomeRange(getFW());
+    if (latestWeek) HOME_WEEK_KEY = latestWeek;
     Object.keys(DONE).forEach(k => { DONE[k] = false; });
     const cur = document.querySelector('.nt.on');
     if (cur) {
