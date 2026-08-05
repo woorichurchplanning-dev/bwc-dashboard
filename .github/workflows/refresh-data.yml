@@ -1,8 +1,10 @@
 name: Refresh dashboard data
 
 on:
+  repository_dispatch:     # 시트 수정 시 Apps Script가 즉시 트리거 (event_type: sheet-updated)
+    types: [sheet-updated]
   schedule:
-    - cron: '0 20 * * *'   # 매일 UTC 20:00 = KST 05:00
+    - cron: '0 20 * * *'   # 매일 UTC 20:00 = KST 05:00 (백스톱)
     - cron: '0 4 * * 1'    # 월 UTC 04:00 = KST 13:00 (주말 집계 반영)
   workflow_dispatch:       # 수동 실행 버튼
 
