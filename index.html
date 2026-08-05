@@ -427,8 +427,14 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 /* ── RESPONSIVE ── */
 @media (max-width:1199px) { .cg { grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); } }
 @media (max-width:768px) {
-  .hdr { padding:0 var(--s4); height:52px; }
-  .hdr-brand h1 { font-size:13px; }
+  .hdr { padding:0 var(--s3); height:52px; gap:8px; }
+  .hdr-l { min-width:0; flex:0 0 auto; }
+  .hdr-brand { min-width:0; }
+  .hdr-brand h1 { font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hdr-brand p { display:none; }
+  .hdr-r { gap:6px; min-width:0; }
+  .sync-status { min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:10px; }
+  .sync-btn { padding:6px 11px; font-size:12px; white-space:nowrap; flex-shrink:0; }
   nav { padding:0 var(--s3); }
   .nt { padding:0 var(--s4); font-size:12px; height:42px; }
   .nt span:not(.nt-icon) { display:none; }
