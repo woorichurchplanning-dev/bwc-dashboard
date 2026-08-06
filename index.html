@@ -1743,11 +1743,20 @@ const _minMax = {
       if (!node) return;
       const label = Number(pt.val).toLocaleString('ko-KR');
       const color  = isMax ? '#09825d' : '#c0123c';
-      const bgCol  = isMax ? 'rgba(9,130,93,0.12)' : 'rgba(192,18,60,0.12)';
+      const bgCol  = isMax ? '#e6f4ef' : '#fbe7ec';  // 불투명 연한 틴트 — 선/격자 위에서도 또렷
       const lw = ctx.measureText(label).width + PAD * 2;
 
-      // Y: 최고점은 위, 최저점은 아래 — 차트 영역 밖으로 나가지 않게 클램프
-      let ry = isMax ? node.y - LH - 3 : node.y + 3;
+      // Y: 최고점은 위, 최저점은 아래에 배치하되 선과 겹치지 않게 여유(GAP)를 둠.
+      //    가장자리라 공간이 없으면 반대쪽으로 뒤집고, 최종적으로 차트 영역 내로 클램프.
+      const GAP = 7;
+      let ry;
+      if (isMax) {
+        ry = node.y - LH - GAP;
+        if (ry < area.top) ry = node.y + GAP;
+      } else {
+        ry = node.y + GAP;
+        if (ry + LH > area.bottom) ry = node.y - LH - GAP;
+      }
       ry = Math.max(area.top, Math.min(area.bottom - LH, ry));
 
       // X: 레이블이 왼쪽/오른쪽 경계 밖으로 나가지 않게 클램프
@@ -1755,11 +1764,14 @@ const _minMax = {
       rx = Math.max(area.left, Math.min(area.right - lw, rx));
 
       ctx.save();
-      ctx.fillStyle = bgCol;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(rx, ry, lw, LH, 3);
+      if (ctx.roundRect) ctx.roundRect(rx, ry, lw, LH, 4);
       else ctx.rect(rx, ry, lw, LH);
+      ctx.fillStyle = bgCol;            // 불투명 배경으로 뒤 선 가림
       ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = color;          // 색 테두리로 최고/최저 구분
+      ctx.stroke();
       ctx.fillStyle = color;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
@@ -1853,7 +1865,7 @@ function mkChart(id, type, labels, datasets, opts={}) {
           return opts.fw?.[index] === opts.focusWeek ? [label, '기준'] : label;
         }
       } },
-      y:{ stacked:isStack, grid:{color:'rgba(0,0,0,0.04)'}, ticks:{font:{size:10}, callback:n=>isPct?n+'%':fmt(n)} }
+      y:{ stacked:isStack, grace: isLine && !isPct ? '10%' : 0, grid:{color:'rgba(0,0,0,0.04)'}, ticks:{font:{size:10}, callback:n=>isPct?n+'%':fmt(n)} }
     }
   }});
   if (onDrill) ctx.style.cursor = 'pointer';
