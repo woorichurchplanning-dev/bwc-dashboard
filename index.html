@@ -2876,6 +2876,8 @@ function renderCellDist() {
   const dates = fd.map(r => { const d=new Date(r.date); return `${d.getMonth()+1}/${d.getDate()}`; });
   const latest = fd[fd.length-1];
   const titleEl = document.getElementById('cell-trend-title');
+  const cellFields = ['여성','직장(남)','직장(여)','부부(신혼)','시니어(여)','시니어(남)'];
+  const cellFieldValue = (x, label) => Number(x?.breakdown?.[label]) || 0;
 
   if (!dist) {
     if(titleEl) titleEl.textContent = '다락방 전체 적·출석 추이';
@@ -2883,8 +2885,11 @@ function renderCellDist() {
     if (latest?.dists) {
       const dn=Object.keys(latest.dists), dc=dn.map(d=>latest.dists[d].chul||0);
       mkChart('c-cell-dist','bar',dn,[bds('출석',dc,C.p)],{horiz:true});
-      mkTable('t-cell',['교구','적','출석','출석률'],
-        dn.map(d=>{const x=latest.dists[d],r=x.juk>0?Math.round(x.chul/x.juk*100):0; return[d,fmt(x.juk||0),fmt(x.chul||0),r+'%'];}));
+      mkTable('t-cell',['교구',...cellFields,'출석','출석률','비고'],
+        dn.map(d=>{
+          const x=latest.dists[d], r=x.juk>0?Math.round(x.chul/x.juk*100):0;
+          return [d,...cellFields.map(label=>fmt(cellFieldValue(x,label))),fmt(x.chul||0),r+'%',x.note||''];
+        }));
     }
   } else {
     if(titleEl) titleEl.textContent = `${dist} 다락방 적·출석 추이`;
@@ -2892,8 +2897,14 @@ function renderCellDist() {
     mkChart('c-cell-trend','line',dates,[lds('적',juk,C.b),lds('출석',chul,C.gr)]);
     const lDist=latest?.dists?.[dist];
     if(lDist) {
-      mkChart('c-cell-dist','bar',['적','출석'],[{data:[lDist.juk||0,lDist.chul||0],backgroundColor:[C.b+'cc',C.p+'cc'],borderRadius:4,borderWidth:0}],{});
-      mkTable('t-cell',['항목','수치'],[['적',fmt(lDist.juk||0)],['출석',fmt(lDist.chul||0)],['출석률',(lDist.juk>0?Math.round(lDist.chul/lDist.juk*100):0)+'%']]);
+      const breakdownData = cellFields.map(label => cellFieldValue(lDist, label));
+      mkChart('c-cell-dist','bar',cellFields,[{data:breakdownData,backgroundColor:[C.pk,C.b,C.teal,C.gold,C.gr,C.p].map(c=>c+'cc'),borderRadius:4,borderWidth:0}],{});
+      mkTable('t-cell',['항목','수치'],[
+        ...cellFields.map(label => [label, fmt(cellFieldValue(lDist, label))]),
+        ['출석',fmt(lDist.chul||0)],
+        ['출석률',(lDist.juk>0?Math.round(lDist.chul/lDist.juk*100):0)+'%'],
+        ['비고',lDist.note||'']
+      ]);
     }
   }
 }
@@ -3556,11 +3567,16 @@ function applyNewData(data) {
     if (Object.keys(dalak).length > 0) {
       const dists = {};
       let totalChul = 0;
+      const cellLabels = ['여성','직장(남)','직장(여)','부부(신혼)','시니어(여)','시니어(남)'];
       Object.entries(dalak).forEach(([교구, val]) => {
         if (!val || typeof val !== 'object') return;
-        const chul = (Number(val['여성'])||0) + (Number(val['남성'])||0)
-                   + (Number(val['직장인'])||0) + (Number(val['부부'])||0);
-        dists[교구] = { juk: 0, chul };
+        const breakdown = {};
+        cellLabels.forEach(label => { breakdown[label] = Number(val[label]) || 0; });
+        const newChul = cellLabels.reduce((sum, label) => sum + breakdown[label], 0);
+        const legacyChul = (Number(val['여성'])||0) + (Number(val['남성'])||0)
+                         + (Number(val['직장인'])||0) + (Number(val['부부'])||0);
+        const chul = newChul || legacyChul;
+        dists[교구] = { juk: 0, chul, breakdown, note: val['비고'] || '' };
         totalChul += chul;
       });
       const cellRec = { date, totalJuk: 0, totalChul, dists };
