@@ -1676,7 +1676,7 @@ const _minMax = {
     const allPts = [];
     chart.data.datasets.forEach((ds, di) => {
       const meta = chart.getDatasetMeta(di);
-      if (!meta.visible || meta.type === 'bar') return;
+      if (!meta.visible || meta.type === 'bar' || meta.type === 'doughnut' || meta.type === 'pie') return;
       ds.data.forEach((val, i) => {
         if (val != null) allPts.push({ val, di, i });
       });
@@ -1750,6 +1750,9 @@ function mkChart(id, type, labels, datasets, opts={}) {
   const onDrill = opts.drill || null;
   const isPie = type === 'doughnut' || type === 'pie';
   const isLine = type === 'line';
+  // 기준 주차 강조 — focusWeek이 주어진 차트에서만. 예전에는 둘 다 undefined일 때
+  // 참이 되어 모든 라벨에 '기준'이 붙었다.
+  const isFocus = i => !isH && !!opts.focusWeek && opts.fw?.[i] === opts.focusWeek;
   const chart = new Chart(ctx, { type, data:{labels,datasets}, options:{
     responsive:true, maintainAspectRatio:true,
     indexAxis: isH ? 'y' : 'x',
@@ -1811,12 +1814,12 @@ function mkChart(id, type, labels, datasets, opts={}) {
     scales: isPie ? {} : {
       x:{ stacked:isStack, grid:{color:'rgba(0,0,0,0.04)'}, ticks:{
         maxRotation:isH?0:45,
-        color: c => !isH && opts.fw?.[c.index] === opts.focusWeek ? '#0f172a' : '#64748b',
-        font: c => ({ size:10, weight: !isH && opts.fw?.[c.index] === opts.focusWeek ? '800' : '400' }),
+        color: c => isFocus(c.index) ? '#0f172a' : '#64748b',
+        font: c => ({ size:10, weight: isFocus(c.index) ? '800' : '400' }),
         callback: function(value, index) {
           if (isH) return isPct ? value + '%' : fmt(value);
           const label = this.getLabelForValue(value);
-          return opts.fw?.[index] === opts.focusWeek ? [label, '기준'] : label;
+          return isFocus(index) ? [label, '기준'] : label;
         }
       } },
       y:{ stacked:isStack, grace: isLine && !isPct ? '10%' : 0, grid:{color:'rgba(0,0,0,0.04)'}, ticks:{font:{size:10}, callback:n=>isPct?n+'%':fmt(n)} }
@@ -1874,6 +1877,25 @@ function schoolDeptTotal(w, dept) {
   return total || null;
 }
 function schoolDeptValue(w, dept) { return v(schoolDeptTotal(w, dept)); }
+/* 부서 묶음 합계 — 모든 부서가 미입력이면 null.
+   0으로 채우면 '출석 0명'으로 오독되고 추이선이 바닥까지 떨어진다. */
+function schoolGroupTotal(w, depts) {
+  let sum = 0, has = false;
+  (depts || SCHOOL_DEPTS).forEach(d => {
+    const x = schoolDeptTotal(w, d);
+    if (x != null) { sum += x; has = true; }
+  });
+  return has ? sum : null;
+}
+/* 시리즈에서 마지막 실측치의 인덱스 (미입력 주 건너뛰기) */
+function lastFilledIdx(arr, before) {
+  for (let i = (before === undefined ? arr.length : before) - 1; i >= 0; i--) {
+    if (arr[i] != null) return i;
+  }
+  return -1;
+}
+/* 미입력은 0이 아니라 '–' */
+function fmtOr(n, dash = '–') { return n == null ? dash : fmt(n); }
 function schoolSeries(dept, fw)  { return (fw||getFW()).map(w => nn(schoolDeptTotal(w, dept))); }
 /* 주일학교 전 부서 합계 — initHome/initYearComp 양쪽에서 쓰이므로 모듈 스코프에 둔다 */
 function schoolTot(w) {
@@ -2596,40 +2618,33 @@ function initYouth() {
 // ── SCHOOL ──
 function initSchool() {
   const fw=getFW(); const wl=getWL(fw); if(!fw.length) return;
-  const totals = fw.map(w => SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0));
-  const latest = totals[totals.length-1], prev = totals[totals.length-2]||latest;
-  const dTot = latest-prev;
-  const maxTot = Math.max(...totals);
-  const maxW = fw[totals.indexOf(maxTot)];
-  const maxDate = maxW ? `${new Date(maxW).getMonth()+1}/${new Date(maxW).getDate()}` : '';
-  const lW = fw[fw.length-1];
-
-  // 전체 탭
-  mkKPI('kk-school',[
-    {label:'주일학교 합계 (최근)',value:fmt(latest),sub:`${fw.length}주 평균 ${fmt(avg(totals))}명`,color:'blue',
-      trend:`${dTot>=0?'▲':'▼'} 전주 ${dTot>=0?'+':''}${fmt(dTot)}`,td:dTot>=0?'up':'dn'},
-    {label:'중등부 (최근)',value:fmt(schoolDeptValue(lW,'중등부')),sub:'최대 부서',color:'purple'},
-    {label:'고등부 (최근)',value:fmt(schoolDeptValue(lW,'고등부')),sub:'',color:'teal'},
-    {label:'기간 내 최고',value:fmt(maxTot),sub:maxDate,color:'gold'},
-  ]);
+  const totals = fw.map(w => schoolGroupTotal(w));
   const renderSchoolTrend = (fw2) => {
-    const tots2=fw2.map(w=>SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0));
+    const tots2 = fw2.map(w => schoolGroupTotal(w));
     mkChart('c-school-trend','line',getWL(fw2),[lds('주일학교 합계',tots2,C.b,true)]);
   };
   const renderSchoolKpi = (fw2) => {
-    const tots2=fw2.map(w=>SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0));
-    const lat2=tots2[tots2.length-1], prv2=tots2[tots2.length-2]||lat2, dT2=lat2-prv2;
-    const maxT2=Math.max(...tots2), maxW2=fw2[tots2.indexOf(maxT2)];
-    const maxD2=maxW2?`${new Date(maxW2).getMonth()+1}/${new Date(maxW2).getDate()}`:'';
-    const lW2=fw2[fw2.length-1];
+    const tots2 = fw2.map(w => schoolGroupTotal(w));
+    // '최근'은 마지막 주가 아니라 실제로 입력된 마지막 주 기준
+    const li = lastFilledIdx(tots2), pi = lastFilledIdx(tots2, li);
+    const lat2 = li >= 0 ? tots2[li] : null;
+    const prv2 = pi >= 0 ? tots2[pi] : null;
+    const dT2 = lat2 != null && prv2 != null ? lat2 - prv2 : null;
+    const lW2 = li >= 0 ? fw2[li] : '';
+    const lblDate = lW2 ? `${Number(lW2.slice(5,7))}/${Number(lW2.slice(8,10))} 기준` : '입력 대기';
+    const filled = tots2.filter(x => x != null);
+    const maxT2 = filled.length ? Math.max(...filled) : null;
+    const maxW2 = maxT2 != null ? fw2[tots2.indexOf(maxT2)] : '';
+    const maxD2 = maxW2 ? `${Number(maxW2.slice(5,7))}/${Number(maxW2.slice(8,10))}` : '';
     mkKPI('kk-school',[
-      {label:'주일학교 합계 (최근)',value:fmt(lat2),sub:`${fw2.length}주 평균 ${fmt(avg(tots2))}명`,color:'blue',
-        trend:`${dT2>=0?'▲':'▼'} 전주 ${dT2>=0?'+':''}${fmt(dT2)}`,td:dT2>=0?'up':'dn'},
-      {label:'중등부 (최근)',value:fmt(schoolDeptValue(lW2,'중등부')),sub:'최대 부서',color:'purple'},
-      {label:'고등부 (최근)',value:fmt(schoolDeptValue(lW2,'고등부')),sub:'',color:'teal'},
-      {label:'기간 내 최고',value:fmt(maxT2),sub:maxD2,color:'gold'},
+      {label:'주일학교 합계 (최근)',value:fmtOr(lat2),sub:`${lblDate} · ${fw2.length}주 평균 ${fmt(avg(tots2))}명`,color:'blue',
+        trend: dT2 == null ? '' : `${dT2>=0?'▲':'▼'} 직전 ${dT2>=0?'+':''}${fmt(dT2)}`, td: dT2>=0?'up':'dn'},
+      {label:'중등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'중등부')),sub:lblDate,color:'purple'},
+      {label:'고등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'고등부')),sub:lblDate,color:'teal'},
+      {label:'기간 내 최고',value:fmtOr(maxT2),sub:maxD2,color:'gold'},
     ]);
   };
+  renderSchoolKpi(fw);
   renderSchoolTrend(fw);
   addCardPeriod('c-school-trend', renderSchoolTrend, renderSchoolKpi);
   const deptSums = SCHOOL_DEPTS.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
@@ -2637,24 +2652,27 @@ function initSchool() {
   const avgs4 = SCHOOL_DEPTS.map(d=>last4avg(fw.map(w=>schoolDeptValue(w,d))));
   mkChart('c-school-bar','bar',SCHOOL_DEPTS,[{data:avgs4,backgroundColor:SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
   mkTable('t-school',['날짜',...SCHOOL_DEPTS,'합계'],
-    fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmt(schoolDeptValue(w,d))),
-      fmt(SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0))]));
+    fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmtOr(schoolDeptTotal(w,d))),
+      fmtOr(schoolGroupTotal(w))]));
 
   // 그룹별 서브탭
   Object.entries(SCHOOL_GROUPS).forEach(([key, grp]) => {
     const depts = grp.depts;
     const colors = depts.map((_,i)=>CA[i%CA.length]);
-    const groupTotals = fw.map(w=>depts.reduce((a,d)=>a+schoolDeptValue(w,d),0));
-    const gLatest = groupTotals[groupTotals.length-1];
-    const gPrev   = groupTotals[groupTotals.length-2]||gLatest;
-    const gDiff   = gLatest-gPrev;
+    const groupTotals = fw.map(w=>schoolGroupTotal(w, depts));
+    const gi = lastFilledIdx(groupTotals), gp = lastFilledIdx(groupTotals, gi);
+    const gLatest = gi >= 0 ? groupTotals[gi] : null;
+    const gPrev   = gp >= 0 ? groupTotals[gp] : null;
+    const gDiff   = gLatest != null && gPrev != null ? gLatest - gPrev : null;
+    const gW      = gi >= 0 ? fw[gi] : '';
+    const gDate   = gW ? `${Number(gW.slice(5,7))}/${Number(gW.slice(8,10))} 기준` : '입력 대기';
     const gSums   = depts.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
     mkKPI(`kk-school-${key}`,[
-      {label:`${grp.label} 합계 (최근)`,value:fmt(gLatest),sub:`평균 ${fmt(avg(groupTotals))}명`,color:grp.color,
-        trend:`${gDiff>=0?'▲':'▼'} 전주 ${gDiff>=0?'+':''}${fmt(gDiff)}`,td:gDiff>=0?'up':'dn'},
-      ...depts.slice(0,3).map(d=>({label:d+' (최근)',value:fmt(schoolDeptValue(lW,d)),sub:'',color:'teal'})),
+      {label:`${grp.label} 합계 (최근)`,value:fmtOr(gLatest),sub:`${gDate} · 평균 ${fmt(avg(groupTotals))}명`,color:grp.color,
+        trend: gDiff == null ? '' : `${gDiff>=0?'▲':'▼'} 직전 ${gDiff>=0?'+':''}${fmt(gDiff)}`, td: gDiff>=0?'up':'dn'},
+      ...depts.slice(0,3).map(d=>({label:d+' (최근)',value:fmtOr(schoolDeptTotal(gW,d)),sub:gDate,color:'teal'})),
     ]);
-    mkChart(`c-school-${key}-trend`,'line',wl,depts.map((d,i)=>lds(d,fw.map(w=>schoolDeptValue(w,d)),colors[i])));
+    mkChart(`c-school-${key}-trend`,'line',wl,depts.map((d,i)=>lds(d,schoolSeries(d,fw),colors[i])));
     mkChart(`c-school-${key}-pie`,'doughnut',depts,dnut(depts,gSums,colors),{});
   });
 }
@@ -2665,15 +2683,15 @@ function renderSchoolDept() {
   const dept = sel?.value || '';
   if (!dept) {
     // 전체 선택 시 전체 추이 복원
-    const tots=fw.map(w=>SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0));
+    const tots=fw.map(w=>schoolGroupTotal(w));
     mkChart('c-school-trend','line',wl,[lds('주일학교 합계',tots,C.b,true)]);
     const deptSums=SCHOOL_DEPTS.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
     mkChart('c-school-pie','doughnut',SCHOOL_DEPTS,dnut(SCHOOL_DEPTS,deptSums,SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length])),{});
     const avgs4=SCHOOL_DEPTS.map(d=>last4avg(fw.map(w=>schoolDeptValue(w,d))));
     mkChart('c-school-bar','bar',SCHOOL_DEPTS,[{data:avgs4,backgroundColor:SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
     mkTable('t-school',['날짜',...SCHOOL_DEPTS,'합계'],
-      fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmt(schoolDeptValue(w,d))),
-        fmt(SCHOOL_DEPTS.reduce((a,d)=>a+schoolDeptValue(w,d),0))]));
+      fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmtOr(schoolDeptTotal(w,d))),
+        fmtOr(schoolGroupTotal(w))]));
     return;
   }
   // 특정 부서 선택
@@ -2702,8 +2720,8 @@ function renderSchoolDept() {
 // ── WEEKDAY ──
 function initWD() {
   const fw=getFW(); const wl=getWL(fw); if(!fw.length) return;
-  const wedOff=fw.map(w=>v(D.weekday[w]?.wed_off)), wedOn=fw.map(w=>v(D.weekday[w]?.wed_on));
-  const friOff=fw.map(w=>v(D.weekday[w]?.fri_off)), friOn=fw.map(w=>v(D.weekday[w]?.fri_on));
+  const wedOff=fw.map(w=>nn(D.weekday[w]?.wed_off)), wedOn=fw.map(w=>nn(D.weekday[w]?.wed_on));
+  const friOff=fw.map(w=>nn(D.weekday[w]?.fri_off)), friOn=fw.map(w=>nn(D.weekday[w]?.fri_on));
   const dawnOn=dawnOnline(fw), dawnOff=dawnOffline(fw);
   const OUTLIERS=['2026-04-05','2026-01-04'];
   const wedOnAvg=avg(wedOn.filter((_,i)=>!OUTLIERS.includes(fw[i])));
@@ -2727,7 +2745,7 @@ function initWD() {
   mkChart('c-dawn-off','line',wl,[lds('현장 합계',dawnOff,C.gr,true)]);
   const days=['월','화','수','목','금','토'];
   const dayColors=[C.b,C.p,C.g,C.or,C.t,C.pk];
-  mkChart('c-dawn-day','line',wl,days.map((d,i)=>lds(d,fw.map(w=>v(D.dawn[w]?.online?.[d])),dayColors[i])));
+  mkChart('c-dawn-day','line',wl,days.map((d,i)=>lds(d,fw.map(w=>nn(D.dawn[w]?.online?.[d])),dayColors[i])));
 }
 
 // ── LEADER ──
@@ -3407,7 +3425,7 @@ function applyHash(){
   if(currentTab() !== tab) sw(tab, {silent:true});
   if(sub){
     if(tab === 'special') spTab(sub, {silent:true});
-    else setTimeout(()=>ss2(tab, sub, {silent:true}), 80);
+    else setTimeout(()=>ss2(subPrefix(tab), sub, {silent:true}), 80);
   }
 }
 
@@ -3430,15 +3448,25 @@ function setHCP(chartId, nWeeks) { setHCPStep(chartId, nWeeks); }
 
 const SUB_TAB = {};  // 탭별 현재 서브탭 — 해시 라우팅용
 
+/* 탭별 하위탭 id 접두어 — 주일예배만 'sunday' 섹션에 'sun-*' id를 쓴다 */
+function subPrefix(tab){
+  const first = document.querySelector('#s-' + tab + ' .ss');
+  if(!first) return tab;
+  return first.id.slice(0, first.id.lastIndexOf('-'));
+}
+
 function ss2(sec,sub,opts){
-  const par=document.getElementById('s-'+sec);
-  const t=document.getElementById(sec+'-'+sub);
-  if(!par || !t) return;
+  const t = document.getElementById(sec + '-' + sub);
+  const par = t && t.closest('.sec');
+  if(!t || !par) return;
+  const tab = par.id.replace(/^s-/, '');
   par.querySelectorAll('.stab').forEach(el=>el.classList.toggle('on',(el.getAttribute('onclick')||'').includes(`'${sub}'`)));
   par.querySelectorAll('.ss').forEach(el=>el.classList.remove('on'));
   t.classList.add('on');
-  SUB_TAB[sec] = sub;
-  if(!opts?.silent) writeHash(sec, sub);
+  SUB_TAB[tab] = sub;
+  // 숨어 있는 동안 0px로 그려진 차트를 다시 그린다
+  t.querySelectorAll('canvas').forEach(c => { const ch = Chart.getChart(c); if (ch) ch.resize(); });
+  if(!opts?.silent) writeHash(tab, sub);
 }
 
 // ── 구글 시트 연동 (JSONP) ──
