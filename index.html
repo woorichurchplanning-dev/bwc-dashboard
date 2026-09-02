@@ -464,6 +464,35 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   .tgl-btn { padding:0 10px; font-size:11px; }
 }
 
+/* ── 연도별 비교 ── */
+.yc-ctl {
+  display:flex; align-items:center; gap:var(--s3); flex-wrap:wrap;
+  padding:var(--s3) var(--s4); margin-bottom:var(--s5);
+  background:var(--color-bg-subtle); border:1px solid var(--color-border-default); border-radius:var(--r);
+}
+.yc-ctl-lbl { font-size:11px; font-weight:700; color:var(--color-text-tertiary); letter-spacing:.3px; }
+.yc-seg-group { display:flex; gap:2px; background:var(--color-bg-muted); border-radius:8px; padding:2px; }
+.yc-seg {
+  border:0; background:transparent; color:var(--color-text-secondary);
+  font-size:12px; font-weight:600; padding:6px 12px; border-radius:6px; cursor:pointer;
+  transition:background var(--t-fast), color var(--t-fast); font-family:inherit; white-space:nowrap;
+}
+.yc-seg:hover { color:var(--color-text-primary); }
+.yc-seg.on { background:var(--color-bg-surface); color:var(--color-accent); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+.yc-check { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--color-text-secondary); cursor:pointer; }
+.yc-banner {
+  display:flex; align-items:flex-start; gap:var(--s3);
+  padding:var(--s3) var(--s4); margin-bottom:var(--s5);
+  background:var(--color-accent-light); border:1px solid rgba(99,91,255,.18);
+  border-radius:var(--r); font-size:13px; line-height:1.6; color:var(--color-text-secondary);
+}
+.yc-banner b { color:var(--color-text-primary); }
+.yc-banner:empty { display:none; }
+table.yc-heat td, table.yc-heat th { text-align:center; font-variant-numeric:tabular-nums; white-space:nowrap; }
+table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
+.yc-cell { display:block; border-radius:5px; padding:5px 4px; font-size:12px; font-weight:600; }
+.yc-d { display:block; font-size:10px; font-weight:600; opacity:.8; margin-top:1px; }
+
 /* ── PRINT ── */
 @media print {
   @page { size:A4 portrait; margin:16mm 12mm; }
@@ -834,11 +863,11 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
     </div>
     <div class="kg" id="kk-school"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">주일학교 전체 출석 추이</div></div></div><canvas id="c-school-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">부서별 비중 (누적)</div></div></div><canvas id="c-school-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct" id="ct-school-trend">주일학교 전체 출석 추이</div></div></div><canvas id="c-school-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct" id="ct-school-pie">부서별 비중 (누적)</div></div></div><canvas id="c-school-pie"></canvas></div>
     </div>
-    <div class="cc" style="margin-bottom:16px"><div class="ch"><div><div class="ct">부서별 최근 4주 평균 출석</div></div></div><canvas id="c-school-bar" style="max-height:380px"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct">부서별 주별 출석 상세</div></div></div>
+    <div class="cc" style="margin-bottom:16px"><div class="ch"><div><div class="ct" id="ct-school-bar">부서별 최근 4주 평균 출석</div></div></div><canvas id="c-school-bar" style="max-height:380px"></canvas></div>
+    <div class="cc"><div class="ch"><div><div class="ct" id="ct-school-table">부서별 주별 출석 상세</div></div></div>
       <div style="overflow-x:auto"><table id="t-school"></table></div>
     </div>
   </div>
@@ -977,86 +1006,66 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 <!-- ═══ YEAR COMPARISON ═══ -->
 <section class="sec" id="s-yearcomp">
   <div class="page-hdr">
-    <div class="page-hdr-title"><h2>연도별 비교</h2><p>2023 · 2024 · 2025 · 2026 — 같은 주차·월 기준 연도별 출석 추이 비교</p></div>
+    <div class="page-hdr-title"><h2>연도별 비교</h2><p>같은 <b>주차 번호</b>로 정렬해 연도 간 출석을 비교합니다 — 결측 주가 있어도 시점이 밀리지 않습니다</p></div>
   </div>
   <div class="stabs">
-    <button class="stab on" onclick="ss2('yearcomp','week')">주차별</button>
-    <button class="stab" onclick="ss2('yearcomp','month')">월별</button>
-    <button class="stab" onclick="ss2('yearcomp','point')">특정날 비교</button>
+    <button class="stab on" onclick="ss2('yearcomp','summary')">연도 요약</button>
+    <button class="stab" onclick="ss2('yearcomp','trend')">추이 비교</button>
+    <button class="stab" onclick="ss2('yearcomp','point')">특정 주일 비교</button>
   </div>
 
-  <div class="ss on" id="yearcomp-week">
-    <div class="cg">
-      <div class="cc" style="grid-column:1/-1">
-        <div class="ch"><div><div class="ct">주일 장년 출석 — 연도별 (주차)</div><div class="cs">서현+송림 합계</div></div></div>
-        <canvas id="c-yc-wk-adult"></canvas>
+  <!-- ─── 연도 요약 ─── -->
+  <div class="ss on" id="yearcomp-summary">
+    <div class="yc-banner" id="yc-summary-banner"></div>
+    <div class="kg" id="kk-yearcomp"></div>
+    <div class="cc">
+      <div class="ch">
+        <div><div class="ct">연도 × 월 평균 출석</div><div class="cs">셀 색은 전년 같은 달 대비 증감</div></div>
+        <select class="dist-sel" id="yc-heat-metric" onchange="renderYCHeat()"></select>
       </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">주일학교 출석 — 연도별 (주차)</div></div></div>
-        <canvas id="c-yc-wk-school"></canvas>
-      </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">청년교구 출석 — 연도별 (주차)</div></div></div>
-        <canvas id="c-yc-wk-youth"></canvas>
-      </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">수요예배 — 연도별 (주차)</div></div></div>
-        <canvas id="c-yc-wk-wed"></canvas>
-      </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">금요기도회 — 연도별 (주차)</div></div></div>
-        <canvas id="c-yc-wk-fri"></canvas>
-      </div>
+      <div style="overflow-x:auto"><table id="t-yc-heat" class="yc-heat"></table></div>
     </div>
   </div>
 
-  <div class="ss" id="yearcomp-month">
-    <div class="cg">
-      <div class="cc" style="grid-column:1/-1">
-        <div class="ch"><div><div class="ct">주일 장년 출석 — 연도별 (월 평균)</div><div class="cs">서현+송림 합계</div></div></div>
-        <canvas id="c-yc-mo-adult"></canvas>
+  <!-- ─── 추이 비교 ─── -->
+  <div class="ss" id="yearcomp-trend">
+    <div class="yc-ctl">
+      <span class="yc-ctl-lbl">지표</span>
+      <div class="yc-seg-group" id="yc-metric-btns"></div>
+      <span class="yc-ctl-lbl">보기</span>
+      <div class="yc-seg-group">
+        <button class="yc-seg on" id="yc-gran-week" onclick="setYCGran('week')">주차별</button>
+        <button class="yc-seg" id="yc-gran-month" onclick="setYCGran('month')">월 평균</button>
       </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">주일학교 출석 — 연도별 (월 평균)</div></div></div>
-        <canvas id="c-yc-mo-school"></canvas>
-      </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">청년교구 출석 — 연도별 (월 평균)</div></div></div>
-        <canvas id="c-yc-mo-youth"></canvas>
-      </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">수요예배 — 연도별 (월 평균)</div></div></div>
-        <canvas id="c-yc-mo-wed"></canvas>
-      </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">금요기도회 — 연도별 (월 평균)</div></div></div>
-        <canvas id="c-yc-mo-fri"></canvas>
-      </div>
+      <label class="yc-check"><input type="checkbox" id="yc-smooth" onchange="renderYCTrend()"> 4주 이동평균</label>
+    </div>
+    <div class="cc">
+      <div class="ch"><div><div class="ct" id="yc-trend-title">연도별 추이</div><div class="cs" id="yc-trend-sub"></div></div></div>
+      <canvas id="c-yc-main"></canvas>
+    </div>
+    <div class="cc">
+      <div class="ch"><div><div class="ct" id="yc-year-title">연도별 요약</div><div class="cs">선택 지표 기준</div></div></div>
+      <div style="overflow-x:auto"><table id="t-yc-year"></table></div>
     </div>
   </div>
 
+  <!-- ─── 특정 주일 비교 ─── -->
   <div class="ss" id="yearcomp-point">
-    <div style="padding:var(--s5); background:var(--color-bg-subtle); border-radius:var(--r); margin-bottom:var(--s5); display:flex; gap:var(--s5); flex-wrap:wrap; align-items:center;">
-      <div style="display:flex; gap:var(--s3); align-items:center;">
-        <label style="font-weight:600; color:var(--color-text-secondary);">기준 날짜:</label>
-        <select id="yc-point-date" onchange="updateYCPoint()" style="padding:var(--s2) var(--s3); border:1px solid var(--color-border-default); border-radius:6px; font-size:13px;">
-        </select>
-      </div>
-      <div style="display:flex; gap:var(--s3); align-items:center;">
-        <label style="font-weight:600; color:var(--color-text-secondary);">부서 선택:</label>
-        <select id="yc-point-dept" onchange="updateYCPoint()" style="padding:var(--s2) var(--s3); border:1px solid var(--color-border-default); border-radius:6px; font-size:13px;">
-        </select>
-      </div>
-      <div style="display:flex; gap:var(--s3); align-items:center;">
-        <label style="font-weight:600; color:var(--color-text-secondary);">표시 방식:</label>
-        <select id="yc-point-mode" onchange="updateYCPoint()" style="padding:var(--s2) var(--s3); border:1px solid var(--color-border-default); border-radius:6px; font-size:13px;">
-          <option value="separate">따로 보기</option>
-          <option value="overlay">겹쳐서 보기</option>
-          <option value="table">표로 보기</option>
-        </select>
-      </div>
+    <div class="yc-ctl">
+      <span class="yc-ctl-lbl">기준 주일</span>
+      <select class="dist-sel" id="yc-point-date" onchange="updateYCPoint()"></select>
+      <span class="yc-ctl-lbl">항목</span>
+      <select class="dist-sel" id="yc-point-dept" onchange="updateYCPoint()"></select>
     </div>
-    <div id="yc-point-content" style="display:flex; flex-direction:column; gap:var(--s5);"></div>
+    <div class="yc-banner" id="yc-point-banner"></div>
+    <div class="cc">
+      <div class="ch"><div><div class="ct" id="yc-point-title">연도별 비교</div><div class="cs">각 연도에서 같은 주차 번호에 해당하는 주일</div></div></div>
+      <canvas id="c-yc-point" style="max-height:320px"></canvas>
+    </div>
+    <div class="cc">
+      <div class="ch"><div><div class="ct">비교 상세</div></div></div>
+      <div style="overflow-x:auto"><table id="t-yc-point"></table></div>
+    </div>
   </div>
 </section>
 
@@ -1080,19 +1089,48 @@ const D = {"weeks":[],"sunday":{},"weekday":{},"dawn":{},"school":{},"youth":{}}
 // ── 과거 3년 통계 데이터 (XLS 파싱 결과) ──
 const HIST={"weeks":["2023-06-11","2023-06-18","2023-06-25","2023-07-02","2023-07-09","2023-07-16","2023-07-23","2023-07-30","2023-08-06","2023-08-13","2023-08-20","2023-08-27","2023-09-03","2023-09-10","2023-09-17","2023-09-24","2023-10-01","2023-10-08","2023-10-15","2023-10-22","2023-10-29","2023-11-05","2023-11-12","2023-11-19","2023-11-26","2023-12-03","2023-12-10","2023-12-17","2023-12-24","2023-12-31","2024-01-07","2024-01-14","2024-01-21","2024-01-28","2024-02-04","2024-02-11","2024-02-18","2024-02-25","2024-03-03","2024-03-10","2024-03-17","2024-03-24","2024-03-31","2024-04-07","2024-04-14","2024-04-21","2024-04-28","2024-05-05","2024-05-12","2024-05-19","2024-05-26","2024-06-02","2024-06-09","2024-06-16","2024-06-23","2024-06-30","2024-07-07","2024-07-14","2024-07-21","2024-07-28","2024-08-04","2024-08-11","2024-08-18","2024-08-25","2024-09-01","2024-09-08","2024-09-15","2024-09-22","2024-09-29","2024-10-06","2024-10-13","2024-10-20","2024-10-27","2024-11-03","2024-11-10","2024-11-17","2024-11-24","2024-12-01","2024-12-08","2024-12-15","2024-12-22","2024-12-29","2025-01-05","2025-01-12","2025-01-19","2025-01-26","2025-02-02","2025-02-09","2025-02-16","2025-02-23","2025-03-02","2025-03-09","2025-03-16","2025-03-23","2025-03-30","2025-04-06","2025-04-13","2025-04-20","2025-04-27","2025-05-04","2025-05-11","2025-05-18","2025-05-25","2025-06-01","2025-06-08","2025-06-15","2025-06-22","2025-06-29","2025-07-06","2025-07-13","2025-07-20","2025-07-27","2025-08-03","2025-08-10","2025-08-17","2025-08-24","2025-08-31","2025-09-07","2025-09-14","2025-09-21","2025-09-28","2025-10-05","2025-10-12","2025-10-19","2025-10-26","2025-11-02","2025-11-09","2025-11-16","2025-11-23","2025-11-30","2025-12-07","2025-12-14","2025-12-21","2025-12-28"],"sunday":{"2023-06-11":{"jangnyeon":3237,"songrim":2049,"youth":null,"school":2245,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":631,"송림":109},"2부":{"장년":1007,"송림":673},"3부":{"장년":1599,"송림":1267},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-06-18":{"jangnyeon":3373,"songrim":2073,"youth":null,"school":2295,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":661,"송림":97},"2부":{"장년":1135,"송림":735},"3부":{"장년":1577,"송림":1241},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-06-25":{"jangnyeon":3355,"songrim":2116,"youth":null,"school":2202,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":710,"송림":140},"2부":{"장년":1100,"송림":736},"3부":{"장년":1545,"송림":1240},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-07-02":{"jangnyeon":3479,"songrim":2135,"youth":null,"school":2259,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":652,"송림":114},"2부":{"장년":1247,"송림":743},"3부":{"장년":1580,"송림":1278},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-07-09":{"jangnyeon":3350,"songrim":2058,"youth":null,"school":2294,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":658,"송림":131},"2부":{"장년":1135,"송림":701},"3부":{"장년":1557,"송림":1226},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-07-16":{"jangnyeon":2792,"songrim":1973,"youth":null,"school":2369,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":514,"송림":124},"2부":{"장년":965,"송림":675},"3부":{"장년":1313,"송림":1174},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-07-23":{"jangnyeon":1945,"songrim":1645,"youth":null,"school":2213,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":377,"송림":103},"2부":{"장년":699,"송림":562},"3부":{"장년":869,"송림":980},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-07-30":{"jangnyeon":2672,"songrim":1792,"youth":null,"school":1451,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":508,"송림":104},"2부":{"장년":875,"송림":574},"3부":{"장년":1289,"송림":1114},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-08-06":{"jangnyeon":2656,"songrim":1982,"youth":null,"school":2093,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":561,"송림":135},"2부":{"장년":898,"송림":668},"3부":{"장년":1197,"송림":1179},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-08-13":{"jangnyeon":2909,"songrim":1960,"youth":null,"school":2091,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":551,"송림":101},"2부":{"장년":1002,"송림":696},"3부":{"장년":1356,"송림":1163},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-08-20":{"jangnyeon":3430,"songrim":2124,"youth":null,"school":2237,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":641,"송림":121},"2부":{"장년":1178,"송림":724},"3부":{"장년":1611,"송림":1279},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-08-27":{"jangnyeon":3532,"songrim":2208,"youth":null,"school":2253,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":703,"송림":136},"2부":{"장년":1232,"송림":777},"3부":{"장년":1597,"송림":1295},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-09-03":{"jangnyeon":3497,"songrim":1895,"youth":null,"school":2273,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":695,"송림":144},"2부":{"장년":1185,"송림":698},"3부":{"장년":1617,"송림":1053},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-09-10":{"jangnyeon":3565,"songrim":2191,"youth":null,"school":2383,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":691,"송림":124},"2부":{"장년":1251,"송림":735},"3부":{"장년":1623,"송림":1332},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-09-17":{"jangnyeon":3434,"songrim":2267,"youth":null,"school":2291,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":653,"송림":141},"2부":{"장년":1178,"송림":735},"3부":{"장년":1603,"송림":1391},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-09-24":{"jangnyeon":3483,"songrim":2177,"youth":null,"school":2177,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":675,"송림":147},"2부":{"장년":1189,"송림":734},"3부":{"장년":1619,"송림":1296},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-10-01":{"jangnyeon":3282,"songrim":1768,"youth":null,"school":1787,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":625,"송림":114},"2부":{"장년":1034,"송림":569},"3부":{"장년":1623,"송림":1085},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-10-08":{"jangnyeon":3358,"songrim":2003,"youth":null,"school":2234,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":623,"송림":135},"2부":{"장년":1155,"송림":652},"3부":{"장년":1580,"송림":1216},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-10-15":{"jangnyeon":3462,"songrim":2232,"youth":null,"school":2179,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":662,"송림":132},"2부":{"장년":1113,"송림":744},"3부":{"장년":1687,"송림":1356},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-10-22":{"jangnyeon":3662,"songrim":2046,"youth":null,"school":2274,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":681,"송림":130},"2부":{"장년":1218,"송림":718},"3부":{"장년":1763,"송림":1198},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-10-29":{"jangnyeon":3146,"songrim":2071,"youth":null,"school":1943,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":633,"송림":115},"2부":{"장년":1040,"송림":721},"3부":{"장년":1473,"송림":1235},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-11-05":{"jangnyeon":3376,"songrim":2013,"youth":null,"school":1968,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":664,"송림":129},"2부":{"장년":1152,"송림":705},"3부":{"장년":1560,"송림":1179},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-11-12":{"jangnyeon":3325,"songrim":2303,"youth":null,"school":2202,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":625,"송림":127},"2부":{"장년":1124,"송림":770},"3부":{"장년":1576,"송림":1406},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-11-19":{"jangnyeon":3327,"songrim":2251,"youth":null,"school":2278,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":658,"송림":110},"2부":{"장년":1099,"송림":739},"3부":{"장년":1570,"송림":1402},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-11-26":{"jangnyeon":3251,"songrim":2205,"youth":null,"school":2274,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":603,"송림":109},"2부":{"장년":1087,"송림":705},"3부":{"장년":1561,"송림":1391},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-12-03":{"jangnyeon":3367,"songrim":2209,"youth":null,"school":2215,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":631,"송림":126},"2부":{"장년":1129,"송림":734},"3부":{"장년":1607,"송림":1349},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-12-10":{"jangnyeon":3400,"songrim":2268,"youth":null,"school":2265,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":672,"송림":138},"2부":{"장년":1150,"송림":740},"3부":{"장년":1578,"송림":1390},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-12-17":{"jangnyeon":0,"songrim":0,"youth":null,"school":0,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":null,"송림":null},"2부":{"장년":null,"송림":null},"3부":{"장년":null,"송림":null},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-12-24":{"jangnyeon":3194,"songrim":2349,"youth":null,"school":2161,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":552,"송림":102},"2부":{"장년":1028,"송림":746},"3부":{"장년":1614,"송림":1501},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2023-12-31":{"jangnyeon":3179,"songrim":2336,"youth":null,"school":2258,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":527,"송림":113},"2부":{"장년":1010,"송림":757},"3부":{"장년":1642,"송림":1466},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-01-07":{"jangnyeon":3426,"songrim":2441,"youth":null,"school":2387,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":607,"송림":113},"2부":{"장년":1183,"송림":789},"3부":{"장년":1636,"송림":1539},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-01-14":{"jangnyeon":3541,"songrim":2542,"youth":null,"school":2263,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":649,"송림":130},"2부":{"장년":1195,"송림":869},"3부":{"장년":1697,"송림":1543},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-01-21":{"jangnyeon":3469,"songrim":2507,"youth":null,"school":2246,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":664,"송림":146},"2부":{"장년":1189,"송림":824},"3부":{"장년":1616,"송림":1537},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-01-28":{"jangnyeon":3791,"songrim":2591,"youth":null,"school":2269,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":806,"송림":162},"2부":{"장년":1498,"송림":1088},"3부":{"장년":1487,"송림":1341},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-02-04":{"jangnyeon":3814,"songrim":2540,"youth":null,"school":1426,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":810,"송림":167},"2부":{"장년":1457,"송림":973},"3부":{"장년":1547,"송림":1400},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-02-11":{"jangnyeon":3378,"songrim":2017,"youth":null,"school":1622,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":698,"송림":127},"2부":{"장년":1196,"송림":790},"3부":{"장년":1484,"송림":1100},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-02-18":{"jangnyeon":3822,"songrim":2673,"youth":null,"school":2259,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":826,"송림":187},"2부":{"장년":1389,"송림":1054},"3부":{"장년":1607,"송림":1432},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-02-25":{"jangnyeon":3881,"songrim":2681,"youth":null,"school":2228,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":876,"송림":203},"2부":{"장년":1410,"송림":1092},"3부":{"장년":1595,"송림":1386},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-03-03":{"jangnyeon":3937,"songrim":3122,"youth":null,"school":2342,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":884,"송림":191},"2부":{"장년":1455,"송림":1098},"3부":{"장년":1598,"송림":1833},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-03-10":{"jangnyeon":3874,"songrim":2753,"youth":null,"school":2291,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":884,"송림":206},"2부":{"장년":1400,"송림":1097},"3부":{"장년":1590,"송림":1450},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-03-17":{"jangnyeon":3864,"songrim":2719,"youth":null,"school":2271,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":880,"송림":219},"2부":{"장년":1418,"송림":1076},"3부":{"장년":1566,"송림":1424},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-03-24":{"jangnyeon":3887,"songrim":2780,"youth":null,"school":2267,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":938,"송림":212},"2부":{"장년":1404,"송림":1113},"3부":{"장년":1545,"송림":1455},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-03-31":{"jangnyeon":4183,"songrim":3003,"youth":null,"school":2302,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":977,"송림":248},"2부":{"장년":1509,"송림":1249},"3부":{"장년":1697,"송림":1506},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-04-07":{"jangnyeon":3867,"songrim":2779,"youth":null,"school":2204,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":901,"송림":225},"2부":{"장년":1451,"송림":1159},"3부":{"장년":1515,"송림":1395},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-04-14":{"jangnyeon":3854,"songrim":2787,"youth":null,"school":2227,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":978,"송림":224},"2부":{"장년":1404,"송림":1140},"3부":{"장년":1472,"송림":1423},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-04-21":{"jangnyeon":3842,"songrim":2659,"youth":null,"school":2142,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":929,"송림":236},"2부":{"장년":1397,"송림":1113},"3부":{"장년":1516,"송림":1310},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-04-28":{"jangnyeon":4422,"songrim":2788,"youth":null,"school":1982,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1040,"송림":211},"2부":{"장년":1470,"송림":1165},"3부":{"장년":1912,"송림":1412},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-05-05":{"jangnyeon":3645,"songrim":2497,"youth":null,"school":2043,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":929,"송림":224},"2부":{"장년":1323,"송림":1051},"3부":{"장년":1393,"송림":1222},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-05-12":{"jangnyeon":3836,"songrim":2106,"youth":null,"school":2136,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":948,"송림":237},"2부":{"장년":1349,"송림":452},"3부":{"장년":1539,"송림":1417},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-05-19":{"jangnyeon":3931,"songrim":2747,"youth":null,"school":2208,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":993,"송림":256},"2부":{"장년":1417,"송림":1104},"3부":{"장년":1521,"송림":1387},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-05-26":{"jangnyeon":3989,"songrim":2733,"youth":null,"school":2202,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":997,"송림":223},"2부":{"장년":1459,"송림":1156},"3부":{"장년":1533,"송림":1354},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-06-02":{"jangnyeon":3983,"songrim":2862,"youth":null,"school":2014,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1026,"송림":272},"2부":{"장년":1382,"송림":1142},"3부":{"장년":1575,"송림":1448},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-06-09":{"jangnyeon":3435,"songrim":2361,"youth":null,"school":2184,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1011,"송림":257},"2부":{"장년":1286,"송림":1147},"3부":{"장년":1595,"송림":1214},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-06-16":{"jangnyeon":3233,"songrim":2635,"youth":null,"school":2227,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1028,"송림":246},"2부":{"장년":1435,"송림":1168},"3부":{"장년":1557,"송림":1467},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-06-23":{"jangnyeon":3352,"songrim":2730,"youth":null,"school":2223,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":966,"송림":265},"2부":{"장년":1411,"송림":1254},"3부":{"장년":1650,"송림":1476},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-06-30":{"jangnyeon":2940,"songrim":2833,"youth":null,"school":2161,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":891,"송림":277},"2부":{"장년":1275,"송림":1118},"3부":{"장년":1419,"송림":1301},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-07-07":{"jangnyeon":4140,"songrim":2844,"youth":null,"school":2213,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1057,"송림":266},"2부":{"장년":1440,"송림":1162},"3부":{"장년":1643,"송림":1416},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-07-14":{"jangnyeon":3735,"songrim":2817,"youth":null,"school":2375,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":919,"송림":249},"2부":{"장년":1353,"송림":1147},"3부":{"장년":1463,"송림":1421},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-07-21":{"jangnyeon":3328,"songrim":3073,"youth":null,"school":2167,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":811,"송림":209},"2부":{"장년":1153,"송림":985},"3부":{"장년":1364,"송림":1879},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-07-28":{"jangnyeon":3475,"songrim":2408,"youth":null,"school":1289,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":807,"송림":966},"2부":{"장년":1256,"송림":243},"3부":{"장년":1412,"송림":1199},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-08-04":{"jangnyeon":3343,"songrim":2529,"youth":null,"school":1944,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":854,"송림":265},"2부":{"장년":1144,"송림":995},"3부":{"장년":1345,"송림":1269},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-08-11":{"jangnyeon":3431,"songrim":2540,"youth":null,"school":2073,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":831,"송림":238},"2부":{"장년":1286,"송림":1036},"3부":{"장년":1314,"송림":1266},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-08-18":{"jangnyeon":4072,"songrim":2762,"youth":null,"school":2135,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":974,"송림":275},"2부":{"장년":1366,"송림":1132},"3부":{"장년":1732,"송림":1355},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-08-25":{"jangnyeon":3885,"songrim":2837,"youth":null,"school":2215,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":924,"송림":255},"2부":{"장년":1371,"송림":1200},"3부":{"장년":1590,"송림":1382},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-09-01":{"jangnyeon":4347,"songrim":2861,"youth":null,"school":2213,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1021,"송림":273},"2부":{"장년":1693,"송림":1173},"3부":{"장년":1633,"송림":1415},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-09-08":{"jangnyeon":3901,"songrim":2766,"youth":null,"school":2233,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":959,"송림":257},"2부":{"장년":1416,"송림":1151},"3부":{"장년":1526,"송림":1358},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-09-15":{"jangnyeon":3884,"songrim":2209,"youth":null,"school":1618,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":970,"송림":243},"2부":{"장년":1363,"송림":910},"3부":{"장년":1551,"송림":1056},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-09-22":{"jangnyeon":4089,"songrim":2900,"youth":null,"school":2213,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":980,"송림":271},"2부":{"장년":1407,"송림":1189},"3부":{"장년":1702,"송림":1440},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-09-29":{"jangnyeon":4162,"songrim":2866,"youth":null,"school":2207,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1048,"송림":278},"2부":{"장년":1481,"송림":1145},"3부":{"장년":1633,"송림":1443},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-10-06":{"jangnyeon":4190,"songrim":2886,"youth":null,"school":2189,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1075,"송림":261},"2부":{"장년":1497,"송림":1231},"3부":{"장년":1618,"송림":1394},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-10-13":{"jangnyeon":4211,"songrim":2964,"youth":null,"school":2222,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1023,"송림":293},"2부":{"장년":1527,"송림":1194},"3부":{"장년":1661,"송림":1477},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-10-20":{"jangnyeon":4454,"songrim":2781,"youth":null,"school":2295,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1024,"송림":264},"2부":{"장년":1658,"송림":1192},"3부":{"장년":1772,"송림":1325},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-10-27":{"jangnyeon":4302,"songrim":2763,"youth":null,"school":2140,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1021,"송림":269},"2부":{"장년":1568,"송림":1154},"3부":{"장년":1713,"송림":1340},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-11-03":{"jangnyeon":4230,"songrim":2867,"youth":null,"school":2267,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1045,"송림":283},"2부":{"장년":1545,"송림":1207},"3부":{"장년":1640,"송림":1377},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-11-10":{"jangnyeon":4179,"songrim":2952,"youth":null,"school":2220,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1022,"송림":288},"2부":{"장년":1474,"송림":1239},"3부":{"장년":1683,"송림":1425},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-11-17":{"jangnyeon":4207,"songrim":2818,"youth":null,"school":2296,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1016,"송림":300},"2부":{"장년":1510,"송림":1119},"3부":{"장년":1681,"송림":1399},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-11-24":{"jangnyeon":4169,"songrim":2856,"youth":null,"school":2281,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":968,"송림":261},"2부":{"장년":1503,"송림":1193},"3부":{"장년":1698,"송림":1402},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-12-01":{"jangnyeon":4122,"songrim":2874,"youth":null,"school":2251,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":943,"송림":252},"2부":{"장년":1503,"송림":1214},"3부":{"장년":1676,"송림":1408},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-12-08":{"jangnyeon":4067,"songrim":2956,"youth":null,"school":2246,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":980,"송림":265},"2부":{"장년":1453,"송림":1220},"3부":{"장년":1634,"송림":1471},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-12-15":{"jangnyeon":4121,"songrim":2908,"youth":null,"school":2211,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1003,"송림":268},"2부":{"장년":1432,"송림":1194},"3부":{"장년":1686,"송림":1446},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-12-22":{"jangnyeon":3908,"songrim":2908,"youth":null,"school":2225,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":904,"송림":257},"2부":{"장년":1371,"송림":1225},"3부":{"장년":1633,"송림":1426},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2024-12-29":{"jangnyeon":4202,"songrim":2911,"youth":null,"school":2274,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":926,"송림":219},"2부":{"장년":1308,"송림":1193},"3부":{"장년":1968,"송림":1499},"4부":{"장년":null,"송림":null},"5부":{"장년":null,"송림":null}}},"2025-01-05":{"jangnyeon":5163,"songrim":2544,"youth":null,"school":2065,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":921,"송림":246},"2부":{"장년":1232,"송림":1045},"3부":{"장년":1439,"송림":1152},"4부":{"장년":1571,"송림":101},"5부":{"장년":null,"송림":null}}},"2025-01-12":{"jangnyeon":5071,"songrim":3442,"youth":null,"school":2316,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":863,"송림":221},"2부":{"장년":1417,"송림":1209},"3부":{"장년":1603,"송림":1399},"4부":{"장년":1188,"송림":613},"5부":{"장년":null,"송림":null}}},"2025-01-19":{"jangnyeon":4997,"songrim":3511,"youth":null,"school":2195,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":934,"송림":226},"2부":{"장년":1401,"송림":1266},"3부":{"장년":1580,"송림":1422},"4부":{"장년":1082,"송림":597},"5부":{"장년":null,"송림":null}}},"2025-01-26":{"jangnyeon":4931,"songrim":3076,"youth":null,"school":1849,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":918,"송림":217},"2부":{"장년":1365,"송림":1149},"3부":{"장년":1634,"송림":1299},"4부":{"장년":1014,"송림":411},"5부":{"장년":null,"송림":null}}},"2025-02-02":{"jangnyeon":4967,"songrim":3427,"youth":null,"school":2206,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":815,"송림":239},"2부":{"장년":1398,"송림":1147},"3부":{"장년":1547,"송림":1444},"4부":{"장년":1207,"송림":597},"5부":{"장년":null,"송림":null}}},"2025-02-09":{"jangnyeon":4737,"songrim":3220,"youth":null,"school":2284,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":796,"송림":221},"2부":{"장년":1301,"송림":1126},"3부":{"장년":1403,"송림":1407},"4부":{"장년":1237,"송림":466},"5부":{"장년":null,"송림":null}}},"2025-02-16":{"jangnyeon":4934,"songrim":3325,"youth":null,"school":1835,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":833,"송림":221},"2부":{"장년":1359,"송림":1201},"3부":{"장년":1487,"송림":1395},"4부":{"장년":1255,"송림":508},"5부":{"장년":null,"송림":null}}},"2025-02-23":{"jangnyeon":5142,"songrim":3204,"youth":null,"school":1525,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":908,"송림":220},"2부":{"장년":1489,"송림":1137},"3부":{"장년":1638,"송림":1401},"4부":{"장년":1107,"송림":446},"5부":{"장년":null,"송림":null}}},"2025-03-02":{"jangnyeon":4852,"songrim":3430,"youth":null,"school":2384,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":913,"송림":227},"2부":{"장년":1435,"송림":1145},"3부":{"장년":1597,"송림":1378},"4부":{"장년":907,"송림":680},"5부":{"장년":null,"송림":null}}},"2025-03-09":{"jangnyeon":4984,"songrim":3604,"youth":null,"school":2456,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":924,"송림":248},"2부":{"장년":1496,"송림":1212},"3부":{"장년":1685,"송림":1445},"4부":{"장년":879,"송림":699},"5부":{"장년":null,"송림":null}}},"2025-03-16":{"jangnyeon":4710,"songrim":3569,"youth":null,"school":2221,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":923,"송림":233},"2부":{"장년":1450,"송림":1253},"3부":{"장년":1552,"송림":1405},"4부":{"장년":785,"송림":678},"5부":{"장년":null,"송림":null}}},"2025-03-23":{"jangnyeon":4760,"songrim":3470,"youth":null,"school":2307,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":966,"송림":277},"2부":{"장년":1509,"송림":1252},"3부":{"장년":1611,"송림":1515},"4부":{"장년":674,"송림":426},"5부":{"장년":null,"송림":null}}},"2025-03-30":{"jangnyeon":4919,"songrim":3530,"youth":null,"school":2315,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1026,"송림":248},"2부":{"장년":1478,"송림":1202},"3부":{"장년":1618,"송림":1419},"4부":{"장년":797,"송림":661},"5부":{"장년":null,"송림":null}}},"2025-04-06":{"jangnyeon":4915,"songrim":3678,"youth":null,"school":2558,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1031,"송림":263},"2부":{"장년":1546,"송림":1277},"3부":{"장년":1612,"송림":1430},"4부":{"장년":726,"송림":708},"5부":{"장년":null,"송림":null}}},"2025-04-13":{"jangnyeon":4835,"songrim":3434,"youth":null,"school":2148,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1036,"송림":265},"2부":{"장년":1633,"송림":1217},"3부":{"장년":1522,"송림":1319},"4부":{"장년":644,"송림":633},"5부":{"장년":null,"송림":null}}},"2025-04-20":{"jangnyeon":5267,"songrim":3828,"youth":null,"school":2189,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1088,"송림":308},"2부":{"장년":1662,"송림":1342},"3부":{"장년":1781,"송림":1533},"4부":{"장년":736,"송림":645},"5부":{"장년":null,"송림":null}}},"2025-04-27":{"jangnyeon":4946,"songrim":3575,"youth":null,"school":1949,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":991,"송림":289},"2부":{"장년":1539,"송림":1291},"3부":{"장년":1647,"송림":1426},"4부":{"장년":769,"송림":569},"5부":{"장년":null,"송림":null}}},"2025-05-04":{"jangnyeon":5515,"songrim":3273,"youth":null,"school":1577,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1752,"송림":267},"2부":{"장년":1502,"송림":1191},"3부":{"장년":1649,"송림":1233},"4부":{"장년":612,"송림":582},"5부":{"장년":null,"송림":null}}},"2025-05-11":{"jangnyeon":4923,"songrim":3759,"youth":null,"school":2091,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1019,"송림":276},"2부":{"장년":1513,"송림":1284},"3부":{"장년":1692,"송림":1495},"4부":{"장년":699,"송림":704},"5부":{"장년":null,"송림":null}}},"2025-05-18":{"jangnyeon":5692,"songrim":3060,"youth":null,"school":2213,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1087,"송림":269},"2부":{"장년":1623,"송림":1281},"3부":{"장년":1615,"송림":1437},"4부":{"장년":1367,"송림":73},"5부":{"장년":null,"송림":null}}},"2025-05-25":{"jangnyeon":4819,"songrim":3742,"youth":null,"school":2049,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1026,"송림":351},"2부":{"장년":1501,"송림":1307},"3부":{"장년":1606,"송림":1416},"4부":{"장년":686,"송림":668},"5부":{"장년":null,"송림":null}}},"2025-06-01":{"jangnyeon":4905,"songrim":3577,"youth":null,"school":2053,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1051,"송림":294},"2부":{"장년":1567,"송림":1275},"3부":{"장년":1604,"송림":1299},"4부":{"장년":683,"송림":709},"5부":{"장년":null,"송림":null}}},"2025-06-08":{"jangnyeon":4795,"songrim":3677,"youth":null,"school":2006,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1038,"송림":290},"2부":{"장년":1491,"송림":1289},"3부":{"장년":1583,"송림":1414},"4부":{"장년":683,"송림":684},"5부":{"장년":null,"송림":null}}},"2025-06-15":{"jangnyeon":4962,"songrim":3871,"youth":null,"school":1819,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1053,"송림":317},"2부":{"장년":1609,"송림":1383},"3부":{"장년":1608,"송림":1501},"4부":{"장년":692,"송림":670},"5부":{"장년":null,"송림":null}}},"2025-06-22":{"jangnyeon":5638,"songrim":3208,"youth":null,"school":2201,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1083,"송림":290},"2부":{"장년":1595,"송림":1391},"3부":{"장년":1705,"송림":1476},"4부":{"장년":1255,"송림":51},"5부":{"장년":null,"송림":null}}},"2025-06-29":{"jangnyeon":4811,"songrim":3736,"youth":null,"school":2230,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1027,"송림":300},"2부":{"장년":1509,"송림":1313},"3부":{"장년":1612,"송림":1438},"4부":{"장년":663,"송림":685},"5부":{"장년":null,"송림":null}}},"2025-07-06":{"jangnyeon":4889,"songrim":3668,"youth":null,"school":2141,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1105,"송림":311},"2부":{"장년":1435,"송림":1315},"3부":{"장년":1731,"송림":1521},"4부":{"장년":618,"송림":521},"5부":{"장년":null,"송림":null}}},"2025-07-13":{"jangnyeon":4888,"songrim":3633,"youth":null,"school":1967,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1149,"송림":303},"2부":{"장년":1557,"송림":1346},"3부":{"장년":1574,"송림":1434},"4부":{"장년":608,"송림":550},"5부":{"장년":null,"송림":null}}},"2025-07-20":{"jangnyeon":4461,"songrim":3858,"youth":null,"school":2164,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":917,"송림":263},"2부":{"장년":1410,"송림":1496},"3부":{"장년":1450,"송림":1435},"4부":{"장년":684,"송림":664},"5부":{"장년":null,"송림":null}}},"2025-07-27":{"jangnyeon":4034,"songrim":2894,"youth":null,"school":1992,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":912,"송림":267},"2부":{"장년":1135,"송림":1196},"3부":{"장년":1223,"송림":1296},"4부":{"장년":764,"송림":135},"5부":{"장년":null,"송림":null}}},"2025-08-03":{"jangnyeon":4200,"songrim":3459,"youth":null,"school":1848,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":958,"송림":269},"2부":{"장년":1215,"송림":1196},"3부":{"장년":1319,"송림":1293},"4부":{"장년":708,"송림":701},"5부":{"장년":null,"송림":null}}},"2025-08-10":{"jangnyeon":4382,"songrim":3495,"youth":null,"school":2060,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":976,"송림":291},"2부":{"장년":1328,"송림":1249},"3부":{"장년":1377,"송림":1383},"4부":{"장년":701,"송림":572},"5부":{"장년":null,"송림":null}}},"2025-08-17":{"jangnyeon":4543,"songrim":3318,"youth":null,"school":2036,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":912,"송림":286},"2부":{"장년":1412,"송림":1251},"3부":{"장년":1458,"송림":1341},"4부":{"장년":761,"송림":440},"5부":{"장년":null,"송림":null}}},"2025-08-24":{"jangnyeon":4906,"songrim":3699,"youth":null,"school":2160,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1056,"송림":310},"2부":{"장년":1541,"송림":1342},"3부":{"장년":1622,"송림":1473},"4부":{"장년":687,"송림":574},"5부":{"장년":null,"송림":null}}},"2025-08-31":{"jangnyeon":4763,"songrim":3665,"youth":null,"school":2230,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":972,"송림":316},"2부":{"장년":1508,"송림":1388},"3부":{"장년":1617,"송림":1459},"4부":{"장년":666,"송림":502},"5부":{"장년":null,"송림":null}}},"2025-09-07":{"jangnyeon":4788,"songrim":3715,"youth":null,"school":2148,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1055,"송림":304},"2부":{"장년":1449,"송림":1396},"3부":{"장년":1567,"송림":1388},"4부":{"장년":717,"송림":627},"5부":{"장년":null,"송림":null}}},"2025-09-14":{"jangnyeon":4710,"songrim":3687,"youth":null,"school":2271,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1067,"송림":321},"2부":{"장년":1432,"송림":1251},"3부":{"장년":1535,"송림":1469},"4부":{"장년":676,"송림":646},"5부":{"장년":null,"송림":null}}},"2025-09-21":{"jangnyeon":4742,"songrim":3583,"youth":null,"school":2180,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1064,"송림":293},"2부":{"장년":1459,"송림":1308},"3부":{"장년":1552,"송림":1422},"4부":{"장년":667,"송림":560},"5부":{"장년":null,"송림":null}}},"2025-09-28":{"jangnyeon":4153,"songrim":3408,"youth":null,"school":2073,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":962,"송림":268},"2부":{"장년":1243,"송림":1241},"3부":{"장년":1291,"송림":1299},"4부":{"장년":657,"송림":600},"5부":{"장년":null,"송림":null}}},"2025-10-05":{"jangnyeon":4016,"songrim":2623,"youth":null,"school":1428,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":955,"송림":245},"2부":{"장년":1278,"송림":1036},"3부":{"장년":1314,"송림":1080},"4부":{"장년":469,"송림":262},"5부":{"장년":null,"송림":null}}},"2025-10-12":{"jangnyeon":4618,"songrim":3582,"youth":null,"school":2190,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":991,"송림":312},"2부":{"장년":1410,"송림":1262},"3부":{"장년":1575,"송림":1393},"4부":{"장년":642,"송림":615},"5부":{"장년":null,"송림":null}}},"2025-10-19":{"jangnyeon":5060,"songrim":3670,"youth":null,"school":2232,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1131,"송림":287},"2부":{"장년":1584,"송림":1357},"3부":{"장년":1747,"송림":1457},"4부":{"장년":598,"송림":569},"5부":{"장년":null,"송림":null}}},"2025-10-26":{"jangnyeon":5060,"songrim":3670,"youth":null,"school":2232,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1131,"송림":287},"2부":{"장년":1584,"송림":1357},"3부":{"장년":1747,"송림":1457},"4부":{"장년":598,"송림":569},"5부":{"장년":null,"송림":null}}},"2025-11-02":{"jangnyeon":5466,"songrim":3070,"youth":null,"school":2123,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1032,"송림":300},"2부":{"장년":1596,"송림":1344},"3부":{"장년":1568,"송림":1389},"4부":{"장년":1270,"송림":37},"5부":{"장년":null,"송림":null}}},"2025-11-09":{"jangnyeon":5032,"songrim":3736,"youth":null,"school":2231,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1096,"송림":285},"2부":{"장년":1559,"송림":1354},"3부":{"장년":1636,"송림":1437},"4부":{"장년":741,"송림":660},"5부":{"장년":null,"송림":null}}},"2025-11-16":{"jangnyeon":4811,"songrim":3677,"youth":null,"school":2246,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1040,"송림":262},"2부":{"장년":1480,"송림":1294},"3부":{"장년":1574,"송림":1478},"4부":{"장년":717,"송림":643},"5부":{"장년":null,"송림":null}}},"2025-11-23":{"jangnyeon":4804,"songrim":3580,"youth":null,"school":2080,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1040,"송림":266},"2부":{"장년":1501,"송림":1282},"3부":{"장년":1577,"송림":1406},"4부":{"장년":686,"송림":626},"5부":{"장년":null,"송림":null}}},"2025-11-30":{"jangnyeon":4649,"songrim":3656,"youth":null,"school":2033,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1051,"송림":242},"2부":{"장년":1401,"송림":1348},"3부":{"장년":1546,"송림":1485},"4부":{"장년":651,"송림":581},"5부":{"장년":null,"송림":null}}},"2025-12-07":{"jangnyeon":4832,"songrim":3611,"youth":null,"school":2017,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1056,"송림":238},"2부":{"장년":1528,"송림":1312},"3부":{"장년":1590,"송림":1483},"4부":{"장년":658,"송림":578},"5부":{"장년":null,"송림":null}}},"2025-12-14":{"jangnyeon":4584,"songrim":3578,"youth":null,"school":1830,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":880,"송림":248},"2부":{"장년":1461,"송림":1248},"3부":{"장년":1576,"송림":1455},"4부":{"장년":667,"송림":627},"5부":{"장년":null,"송림":null}}},"2025-12-21":{"jangnyeon":4738,"songrim":3776,"youth":null,"school":2231,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":1001,"송림":279},"2부":{"장년":1431,"송림":1346},"3부":{"장년":1614,"송림":1481},"4부":{"장년":692,"송림":670},"5부":{"장년":null,"송림":null}}},"2025-12-28":{"jangnyeon":4734,"songrim":3823,"youth":null,"school":2294,"offline_total":null,"grand_total":null,"bu":{"1부":{"장년":954,"송림":251},"2부":{"장년":1530,"송림":1328},"3부":{"장년":1681,"송림":1544},"4부":{"장년":569,"송림":700},"5부":{"장년":null,"송림":null}}}},"weekday":{"2023-06-11":{"wed_off":526,"wed_on":1502,"wed_tot":2028,"fri_off":351,"fri_on":1116,"fri_tot":1467},"2023-06-18":{"wed_off":539,"wed_on":1469,"wed_tot":2008,"fri_off":348,"fri_on":976,"fri_tot":1324},"2023-06-25":{"wed_off":692,"wed_on":1518,"wed_tot":2210,"fri_off":360,"fri_on":1165,"fri_tot":1525},"2023-07-02":{"wed_off":744,"wed_on":1662,"wed_tot":2406,"fri_off":359,"fri_on":1179,"fri_tot":1538},"2023-07-09":{"wed_off":493,"wed_on":1389,"wed_tot":1882,"fri_off":138,"fri_on":1166,"fri_tot":1304},"2023-07-16":{"wed_off":373,"wed_on":1808,"wed_tot":2181,"fri_off":327,"fri_on":1440,"fri_tot":1767},"2023-07-23":{"wed_off":298,"wed_on":1387,"wed_tot":1685,"fri_off":391,"fri_on":1310,"fri_tot":1701},"2023-07-30":{"wed_off":259,"wed_on":1497,"wed_tot":1756,"fri_off":417,"fri_on":1322,"fri_tot":1739},"2023-08-06":{"wed_off":344,"wed_on":1343,"wed_tot":1687,"fri_off":525,"fri_on":1194,"fri_tot":1719},"2023-08-13":{"wed_off":314,"wed_on":1414,"wed_tot":1728,"fri_off":481,"fri_on":1277,"fri_tot":1758},"2023-08-20":{"wed_off":303,"wed_on":1485,"wed_tot":1788,"fri_off":482,"fri_on":1272,"fri_tot":1754},"2023-08-27":{"wed_off":303,"wed_on":1485,"wed_tot":1788,"fri_off":482,"fri_on":1272,"fri_tot":1754},"2023-09-03":{"wed_off":278,"wed_on":1589,"wed_tot":1867,"fri_off":442,"fri_on":1222,"fri_tot":1664},"2023-09-10":{"wed_off":353,"wed_on":1396,"wed_tot":1749,"fri_off":393,"fri_on":1063,"fri_tot":1456},"2023-09-17":{"wed_off":308,"wed_on":1694,"wed_tot":2002,"fri_off":358,"fri_on":1308,"fri_tot":1666},"2023-09-24":{"wed_off":183,"wed_on":1253,"wed_tot":1436,"fri_off":null,"fri_on":null,"fri_tot":0},"2023-10-01":{"wed_off":205,"wed_on":1265,"wed_tot":1470,"fri_off":null,"fri_on":null,"fri_tot":0},"2023-10-08":{"wed_off":231,"wed_on":1516,"wed_tot":1747,"fri_off":329,"fri_on":1102,"fri_tot":1431},"2023-10-15":{"wed_off":312,"wed_on":1457,"wed_tot":1769,"fri_off":327,"fri_on":1137,"fri_tot":1464},"2023-10-22":{"wed_off":664,"wed_on":1331,"wed_tot":1995,"fri_off":310,"fri_on":1066,"fri_tot":1376},"2023-10-29":{"wed_off":285,"wed_on":1495,"wed_tot":1780,"fri_off":331,"fri_on":1274,"fri_tot":1605},"2023-11-05":{"wed_off":346,"wed_on":1312,"wed_tot":1658,"fri_off":371,"fri_on":922,"fri_tot":1293},"2023-11-12":{"wed_off":289,"wed_on":1217,"wed_tot":1506,"fri_off":311,"fri_on":990,"fri_tot":1301},"2023-11-19":{"wed_off":316,"wed_on":1188,"wed_tot":1504,"fri_off":305,"fri_on":1017,"fri_tot":1322},"2023-11-26":{"wed_off":316,"wed_on":1447,"wed_tot":1763,"fri_off":324,"fri_on":1181,"fri_tot":1505},"2023-12-03":{"wed_off":303,"wed_on":1628,"wed_tot":1931,"fri_off":327,"fri_on":1359,"fri_tot":1686},"2023-12-10":{"wed_off":895,"wed_on":1501,"wed_tot":2396,"fri_off":287,"fri_on":1165,"fri_tot":1452},"2023-12-17":{"wed_off":null,"wed_on":null,"wed_tot":0,"fri_off":null,"fri_on":null,"fri_tot":0},"2023-12-24":{"wed_off":275,"wed_on":1560,"wed_tot":1835,"fri_off":254,"fri_on":1282,"fri_tot":1536},"2023-12-31":{"wed_off":279,"wed_on":1201,"wed_tot":1480,"fri_off":237,"fri_on":1418,"fri_tot":1655},"2024-01-07":{"wed_off":373,"wed_on":1517,"wed_tot":1890,"fri_off":291,"fri_on":1240,"fri_tot":1531},"2024-01-14":{"wed_off":381,"wed_on":1339,"wed_tot":1720,"fri_off":327,"fri_on":1245,"fri_tot":1572},"2024-01-21":{"wed_off":211,"wed_on":1561,"wed_tot":1772,"fri_off":395,"fri_on":1153,"fri_tot":1548},"2024-01-28":{"wed_off":303,"wed_on":1602,"wed_tot":1905,"fri_off":395,"fri_on":1361,"fri_tot":1756},"2024-02-04":{"wed_off":425,"wed_on":1578,"wed_tot":2003,"fri_off":395,"fri_on":1220,"fri_tot":1615},"2024-02-11":{"wed_off":323,"wed_on":1359,"wed_tot":1682,"fri_off":null,"fri_on":null,"fri_tot":0},"2024-02-18":{"wed_off":415,"wed_on":1490,"wed_tot":1905,"fri_off":391,"fri_on":1282,"fri_tot":1673},"2024-02-25":{"wed_off":355,"wed_on":1679,"wed_tot":2034,"fri_off":362,"fri_on":1181,"fri_tot":1543},"2024-03-03":{"wed_off":452,"wed_on":1465,"wed_tot":1917,"fri_off":260,"fri_on":1114,"fri_tot":1374},"2024-03-10":{"wed_off":277,"wed_on":1435,"wed_tot":1712,"fri_off":337,"fri_on":1242,"fri_tot":1579},"2024-03-17":{"wed_off":451,"wed_on":1452,"wed_tot":1903,"fri_off":361,"fri_on":1174,"fri_tot":1535},"2024-03-24":{"wed_off":345,"wed_on":1517,"wed_tot":1862,"fri_off":326,"fri_on":1200,"fri_tot":1526},"2024-03-31":{"wed_off":null,"wed_on":null,"wed_tot":0,"fri_off":null,"fri_on":null,"fri_tot":0},"2024-04-07":{"wed_off":383,"wed_on":1692,"wed_tot":2075,"fri_off":370,"fri_on":1374,"fri_tot":1744},"2024-04-14":{"wed_off":262,"wed_on":1553,"wed_tot":1815,"fri_off":345,"fri_on":1312,"fri_tot":1657},"2024-04-21":{"wed_off":352,"wed_on":1563,"wed_tot":1915,"fri_off":417,"fri_on":1380,"fri_tot":1797},"2024-04-28":{"wed_off":368,"wed_on":1598,"wed_tot":1966,"fri_off":385,"fri_on":1263,"fri_tot":1648},"2024-05-05":{"wed_off":1639,"wed_on":1981,"wed_tot":3620,"fri_off":1207,"fri_on":1610,"fri_tot":2817},"2024-05-12":{"wed_off":341,"wed_on":1483,"wed_tot":1824,"fri_off":372,"fri_on":1265,"fri_tot":1637},"2024-05-19":{"wed_off":261,"wed_on":1673,"wed_tot":1934,"fri_off":383,"fri_on":1217,"fri_tot":1600},"2024-05-26":{"wed_off":696,"wed_on":1294,"wed_tot":1990,"fri_off":377,"fri_on":1216,"fri_tot":1593},"2024-06-02":{"wed_off":303,"wed_on":1366,"wed_tot":1669,"fri_off":378,"fri_on":1179,"fri_tot":1557},"2024-06-09":{"wed_off":375,"wed_on":1321,"wed_tot":1696,"fri_off":408,"fri_on":1221,"fri_tot":1629},"2024-06-16":{"wed_off":368,"wed_on":1444,"wed_tot":1812,"fri_off":398,"fri_on":1376,"fri_tot":1774},"2024-06-23":{"wed_off":414,"wed_on":1565,"wed_tot":1979,"fri_off":456,"fri_on":1343,"fri_tot":1799},"2024-06-30":{"wed_off":373,"wed_on":1363,"wed_tot":1736,"fri_off":448,"fri_on":1401,"fri_tot":1849},"2024-07-07":{"wed_off":503,"wed_on":1577,"wed_tot":2080,"fri_off":419,"fri_on":1148,"fri_tot":1567},"2024-07-14":{"wed_off":397,"wed_on":1471,"wed_tot":1868,"fri_off":485,"fri_on":1215,"fri_tot":1700},"2024-07-21":{"wed_off":387,"wed_on":1557,"wed_tot":1944,"fri_off":714,"fri_on":1056,"fri_tot":1770},"2024-07-28":{"wed_off":346,"wed_on":1327,"wed_tot":1673,"fri_off":671,"fri_on":1271,"fri_tot":1942},"2024-08-04":{"wed_off":320,"wed_on":1399,"wed_tot":1719,"fri_off":814,"fri_on":1253,"fri_tot":2067},"2024-08-11":{"wed_off":289,"wed_on":1430,"wed_tot":1719,"fri_off":849,"fri_on":1349,"fri_tot":2198},"2024-08-18":{"wed_off":379,"wed_on":1483,"wed_tot":1862,"fri_off":415,"fri_on":1274,"fri_tot":1689},"2024-08-25":{"wed_off":343,"wed_on":1513,"wed_tot":1856,"fri_off":467,"fri_on":1414,"fri_tot":1881},"2024-09-01":{"wed_off":467,"wed_on":1534,"wed_tot":2001,"fri_off":494,"fri_on":1261,"fri_tot":1755},"2024-09-08":{"wed_off":362,"wed_on":1448,"wed_tot":1810,"fri_off":445,"fri_on":1337,"fri_tot":1782},"2024-09-15":{"wed_off":352,"wed_on":1456,"wed_tot":1808,"fri_off":412,"fri_on":1283,"fri_tot":1695},"2024-09-22":{"wed_off":317,"wed_on":1650,"wed_tot":1967,"fri_off":410,"fri_on":1699,"fri_tot":2109},"2024-09-29":{"wed_off":395,"wed_on":1656,"wed_tot":2051,"fri_off":490,"fri_on":1581,"fri_tot":2071},"2024-10-06":{"wed_off":192,"wed_on":1317,"wed_tot":1509,"fri_off":null,"fri_on":null,"fri_tot":0},"2024-10-13":{"wed_off":325,"wed_on":1707,"wed_tot":2032,"fri_off":459,"fri_on":1263,"fri_tot":1722},"2024-10-20":{"wed_off":636,"wed_on":1554,"wed_tot":2190,"fri_off":387,"fri_on":1513,"fri_tot":1900},"2024-10-27":{"wed_off":346,"wed_on":1222,"wed_tot":1568,"fri_off":385,"fri_on":1619,"fri_tot":2004},"2024-11-03":{"wed_off":1736,"wed_on":1093,"wed_tot":2829,"fri_off":379,"fri_on":1120,"fri_tot":1499},"2024-11-10":{"wed_off":365,"wed_on":1240,"wed_tot":1605,"fri_off":433,"fri_on":1085,"fri_tot":1518},"2024-11-17":{"wed_off":319,"wed_on":1260,"wed_tot":1579,"fri_off":397,"fri_on":1058,"fri_tot":1455},"2024-11-24":{"wed_off":300,"wed_on":1222,"wed_tot":1522,"fri_off":427,"fri_on":1304,"fri_tot":1731},"2024-12-01":{"wed_off":170,"wed_on":1706,"wed_tot":1876,"fri_off":281,"fri_on":1507,"fri_tot":1788},"2024-12-08":{"wed_off":312,"wed_on":1530,"wed_tot":1842,"fri_off":377,"fri_on":1438,"fri_tot":1815},"2024-12-15":{"wed_off":907,"wed_on":1645,"wed_tot":2552,"fri_off":350,"fri_on":1331,"fri_tot":1681},"2024-12-22":{"wed_off":319,"wed_on":1538,"wed_tot":1857,"fri_off":331,"fri_on":1580,"fri_tot":1911},"2024-12-29":{"wed_off":6600,"wed_on":64609,"wed_tot":71209,"fri_off":354,"fri_on":1459,"fri_tot":1813},"2025-01-05":{"wed_off":159,"wed_on":1398,"wed_tot":1557,"fri_off":381,"fri_on":1504,"fri_tot":1885},"2025-01-12":{"wed_off":372,"wed_on":1718,"wed_tot":2090,"fri_off":788,"fri_on":1499,"fri_tot":2287},"2025-01-19":{"wed_off":372,"wed_on":7453,"wed_tot":7825,"fri_off":788,"fri_on":7974,"fri_tot":8762},"2025-01-26":{"wed_off":317,"wed_on":5874,"wed_tot":6191,"fri_off":483,"fri_on":7002,"fri_tot":7485},"2025-02-02":{"wed_off":81,"wed_on":7323,"wed_tot":7404,"fri_off":452,"fri_on":7566,"fri_tot":8018},"2025-02-09":{"wed_off":437,"wed_on":7106,"wed_tot":7543,"fri_off":327,"fri_on":9082,"fri_tot":9409},"2025-02-16":{"wed_off":439,"wed_on":6519,"wed_tot":6958,"fri_off":519,"fri_on":7508,"fri_tot":8027},"2025-02-23":{"wed_off":451,"wed_on":5960,"wed_tot":6411,"fri_off":486,"fri_on":7491,"fri_tot":7977},"2025-03-02":{"wed_off":434,"wed_on":6911,"wed_tot":7345,"fri_off":526,"fri_on":7048,"fri_tot":7574},"2025-03-09":{"wed_off":438,"wed_on":2793,"wed_tot":3231,"fri_off":512,"fri_on":4786,"fri_tot":5298},"2025-03-16":{"wed_off":372,"wed_on":7453,"wed_tot":7825,"fri_off":788,"fri_on":7974,"fri_tot":8762},"2025-03-23":{"wed_off":480,"wed_on":5817,"wed_tot":6297,"fri_off":484,"fri_on":6880,"fri_tot":7364},"2025-03-30":{"wed_off":432,"wed_on":7023,"wed_tot":7455,"fri_off":589,"fri_on":6678,"fri_tot":7267},"2025-04-06":{"wed_off":470,"wed_on":6793,"wed_tot":7263,"fri_off":475,"fri_on":7703,"fri_tot":8178},"2025-04-13":{"wed_off":451,"wed_on":6192,"wed_tot":6643,"fri_off":476,"fri_on":7348,"fri_tot":7824},"2025-04-20":{"wed_off":0,"wed_on":0,"wed_tot":0,"fri_off":0,"fri_on":0,"fri_tot":0},"2025-04-27":{"wed_off":477,"wed_on":7264,"wed_tot":7741,"fri_off":457,"fri_on":8785,"fri_tot":9242},"2025-05-04":{"wed_off":502,"wed_on":5947,"wed_tot":6449,"fri_off":398,"fri_on":7825,"fri_tot":8223},"2025-05-11":{"wed_off":414,"wed_on":5640,"wed_tot":6054,"fri_off":431,"fri_on":11625,"fri_tot":12056},"2025-05-18":{"wed_off":429,"wed_on":5610,"wed_tot":6039,"fri_off":359,"fri_on":6981,"fri_tot":7340},"2025-05-25":{"wed_off":895,"wed_on":6541,"wed_tot":7436,"fri_off":1302,"fri_on":9525,"fri_tot":10827},"2025-06-01":{"wed_off":412,"wed_on":6493,"wed_tot":6905,"fri_off":1248,"fri_on":13275,"fri_tot":14523},"2025-06-08":{"wed_off":387,"wed_on":6296,"wed_tot":6683,"fri_off":419,"fri_on":7725,"fri_tot":8144},"2025-06-15":{"wed_off":458,"wed_on":6241,"wed_tot":6699,"fri_off":416,"fri_on":8521,"fri_tot":8937},"2025-06-22":{"wed_off":376,"wed_on":5045,"wed_tot":5421,"fri_off":321,"fri_on":7426,"fri_tot":7747},"2025-06-29":{"wed_off":358,"wed_on":6208,"wed_tot":6566,"fri_off":523,"fri_on":7235,"fri_tot":7758},"2025-07-06":{"wed_off":466,"wed_on":5170,"wed_tot":5636,"fri_off":458,"fri_on":7877,"fri_tot":8335},"2025-07-13":{"wed_off":462,"wed_on":6506,"wed_tot":6968,"fri_off":430,"fri_on":5796,"fri_tot":6226},"2025-07-20":{"wed_off":294,"wed_on":6327,"wed_tot":6621,"fri_off":772,"fri_on":8596,"fri_tot":9368},"2025-07-27":{"wed_off":353,"wed_on":5412,"wed_tot":5765,"fri_off":778,"fri_on":7883,"fri_tot":8661},"2025-08-03":{"wed_off":295,"wed_on":3929,"wed_tot":4224,"fri_off":898,"fri_on":8615,"fri_tot":9513},"2025-08-10":{"wed_off":428,"wed_on":5795,"wed_tot":6223,"fri_off":536,"fri_on":6540,"fri_tot":7076},"2025-08-17":{"wed_off":303,"wed_on":5220,"wed_tot":5523,"fri_off":427,"fri_on":6074,"fri_tot":6501},"2025-08-24":{"wed_off":387,"wed_on":6296,"wed_tot":6683,"fri_off":419,"fri_on":7725,"fri_tot":8144},"2025-08-31":{"wed_off":435,"wed_on":5454,"wed_tot":5889,"fri_off":541,"fri_on":6698,"fri_tot":7239},"2025-09-07":{"wed_off":415,"wed_on":5886,"wed_tot":6301,"fri_off":539,"fri_on":7278,"fri_tot":7817},"2025-09-14":{"wed_off":418,"wed_on":5075,"wed_tot":5493,"fri_off":454,"fri_on":7119,"fri_tot":7573},"2025-09-21":{"wed_off":460,"wed_on":5893,"wed_tot":6353,"fri_off":391,"fri_on":6481,"fri_tot":6872},"2025-09-28":{"wed_off":198,"wed_on":5982,"wed_tot":6180,"fri_off":null,"fri_on":null,"fri_tot":0},"2025-10-05":{"wed_off":339,"wed_on":4753,"wed_tot":5092,"fri_off":297,"fri_on":4771,"fri_tot":5068},"2025-10-12":{"wed_off":245,"wed_on":6652,"wed_tot":6897,"fri_off":351,"fri_on":6795,"fri_tot":7146},"2025-10-19":{"wed_off":392,"wed_on":5036,"wed_tot":5428,"fri_off":427,"fri_on":7151,"fri_tot":7578},"2025-10-26":{"wed_off":392,"wed_on":5036,"wed_tot":5428,"fri_off":427,"fri_on":7151,"fri_tot":7578},"2025-11-02":{"wed_off":367,"wed_on":4950,"wed_tot":5317,"fri_off":448,"fri_on":5247,"fri_tot":5695},"2025-11-09":{"wed_off":370,"wed_on":5024,"wed_tot":5394,"fri_off":433,"fri_on":5094,"fri_tot":5527},"2025-11-16":{"wed_off":377,"wed_on":4793,"wed_tot":5170,"fri_off":437,"fri_on":4324,"fri_tot":4761},"2025-11-23":{"wed_off":593,"wed_on":4439,"wed_tot":5032,"fri_off":449,"fri_on":5235,"fri_tot":5684},"2025-11-30":{"wed_off":358,"wed_on":4922,"wed_tot":5280,"fri_off":433,"fri_on":5981,"fri_tot":6414},"2025-12-07":{"wed_off":332,"wed_on":5731,"wed_tot":6063,"fri_off":327,"fri_on":6103,"fri_tot":6430},"2025-12-14":{"wed_off":892,"wed_on":6341,"wed_tot":7233,"fri_off":447,"fri_on":6674,"fri_tot":7121},"2025-12-21":{"wed_off":378,"wed_on":5480,"wed_tot":5858,"fri_off":373,"fri_on":6970,"fri_tot":7343},"2025-12-28":{"wed_off":1288,"wed_on":21305,"wed_tot":22593,"fri_off":317,"fri_on":6757,"fri_tot":7074}},"dawn":{"2023-06-11":{"online":{"월":1366,"화":1161,"수":1556,"목":1242,"금":1438,"토":1188},"offline":{"월":68,"화":75,"수":73,"목":64,"금":66,"토":48}},"2023-06-18":{"online":{"월":1243,"화":1424,"수":1420,"목":5343,"금":4891,"토":4401},"offline":{"월":60,"화":67,"수":64,"목":77,"금":63,"토":63}},"2023-06-25":{"online":{"월":1453,"화":1494,"수":1271,"목":1551,"금":1475,"토":1074},"offline":{"월":73,"화":73,"수":53,"목":72,"금":81,"토":62}},"2023-07-02":{"online":{"월":1384,"화":1591,"수":1479,"목":1467,"금":1450,"토":1139},"offline":{"월":51,"화":67,"수":76,"목":67,"금":72,"토":61}},"2023-07-09":{"online":{"월":1459,"화":1575,"수":1645,"목":1568,"금":1501,"토":1048},"offline":{"월":67,"화":76,"수":61,"목":71,"금":77,"토":49}},"2023-07-16":{"online":{"월":1602,"화":1629,"수":1679,"목":1389,"금":1439,"토":1157},"offline":{"월":68,"화":73,"수":67,"목":67,"금":47,"토":49}},"2023-07-23":{"online":{"월":5481,"화":5920,"수":5992,"목":5554,"금":5134,"토":4131},"offline":{"월":1483,"화":1499,"수":1571,"목":1393,"금":1351,"토":983}},"2023-07-30":{"online":{"월":1336,"화":1366,"수":1364,"목":1339,"금":1317,"토":1108},"offline":{"월":65,"화":76,"수":73,"목":68,"금":59,"토":46}},"2023-08-06":{"online":{"월":1343,"화":1305,"수":1380,"목":1395,"금":1432,"토":1048},"offline":{"월":74,"화":81,"수":88,"목":86,"금":79,"토":72}},"2023-08-13":{"online":{"월":1257,"화":1414,"수":1437,"목":1399,"금":1361,"토":1028},"offline":{"월":77,"화":83,"수":81,"목":59,"금":56,"토":61}},"2023-08-20":{"online":{"월":1178,"화":968,"수":1282,"목":1408,"금":1359,"토":1027},"offline":{"월":72,"화":77,"수":72,"목":74,"금":68,"토":73}},"2023-08-27":{"online":{"월":1205,"화":1212,"수":1145,"목":1545,"금":1395,"토":1016},"offline":{"월":79,"화":69,"수":78,"목":74,"금":85,"토":60}},"2023-09-03":{"online":{"월":1269,"화":1457,"수":1503,"목":1473,"금":1384,"토":940},"offline":{"월":88,"화":81,"수":79,"목":78,"금":81,"토":68}},"2023-09-10":{"online":{"월":1458,"화":1597,"수":1504,"목":1462,"금":1572,"토":1112},"offline":{"월":83,"화":84,"수":81,"목":71,"금":78,"토":60}},"2023-09-17":{"online":{"월":1687,"화":1587,"수":1567,"목":1667,"금":1564,"토":1142},"offline":{"월":92,"화":89,"수":79,"목":80,"금":93,"토":64}},"2023-10-01":{"online":{"월":6207,"화":6458,"수":5761,"목":4948,"금":5249,"토":6049},"offline":{"월":112,"화":86,"수":96,"목":82,"금":51,"토":64}},"2023-10-08":{"online":{"월":5036,"화":6321,"수":5671,"목":6356,"금":5860,"토":5069},"offline":{"월":78,"화":86,"수":92,"목":96,"금":78,"토":92}},"2023-10-15":{"online":{"월":7402,"화":6916,"수":5627,"목":6239,"금":5600,"토":5301},"offline":{"월":74,"화":90,"수":79,"목":81,"금":78,"토":69}},"2023-10-22":{"online":{"월":5914,"화":6042,"수":5740,"목":6114,"금":5412,"토":5518},"offline":{"월":93,"화":88,"수":79,"목":81,"금":81,"토":80}},"2023-10-29":{"online":{"월":5326,"화":6160,"수":6101,"목":6168,"금":6277,"토":5093},"offline":{"월":91,"화":90,"수":81,"목":86,"금":82,"토":74}},"2023-11-05":{"online":{"월":6114,"화":6614,"수":6047,"목":6002,"금":5537,"토":4813},"offline":{"월":81,"화":82,"수":91,"목":89,"금":76,"토":85}},"2023-11-12":{"online":{"월":5550,"화":6004,"수":5775,"목":6378,"금":5735,"토":5417},"offline":{"월":61,"화":87,"수":79,"목":78,"금":62,"토":64}},"2023-11-19":{"online":{"월":5580,"화":5624,"수":5593,"목":10501,"금":5644,"토":4760},"offline":{"월":71,"화":68,"수":81,"목":0,"금":53,"토":41}},"2023-11-26":{"online":{"월":5695,"화":6355,"수":5820,"목":5826,"금":5937,"토":4792},"offline":{"월":71,"화":65,"수":62,"목":72,"금":69,"토":51}},"2023-12-03":{"online":{"월":6208,"화":6624,"수":6066,"목":5577,"금":4477,"토":4677},"offline":{"월":67,"화":54,"수":46,"목":60,"금":49,"토":39}},"2023-12-10":{"online":{"월":5921,"화":6744,"수":6545,"목":6721,"금":6156,"토":5925},"offline":{"월":65,"화":60,"수":59,"목":55,"금":61,"토":52}},"2023-12-24":{"online":{"월":5728,"화":6455,"수":5835,"목":5718,"금":5913,"토":5151},"offline":{"월":54,"화":52,"수":50,"목":48,"금":39,"토":35}},"2023-12-31":{"online":{"월":5398,"화":6346,"수":5961,"목":6038,"금":5670,"토":5830},"offline":{"월":18,"화":52,"수":58,"목":59,"금":60,"토":44}},"2024-01-07":{"online":{"월":7229,"화":7811,"수":7566,"목":7008,"금":6351,"토":6546},"offline":{"월":40,"화":71,"수":69,"목":65,"금":74,"토":55}},"2024-01-14":{"online":{"월":6495,"화":6791,"수":6059,"목":6223,"금":6394,"토":5866},"offline":{"월":56,"화":54,"수":53,"목":68,"금":67,"토":47}},"2024-01-21":{"online":{"월":6687,"화":7216,"수":7184,"목":6740,"금":6029,"토":5558},"offline":{"월":50,"화":57,"수":50,"목":60,"금":47,"토":49}},"2024-01-28":{"online":{"월":6464,"화":6992,"수":6491,"목":6594,"금":5672,"토":5305},"offline":{"월":63,"화":50,"수":52,"목":53,"금":50,"토":45}},"2024-02-04":{"online":{"월":6349,"화":6738,"수":6064,"목":6728,"금":5750,"토":5228},"offline":{"월":71,"화":55,"수":57,"목":54,"금":56,"토":41}},"2024-02-11":{"online":{"월":6471,"화":null,"수":6133,"목":5910,"금":4887,"토":5132},"offline":{"월":62,"화":54,"수":60,"목":57,"금":50,"토":26}},"2024-02-18":{"online":{"월":5252,"화":6484,"수":6125,"목":6361,"금":5964,"토":5173},"offline":{"월":41,"화":53,"수":48,"목":57,"금":61,"토":47}},"2024-02-25":{"online":{"월":6177,"화":6935,"수":6855,"목":6392,"금":5965,"토":5091},"offline":{"월":52,"화":62,"수":63,"목":39,"금":51,"토":43}},"2024-03-03":{"online":{"월":6063,"화":7353,"수":6448,"목":6164,"금":5431,"토":5184},"offline":{"월":71,"화":70,"수":64,"목":64,"금":50,"토":39}},"2024-03-10":{"online":{"월":6189,"화":6597,"수":6155,"목":5801,"금":5735,"토":5438},"offline":{"월":71,"화":67,"수":64,"목":72,"금":57,"토":44}},"2024-03-17":{"online":{"월":5299,"화":6579,"수":6482,"목":6336,"금":5988,"토":5525},"offline":{"월":64,"화":76,"수":63,"목":61,"금":61,"토":42}},"2024-03-24":{"online":{"월":6298,"화":6118,"수":6004,"목":6157,"금":5969,"토":5391},"offline":{"월":60,"화":60,"수":57,"목":64,"금":55,"토":41}},"2024-03-31":{"online":{"월":7760,"화":6584,"수":6178,"목":5781,"금":5496,"토":5900},"offline":{"월":61,"화":51,"수":53,"목":52,"금":44,"토":41}},"2024-04-07":{"online":{"월":6507,"화":7066,"수":6792,"목":7188,"금":6009,"토":5301},"offline":{"월":63,"화":61,"수":58,"목":54,"금":68,"토":47}},"2024-04-14":{"online":{"월":6432,"화":6107,"수":5974,"목":6759,"금":5671,"토":5107},"offline":{"월":64,"화":70,"수":59,"목":53,"금":47,"토":52}},"2024-04-21":{"online":{"월":5807,"화":6434,"수":6309,"목":6284,"금":5856,"토":5722},"offline":{"월":62,"화":70,"수":65,"목":63,"금":61,"토":41}},"2024-04-28":{"online":{"월":6058,"화":6226,"수":5994,"목":6032,"금":5482,"토":4689},"offline":{"월":61,"화":71,"수":57,"목":60,"금":63,"토":48}},"2024-05-05":{"online":{"월":5855,"화":5912,"수":5439,"목":6236,"금":2389,"토":4692},"offline":{"월":62,"화":65,"수":66,"목":68,"금":75,"토":63}},"2024-05-12":{"online":{"월":5618,"화":6875,"수":5913,"목":6330,"금":6042,"토":5017},"offline":{"월":48,"화":69,"수":73,"목":70,"금":60,"토":48}},"2024-05-19":{"online":{"월":6080,"화":6149,"수":5202,"목":5843,"금":5599,"토":5060},"offline":{"월":74,"화":68,"수":79,"목":60,"금":63,"토":61}},"2024-05-26":{"online":{"월":5792,"화":2037,"수":5916,"목":6222,"금":5776,"토":4730},"offline":{"월":77,"화":73,"수":78,"목":76,"금":71,"토":58}},"2024-06-02":{"online":{"월":5713,"화":6320,"수":5883,"목":6056,"금":5458,"토":4606},"offline":{"월":67,"화":76,"수":86,"목":78,"금":81,"토":64}},"2024-06-09":{"online":{"월":5832,"화":6517,"수":5847,"목":5079,"금":5471,"토":4885},"offline":{"월":75,"화":74,"수":86,"목":70,"금":75,"토":57}},"2024-06-16":{"online":{"월":5546,"화":5951,"수":5418,"목":6271,"금":5319,"토":2671},"offline":{"월":91,"화":67,"수":70,"목":82,"금":81,"토":64}},"2024-06-23":{"online":{"월":null,"화":5959,"수":5873,"목":5661,"금":5402,"토":4806},"offline":{"월":76,"화":77,"수":79,"목":81,"금":82,"토":61}},"2024-06-30":{"online":{"월":5640,"화":6206,"수":6148,"목":6099,"금":5828,"토":4743},"offline":{"월":82,"화":89,"수":90,"목":92,"금":90,"토":77}},"2024-07-07":{"online":{"월":5701,"화":6196,"수":6124,"목":6026,"금":6064,"토":4992},"offline":{"월":97,"화":90,"수":89,"목":99,"금":69,"토":56}},"2024-07-14":{"online":{"월":5948,"화":6615,"수":6304,"목":5963,"금":6024,"토":4685},"offline":{"월":86,"화":88,"수":76,"목":77,"금":73,"토":67}},"2024-07-21":{"online":{"월":5958,"화":6296,"수":6179,"목":6316,"금":5424,"토":4747},"offline":{"월":85,"화":89,"수":78,"목":43,"금":66,"토":52}},"2024-07-28":{"online":{"월":6199,"화":6281,"수":5899,"목":5791,"금":5723,"토":5259},"offline":{"월":50,"화":51,"수":63,"목":75,"금":66,"토":66}},"2024-08-04":{"online":{"월":6025,"화":6058,"수":5430,"목":5782,"금":5981,"토":5023},"offline":{"월":76,"화":96,"수":78,"목":84,"금":77,"토":72}},"2024-08-11":{"online":{"월":5609,"화":6023,"수":4538,"목":5889,"금":7286,"토":4624},"offline":{"월":82,"화":92,"수":84,"목":94,"금":85,"토":75}},"2024-08-18":{"online":{"월":5753,"화":5889,"수":5605,"목":5248,"금":5288,"토":4611},"offline":{"월":91,"화":91,"수":96,"목":86,"금":94,"토":83}},"2024-08-25":{"online":{"월":5741,"화":5935,"수":6037,"목":5792,"금":5561,"토":4191},"offline":{"월":80,"화":76,"수":71,"목":68,"금":75,"토":59}},"2024-09-01":{"online":{"월":6038,"화":6231,"수":6047,"목":6233,"금":5956,"토":4615},"offline":{"월":98,"화":92,"수":93,"목":95,"금":93,"토":70}},"2024-09-08":{"online":{"월":5673,"화":6165,"수":5149,"목":6182,"금":5863,"토":4328},"offline":{"월":100,"화":95,"수":91,"목":88,"금":93,"토":81}},"2024-09-15":{"online":{"월":6573,"화":6143,"수":5765,"목":5838,"금":5472,"토":4503},"offline":{"월":107,"화":106,"수":103,"목":91,"금":97,"토":85}},"2024-09-22":{"online":{"월":4265,"화":4425,"수":4928,"목":5198,"금":5469,"토":4364},"offline":{"월":78,"화":73,"수":77,"목":98,"금":82,"토":55}},"2024-09-29":{"online":{"월":5959,"화":6724,"수":7284,"목":7015,"금":6152,"토":4728},"offline":{"월":108,"화":90,"수":102,"목":104,"금":103,"토":80}},"2024-10-13":{"online":{"월":7443,"화":6716,"수":5892,"목":6404,"금":6106,"토":5076},"offline":{"월":145,"화":133,"수":180,"목":138,"금":115,"토":161}},"2024-10-20":{"online":{"월":5666,"화":6554,"수":6233,"목":6303,"금":6226,"토":5012},"offline":{"월":114,"화":110,"수":127,"목":127,"금":96,"토":95}},"2024-10-27":{"online":{"월":6033,"화":6874,"수":6160,"목":6697,"금":5823,"토":4850},"offline":{"월":114,"화":107,"수":98,"목":98,"금":99,"토":77}},"2024-11-03":{"online":{"월":6607,"화":6895,"수":6048,"목":6059,"금":5979,"토":4288},"offline":{"월":87,"화":97,"수":94,"목":71,"금":93,"토":85}},"2024-11-10":{"online":{"월":6274,"화":6603,"수":6148,"목":6782,"금":5995,"토":4979},"offline":{"월":88,"화":104,"수":97,"목":71,"금":84,"토":71}},"2024-11-17":{"online":{"월":6042,"화":6427,"수":5789,"목":2758,"금":5333,"토":4354},"offline":{"월":82,"화":76,"수":80,"목":null,"금":61,"토":48}},"2024-11-24":{"online":{"월":5421,"화":5321,"수":5393,"목":5794,"금":5260,"토":4788},"offline":{"월":75,"화":72,"수":61,"목":78,"금":78,"토":72}},"2024-12-01":{"online":{"월":5662,"화":6284,"수":6391,"목":6024,"금":6164,"토":5473},"offline":{"월":81,"화":79,"수":55,"목":19,"금":35,"토":41}},"2024-12-08":{"online":{"월":6430,"화":6646,"수":6600,"목":6422,"금":5894,"토":5034},"offline":{"월":79,"화":68,"수":65,"목":81,"금":76,"토":68}},"2024-12-15":{"online":{"월":6139,"화":6298,"수":6282,"목":6357,"금":5785,"토":5189},"offline":{"월":78,"화":76,"수":64,"목":76,"금":64,"토":61}},"2024-12-22":{"online":{"월":6280,"화":6544,"수":6256,"목":6122,"금":6436,"토":5274},"offline":{"월":86,"화":75,"수":83,"목":79,"금":81,"토":43}},"2024-12-29":{"online":{"월":5949,"화":6338,"수":5938,"목":5918,"금":6377,"토":4676},"offline":{"월":69,"화":70,"수":35,"목":75,"금":65,"토":37}},"2025-01-05":{"online":{"월":7351,"화":4199,"수":8201,"목":6923,"금":6535,"토":5863},"offline":{"월":70,"화":70,"수":null,"목":76,"금":77,"토":65}},"2025-01-12":{"online":{"월":6639,"화":6712,"수":6494,"목":6738,"금":6055,"토":5525},"offline":{"월":71,"화":55,"수":57,"목":56,"금":53,"토":44}},"2025-01-19":{"online":{"월":6227,"화":6977,"수":5969,"목":6277,"금":6132,"토":5449},"offline":{"월":67,"화":50,"수":60,"목":63,"금":62,"토":58}},"2025-01-26":{"online":{"월":6292,"화":5976,"수":6065,"목":5948,"금":6166,"토":5180},"offline":{"월":65,"화":59,"수":71,"목":64,"금":67,"토":59}},"2025-02-02":{"online":{"월":5734,"화":5166,"수":5184,"목":5431,"금":5929,"토":5697},"offline":{"월":58,"화":35,"수":38,"목":36,"금":55,"토":47}},"2025-02-09":{"online":{"월":6442,"화":6776,"수":6648,"목":6221,"금":6074,"토":5136},"offline":{"월":77,"화":72,"수":73,"목":65,"금":49,"토":49}},"2025-02-16":{"online":{"월":6558,"화":6562,"수":6416,"목":6039,"금":5812,"토":5092},"offline":{"월":78,"화":79,"수":75,"목":71,"금":79,"토":62}},"2025-02-23":{"online":{"월":6179,"화":6589,"수":6147,"목":6150,"금":5920,"토":5301},"offline":{"월":83,"화":85,"수":80,"목":90,"금":71,"토":55}},"2025-03-02":{"online":{"월":6179,"화":6683,"수":5796,"목":6007,"금":5795,"토":5018},"offline":{"월":74,"화":73,"수":67,"목":68,"금":62,"토":54}},"2025-03-09":{"online":{"월":5479,"화":6413,"수":6222,"목":6564,"금":5740,"토":4786},"offline":{"월":55,"화":73,"수":80,"목":70,"금":69,"토":36}},"2025-03-16":{"online":{"월":6227,"화":6977,"수":5969,"목":6277,"금":6132,"토":5449},"offline":{"월":67,"화":50,"수":60,"목":63,"금":62,"토":58}},"2025-03-23":{"online":{"월":6463,"화":6323,"수":5792,"목":6280,"금":5530,"토":4899},"offline":{"월":86,"화":60,"수":75,"목":70,"금":70,"토":44}},"2025-03-30":{"online":{"월":5990,"화":6350,"수":6140,"목":5971,"금":6290,"토":4476},"offline":{"월":71,"화":77,"수":69,"목":62,"금":65,"토":52}},"2025-04-06":{"online":{"월":5923,"화":5827,"수":5741,"목":591,"금":5639,"토":4998},"offline":{"월":60,"화":68,"수":61,"목":72,"금":64,"토":54}},"2025-04-13":{"online":{"월":5919,"화":6024,"수":6094,"목":6086,"금":5582,"토":4680},"offline":{"월":64,"화":79,"수":68,"목":62,"금":60,"토":44}},"2025-04-20":{"online":{"월":6749,"화":5927,"수":5471,"목":5965,"금":5086,"토":4691},"offline":{"월":57,"화":40,"수":48,"목":41,"금":47,"토":42}},"2025-04-27":{"online":{"월":6363,"화":6555,"수":5674,"목":5982,"금":5767,"토":4683},"offline":{"월":75,"화":65,"수":63,"목":70,"금":68,"토":43}},"2025-05-04":{"online":{"월":5734,"화":6520,"수":5970,"목":5833,"금":5517,"토":5347},"offline":{"월":72,"화":75,"수":79,"목":67,"금":69,"토":51}},"2025-05-11":{"online":{"월":4742,"화":5116,"수":5245,"목":5823,"금":6110,"토":4650},"offline":{"월":52,"화":75,"수":72,"목":68,"금":83,"토":63}},"2025-05-18":{"online":{"월":5617,"화":5914,"수":5657,"목":6140,"금":5819,"토":8525},"offline":{"월":75,"화":73,"수":79,"목":69,"금":63,"토":60}},"2025-05-25":{"online":{"월":5833,"화":6047,"수":5728,"목":5863,"금":5547,"토":5055},"offline":{"월":74,"화":72,"수":63,"목":70,"금":66,"토":58}},"2025-06-01":{"online":{"월":5803,"화":5980,"수":5718,"목":6083,"금":5644,"토":4932},"offline":{"월":76,"화":79,"수":82,"목":81,"금":74,"토":58}},"2025-06-08":{"online":{"월":5491,"화":5347,"수":5706,"목":5678,"금":5004,"토":4768},"offline":{"월":75,"화":86,"수":79,"목":80,"금":73,"토":70}},"2025-06-15":{"online":{"월":5705,"화":6022,"수":6038,"목":5926,"금":5377,"토":4774},"offline":{"월":86,"화":76,"수":93,"목":83,"금":84,"토":67}},"2025-06-22":{"online":{"월":5505,"화":5744,"수":5988,"목":6019,"금":5309,"토":4359},"offline":{"월":82,"화":84,"수":84,"목":69,"금":72,"토":64}},"2025-06-29":{"online":{"월":5661,"화":6006,"수":5818,"목":7358,"금":5850,"토":4522},"offline":{"월":80,"화":81,"수":86,"목":85,"금":68,"토":58}},"2025-07-06":{"online":{"월":5773,"화":6299,"수":5683,"목":5980,"금":5704,"토":4447},"offline":{"월":86,"화":87,"수":72,"목":87,"금":95,"토":81}},"2025-07-13":{"online":{"월":6367,"화":6396,"수":5934,"목":5786,"금":5514,"토":4616},"offline":{"월":93,"화":83,"수":90,"목":72,"금":79,"토":72}},"2025-07-20":{"online":{"월":5696,"화":5915,"수":6154,"목":5859,"금":5557,"토":4881},"offline":{"월":77,"화":69,"수":81,"목":64,"금":73,"토":56}},"2025-07-27":{"online":{"월":5851,"화":6245,"수":5734,"목":5921,"금":5670,"토":4629},"offline":{"월":80,"화":82,"수":87,"목":88,"금":74,"토":68}},"2025-08-03":{"online":{"월":5645,"화":5784,"수":5504,"목":5332,"금":5295,"토":4357},"offline":{"월":84,"화":93,"수":81,"목":75,"금":63,"토":71}},"2025-08-10":{"online":{"월":5903,"화":5797,"수":6004,"목":5677,"금":5485,"토":4491},"offline":{"월":61,"화":72,"수":69,"목":73,"금":68,"토":73}},"2025-08-17":{"online":{"월":5979,"화":5481,"수":5387,"목":5586,"금":4731,"토":4738},"offline":{"월":86,"화":86,"수":50,"목":53,"금":68,"토":58}},"2025-08-24":{"online":{"월":5491,"화":5347,"수":5706,"목":5678,"금":5004,"토":4768},"offline":{"월":75,"화":86,"수":79,"목":80,"금":73,"토":70}},"2025-08-31":{"online":{"월":5577,"화":5868,"수":5698,"목":5567,"금":5370,"토":4619},"offline":{"월":85,"화":63,"수":77,"목":86,"금":70,"토":59}},"2025-09-07":{"online":{"월":5699,"화":5771,"수":5535,"목":5844,"금":5437,"토":4829},"offline":{"월":83,"화":82,"수":82,"목":78,"금":74,"토":67}},"2025-09-14":{"online":{"월":5723,"화":5979,"수":5581,"목":5895,"금":5549,"토":4548},"offline":{"월":96,"화":77,"수":85,"목":66,"금":72,"토":49}},"2025-09-21":{"online":{"월":5929,"화":5698,"수":5489,"목":5946,"금":5206,"토":4461},"offline":{"월":91,"화":80,"수":67,"목":67,"금":64,"토":36}},"2025-09-28":{"online":{"월":1661,"화":1448,"수":1487,"목":1445,"금":1485,"토":2426},"offline":{"월":1107,"화":985,"수":944,"목":941,"금":941,"토":1468}},"2025-10-05":{"online":{"월":5096,"화":5992,"수":5333,"목":5198,"금":4153,"토":4545},"offline":{"월":88,"화":88,"수":92,"목":76,"금":84,"토":71}},"2025-10-12":{"online":{"월":3836,"화":4899,"수":4922,"목":5224,"금":5244,"토":5033},"offline":{"월":52,"화":68,"수":73,"목":91,"금":81,"토":73}},"2025-10-19":{"online":{"월":5280,"화":5738,"수":5423,"목":5573,"금":4869,"토":4288},"offline":{"월":86,"화":77,"수":76,"목":69,"금":71,"토":60}},"2025-10-26":{"online":{"월":5280,"화":5738,"수":5423,"목":5573,"금":4869,"토":4288},"offline":{"월":86,"화":77,"수":76,"목":69,"금":71,"토":60}},"2025-11-02":{"online":{"월":5290,"화":5384,"수":5064,"목":5160,"금":4787,"토":7272},"offline":{"월":75,"화":61,"수":72,"목":76,"금":60,"토":55}},"2025-11-09":{"online":{"월":5554,"화":5698,"수":5483,"목":5523,"금":5319,"토":4508},"offline":{"월":72,"화":76,"수":76,"목":68,"금":70,"토":65}},"2025-11-16":{"online":{"월":5135,"화":5565,"수":7004,"목":7500,"금":5107,"토":4598},"offline":{"월":67,"화":69,"수":64,"목":null,"금":56,"토":62}},"2025-11-23":{"online":{"월":5193,"화":5623,"수":5502,"목":5858,"금":5470,"토":4797},"offline":{"월":80,"화":71,"수":59,"목":65,"금":77,"토":75}},"2025-11-30":{"online":{"월":5535,"화":5661,"수":5545,"목":5555,"금":5249,"토":4433},"offline":{"월":73,"화":62,"수":59,"목":59,"금":58,"토":50}},"2025-12-07":{"online":{"월":5829,"화":6255,"수":5762,"목":5908,"금":5600,"토":8045},"offline":{"월":75,"화":66,"수":67,"목":54,"금":25,"토":43}},"2025-12-14":{"online":{"월":6155,"화":6259,"수":6148,"목":6082,"금":5741,"토":4787},"offline":{"월":70,"화":62,"수":55,"목":56,"금":63,"토":56}},"2025-12-21":{"online":{"월":5899,"화":6155,"수":6094,"목":6152,"금":5997,"토":4897},"offline":{"월":71,"화":77,"수":61,"목":58,"금":51,"토":59}},"2025-12-28":{"online":{"월":5853,"화":6171,"수":6079,"목":5718,"금":5531,"토":5087},"offline":{"월":59,"화":63,"수":58,"목":32,"금":49,"토":51}}},"school":{"2023-06-11":{"_total":2245,"사랑부":{"1부":30},"영아부":{"1부":51},"송링유년":{"1부":28},"서현유년":{"1부":235},"송림초등":{"1부":34},"서현초등":{"1부":230},"송림소년":{"1부":38},"서현소년":{"1부":227},"중등부":{"1부":292},"고등부":{"1부":194},"수험생":{"1부":0}},"2023-06-18":{"_total":2295,"사랑부":{"1부":26},"영아부":{"1부":55},"송링유년":{"1부":31},"서현유년":{"1부":219},"송림초등":{"1부":34},"서현초등":{"1부":223},"송림소년":{"1부":41},"서현소년":{"1부":241},"중등부":{"1부":310},"고등부":{"1부":217},"수험생":{"1부":0}},"2023-06-25":{"_total":2202,"사랑부":{"1부":23},"영아부":{"1부":57},"송링유년":{"1부":24},"서현유년":{"1부":232},"송림초등":{"1부":33},"서현초등":{"1부":210},"송림소년":{"1부":37},"서현소년":{"1부":218},"중등부":{"1부":267},"고등부":{"1부":199},"수험생":{"1부":0}},"2023-07-02":{"_total":2259,"사랑부":{"1부":30},"영아부":{"1부":57},"송링유년":{"1부":32},"서현유년":{"1부":234},"송림초등":{"1부":40},"서현초등":{"1부":234},"송림소년":{"1부":42},"서현소년":{"1부":244},"중등부":{"1부":254},"고등부":{"1부":167},"수험생":{"1부":0}},"2023-07-09":{"_total":2294,"사랑부":{"1부":30},"영아부":{"1부":48},"송링유년":{"1부":26},"서현유년":{"1부":225},"송림초등":{"1부":31},"서현초등":{"1부":228},"송림소년":{"1부":43},"서현소년":{"1부":235},"중등부":{"1부":298},"고등부":{"1부":193},"수험생":{"1부":0}},"2023-07-16":{"_total":2369,"사랑부":{"1부":26},"영아부":{"1부":53},"송링유년":{"1부":33},"서현유년":{"1부":211},"송림초등":{"1부":39},"서현초등":{"1부":222},"송림소년":{"1부":43},"서현소년":{"1부":235},"중등부":{"1부":300},"고등부":{"1부":214},"수험생":{"1부":0}},"2023-07-23":{"_total":2213,"사랑부":{"1부":23},"영아부":{"1부":49},"송링유년":{"1부":30},"서현유년":{"1부":180},"송림초등":{"1부":29},"서현초등":{"1부":212},"송림소년":{"1부":30},"서현소년":{"1부":209},"중등부":{"1부":257},"고등부":{"1부":203},"수험생":{"1부":0}},"2023-07-30":{"_total":1451,"사랑부":{"1부":25},"영아부":{"1부":65},"유아부":{"1부":126},"유치부":{"1부":148},"송링유년":{"1부":29},"서현유년":{"1부":191},"송림초등":{"1부":29},"서현초등":{"1부":203},"송림소년":{"1부":25},"서현소년":{"1부":201},"중등부":{"1부":0},"고등부":{"1부":0},"수험생":{"1부":0}},"2023-08-06":{"_total":2093,"사랑부":{"1부":27},"영아부":{"1부":61},"유아부":{"1부":140},"유치부":{"1부":146},"송링유년":{"1부":30},"서현유년":{"1부":180},"송림초등":{"1부":36},"서현초등":{"1부":192},"송림소년":{"1부":27},"서현소년":{"1부":209},"중등부":{"1부":232},"고등부":{"1부":203},"수험생":{"1부":0}},"2023-08-13":{"_total":2091,"사랑부":{"1부":27},"영아부":{"1부":58},"유아부":{"1부":162},"유치부":{"1부":151},"송링유년":{"1부":27},"서현유년":{"1부":177},"송림초등":{"1부":34},"서현초등":{"1부":193},"송림소년":{"1부":28},"서현소년":{"1부":177},"중등부":{"1부":278},"고등부":{"1부":180},"수험생":{"1부":0}},"2023-08-20":{"_total":2237,"사랑부":{"1부":29},"영아부":{"1부":60},"유아부":{"1부":149},"유치부":{"1부":160},"송링유년":{"1부":27},"서현유년":{"1부":207},"송림초등":{"1부":30},"서현초등":{"1부":226},"송림소년":{"1부":37},"서현소년":{"1부":235},"중등부":{"1부":293},"고등부":{"1부":223},"수험생":{"1부":0}},"2023-08-27":{"_total":2253,"사랑부":{"1부":27},"영아부":{"1부":38},"유아부":{"1부":160},"유치부":{"1부":162},"송링유년":{"1부":31},"서현유년":{"1부":219},"송림초등":{"1부":31},"서현초등":{"1부":219},"송림소년":{"1부":38},"서현소년":{"1부":255},"중등부":{"1부":314},"고등부":{"1부":216},"수험생":{"1부":0}},"2023-09-03":{"_total":2273,"사랑부":{"1부":23},"영아부":{"1부":63},"유아부":{"1부":153},"유치부":{"1부":171},"송링유년":{"1부":28},"서현유년":{"1부":224},"송림초등":{"1부":36},"서현초등":{"1부":212},"송림소년":{"1부":34},"서현소년":{"1부":236},"중등부":{"1부":269},"고등부":{"1부":203},"수험생":{"1부":0}},"2023-09-10":{"_total":2383,"사랑부":{"1부":99},"영아부":{"1부":66},"유아부":{"1부":160},"유치부":{"1부":167},"송링유년":{"1부":28},"서현유년":{"1부":223},"송림초등":{"1부":36},"서현초등":{"1부":226},"송림소년":{"1부":42},"서현소년":{"1부":233},"중등부":{"1부":309},"고등부":{"1부":205},"수험생":{"1부":0}},"2023-09-17":{"_total":2291,"사랑부":{"1부":69},"영아부":{"1부":64},"유아부":{"1부":160},"유치부":{"1부":176},"송링유년":{"1부":26},"서현유년":{"1부":227},"송림초등":{"1부":31},"서현초등":{"1부":240},"송림소년":{"1부":38},"서현소년":{"1부":226},"중등부":{"1부":296},"고등부":{"1부":196},"수험생":{"1부":0}},"2023-09-24":{"_total":2177,"사랑부":{"1부":63},"영아부":{"1부":80},"유아부":{"1부":163},"유치부":{"1부":172},"송링유년":{"1부":34},"서현유년":{"1부":207},"송림초등":{"1부":43},"서현초등":{"1부":232},"송림소년":{"1부":40},"서현소년":{"1부":213},"중등부":{"1부":259},"고등부":{"1부":180},"수험생":{"1부":0}},"2023-10-01":{"_total":1787,"사랑부":{"1부":50},"영아부":{"1부":46},"유아부":{"1부":97},"유치부":{"1부":113},"송링유년":{"1부":17},"서현유년":{"1부":146},"송림초등":{"1부":33},"서현초등":{"1부":147},"송림소년":{"1부":23},"서현소년":{"1부":151},"중등부":{"1부":180},"고등부":{"1부":152},"수험생":{"1부":0}},"2023-10-08":{"_total":2234,"사랑부":{"1부":66},"영아부":{"1부":73},"유아부":{"1부":166},"유치부":{"1부":165},"송링유년":{"1부":28},"서현유년":{"1부":223},"송림초등":{"1부":40},"서현초등":{"1부":220},"송림소년":{"1부":33},"서현소년":{"1부":213},"중등부":{"1부":293},"고등부":{"1부":161},"수험생":{"1부":0}},"2023-10-15":{"_total":2179,"사랑부":{"1부":73},"영아부":{"1부":61},"유아부":{"1부":166},"유치부":{"1부":168},"송링유년":{"1부":29},"서현유년":{"1부":246},"송림초등":{"1부":35},"서현초등":{"1부":220},"송림소년":{"1부":38},"서현소년":{"1부":224},"중등부":{"1부":291},"고등부":{"1부":172},"수험생":{"1부":0}},"2023-10-22":{"_total":2274,"사랑부":{"1부":70},"영아부":{"1부":73},"유아부":{"1부":164},"유치부":{"1부":169},"송링유년":{"1부":23},"서현유년":{"1부":210},"송림초등":{"1부":29},"서현초등":{"1부":249},"송림소년":{"1부":35},"서현소년":{"1부":219},"중등부":{"1부":303},"고등부":{"1부":183},"수험생":{"1부":0}},"2023-10-29":{"_total":1943,"사랑부":{"1부":65},"영아부":{"1부":74},"유아부":{"1부":159},"유치부":{"1부":146},"송링유년":{"1부":27},"서현유년":{"1부":210},"송림초등":{"1부":43},"서현초등":{"1부":229},"송림소년":{"1부":35},"서현소년":{"1부":208},"중등부":{"1부":257},"고등부":{"1부":170},"수험생":{"1부":0}},"2023-11-05":{"_total":1968,"사랑부":{"1부":64},"영아부":{"1부":50},"유아부":{"1부":143},"유치부":{"1부":172},"송링유년":{"1부":23},"서현유년":{"1부":268},"송림초등":{"1부":31},"서현초등":{"1부":219},"송림소년":{"1부":32},"서현소년":{"1부":231},"중등부":{"1부":270},"고등부":{"1부":168},"수험생":{"1부":0}},"2023-11-12":{"_total":2202,"사랑부":{"1부":62},"영아부":{"1부":74},"유아부":{"1부":156},"유치부":{"1부":167},"송링유년":{"1부":29},"서현유년":{"1부":222},"송림초등":{"1부":24},"서현초등":{"1부":241},"송림소년":{"1부":49},"서현소년":{"1부":212},"중등부":{"1부":268},"고등부":{"1부":200},"수험생":{"1부":0}},"2023-11-19":{"_total":2278,"사랑부":{"1부":66},"영아부":{"1부":57},"유아부":{"1부":163},"유치부":{"1부":167},"송링유년":{"1부":28},"서현유년":{"1부":229},"송림초등":{"1부":45},"서현초등":{"1부":235},"송림소년":{"1부":35},"서현소년":{"1부":226},"중등부":{"1부":298},"고등부":{"1부":182},"수험생":{"1부":0}},"2023-11-26":{"_total":2274,"사랑부":{"1부":56},"영아부":{"1부":76},"유아부":{"1부":159},"유치부":{"1부":171},"송링유년":{"1부":28},"서현유년":{"1부":239},"송림초등":{"1부":38},"서현초등":{"1부":252},"송림소년":{"1부":33},"서현소년":{"1부":240},"중등부":{"1부":256},"고등부":{"1부":178},"수험생":{"1부":0}},"2023-12-03":{"_total":2215,"사랑부":{"1부":64},"영아부":{"1부":80},"유아부":{"1부":154},"유치부":{"1부":185},"송링유년":{"1부":32},"서현유년":{"1부":256},"송림초등":{"1부":36},"서현초등":{"1부":238},"송림소년":{"1부":39},"서현소년":{"1부":198},"중등부":{"1부":240},"고등부":{"1부":167},"수험생":{"1부":0}},"2023-12-10":{"_total":2265,"사랑부":{"1부":72},"영아부":{"1부":80},"유아부":{"1부":165},"유치부":{"1부":188},"송링유년":{"1부":30},"서현유년":{"1부":224},"송림초등":{"1부":40},"서현초등":{"1부":244},"송림소년":{"1부":40},"서현소년":{"1부":218},"중등부":{"1부":230},"고등부":{"1부":192},"수험생":{"1부":0}},"2023-12-17":{"_total":0,"사랑부":{"1부":0},"영아부":{"1부":0},"유아부":{"1부":0},"유치부":{"1부":0},"송림유년":{"1부":0},"서현유년":{"1부":0},"송림초등":{"1부":0},"서현초등":{"1부":0},"송림소년":{"1부":0},"서현소년":{"1부":0},"중등부":{"1부":0},"고등부":{"1부":0},"수험생":{"1부":0}},"2023-12-24":{"_total":2161,"사랑부":{"1부":72},"영아부":{"1부":70},"유아부":{"1부":179},"유치부":{"1부":177},"송림유년":{"1부":29},"서현유년":{"1부":237},"송림초등":{"1부":39},"서현초등":{"1부":219},"송림소년":{"1부":39},"서현소년":{"1부":226},"중등부":{"1부":246},"고등부":{"1부":223},"수험생":{"1부":0}},"2023-12-31":{"_total":2258,"사랑부":{"1부":68},"영아부":{"1부":78},"유아부":{"1부":158},"유치부":{"1부":180},"송림유년":{"1부":38},"서현유년":{"1부":220},"송림초등":{"1부":44},"서현초등":{"1부":239},"송림소년":{"1부":39},"서현소년":{"1부":242},"중등부":{"1부":289},"고등부":{"1부":201},"수험생":{"1부":0}},"2024-01-07":{"_total":2387,"사랑부":{"1부":69},"영아부":{"1부":48},"유아부":{"1부":127},"유치부":{"1부":240},"송림유년":{"1부":28},"서현유년":{"1부":221},"송림초등":{"1부":40},"서현초등":{"1부":276},"송림소년":{"1부":57},"서현소년":{"1부":245},"중등부":{"1부":374},"고등부":{"1부":249},"수험생":{"1부":0}},"2024-01-14":{"_total":2263,"사랑부":{"1부":72},"영아부":{"1부":46},"유아부":{"1부":144},"유치부":{"1부":164},"송림유년":{"1부":23},"서현유년":{"1부":211},"송림초등":{"1부":48},"서현초등":{"1부":238},"송림소년":{"1부":57},"서현소년":{"1부":245},"중등부":{"1부":349},"고등부":{"1부":254},"수험생":{"1부":0}},"2024-01-21":{"_total":2246,"사랑부":{"1부":71},"영아부":{"1부":52},"유아부":{"1부":137},"유치부":{"1부":178},"송림유년":{"1부":22},"서현유년":{"1부":209},"송림초등":{"1부":45},"서현초등":{"1부":260},"송림소년":{"1부":62},"서현소년":{"1부":250},"중등부":{"1부":308},"고등부":{"1부":244},"수험생":{"1부":0}},"2024-01-28":{"_total":2269,"사랑부":{"1부":70},"영아부":{"1부":54},"유아부":{"1부":145},"유치부":{"1부":200},"송림유년":{"1부":25},"서현유년":{"1부":245},"송림초등":{"1부":49},"서현초등":{"1부":264},"송림소년":{"1부":60},"서현소년":{"1부":252},"중등부":{"1부":355},"고등부":{"1부":248},"수험생":{"1부":0}},"2024-02-04":{"_total":1426,"사랑부":{"1부":72},"영아부":{"1부":86},"유아부":{"1부":119},"유치부":{"1부":190},"송림유년":{"1부":26},"서현유년":{"1부":84},"송림초등":{"1부":44},"서현초등":{"1부":257},"송림소년":{"1부":57},"서현소년":{"1부":230},"중등부":{"1부":0},"고등부":{"1부":70},"수험생":{"1부":0}},"2024-02-11":{"_total":1622,"사랑부":{"1부":53},"영아부":{"1부":45},"유아부":{"1부":107},"유치부":{"1부":118},"송림유년":{"1부":18},"서현유년":{"1부":150},"송림초등":{"1부":33},"서현초등":{"1부":154},"송림소년":{"1부":39},"서현소년":{"1부":133},"중등부":{"1부":208},"고등부":{"1부":182},"수험생":{"1부":0}},"2024-02-18":{"_total":2259,"사랑부":{"1부":76},"영아부":{"1부":61},"유아부":{"1부":153},"유치부":{"1부":198},"송림유년":{"1부":28},"서현유년":{"1부":237},"송림초등":{"1부":45},"서현초등":{"1부":274},"송림소년":{"1부":61},"서현소년":{"1부":249},"중등부":{"1부":351},"고등부":{"1부":247},"수험생":{"1부":0}},"2024-02-25":{"_total":2228,"사랑부":{"1부":70},"영아부":{"1부":65},"유아부":{"1부":155},"유치부":{"1부":196},"송림유년":{"1부":33},"서현유년":{"1부":207},"송림초등":{"1부":52},"서현초등":{"1부":261},"송림소년":{"1부":66},"서현소년":{"1부":237},"중등부":{"1부":327},"고등부":{"1부":236},"수험생":{"1부":0}},"2024-03-03":{"_total":2342,"사랑부":{"1부":76},"영아부":{"1부":61},"유아부":{"1부":150},"유치부":{"1부":203},"송림유년":{"1부":31},"서현유년":{"1부":229},"송림초등":{"1부":60},"서현초등":{"1부":262},"송림소년":{"1부":64},"서현소년":{"1부":250},"중등부":{"1부":379},"고등부":{"1부":277},"수험생":{"1부":0}},"2024-03-10":{"_total":2291,"사랑부":{"1부":75},"영아부":{"1부":62},"유아부":{"1부":148},"유치부":{"1부":187},"송림유년":{"1부":34},"서현유년":{"1부":228},"송림초등":{"1부":52},"서현초등":{"1부":264},"송림소년":{"1부":64},"서현소년":{"1부":259},"중등부":{"1부":373},"고등부":{"1부":245},"수험생":{"1부":0}},"2024-03-17":{"_total":2271,"사랑부":{"1부":76},"영아부":{"1부":67},"유아부":{"1부":156},"유치부":{"1부":195},"송림유년":{"1부":30},"서현유년":{"1부":231},"송림초등":{"1부":56},"서현초등":{"1부":272},"송림소년":{"1부":62},"서현소년":{"1부":247},"중등부":{"1부":319},"고등부":{"1부":239},"수험생":{"1부":0}},"2024-03-24":{"_total":2267,"사랑부":{"1부":73},"영아부":{"1부":69},"유아부":{"1부":108},"유치부":{"1부":189},"송림유년":{"1부":31},"서현유년":{"1부":243},"송림초등":{"1부":48},"서현초등":{"1부":292},"송림소년":{"1부":62},"서현소년":{"1부":261},"중등부":{"1부":326},"고등부":{"1부":234},"수험생":{"1부":0}},"2024-03-31":{"_total":2302,"사랑부":{"1부":73},"영아부":{"1부":72},"유아부":{"1부":163},"유치부":{"1부":205},"송림유년":{"1부":38},"서현유년":{"1부":238},"송림초등":{"1부":59},"서현초등":{"1부":285},"송림소년":{"1부":64},"서현소년":{"1부":261},"중등부":{"1부":343},"고등부":{"1부":230},"수험생":{"1부":0}},"2024-04-07":{"_total":2204,"사랑부":{"1부":72},"영아부":{"1부":75},"유아부":{"1부":157},"유치부":{"1부":196},"송림유년":{"1부":33},"서현유년":{"1부":229},"송림초등":{"1부":52},"서현초등":{"1부":274},"송림소년":{"1부":64},"서현소년":{"1부":233},"중등부":{"1부":299},"고등부":{"1부":213},"수험생":{"1부":0}},"2024-04-14":{"_total":2227,"사랑부":{"1부":70},"영아부":{"1부":79},"유아부":{"1부":150},"유치부":{"1부":208},"송림유년":{"1부":29},"서현유년":{"1부":243},"송림초등":{"1부":48},"서현초등":{"1부":279},"송림소년":{"1부":58},"서현소년":{"1부":236},"중등부":{"1부":329},"고등부":{"1부":213},"수험생":{"1부":0}},"2024-04-21":{"_total":2142,"사랑부":{"1부":77},"영아부":{"1부":72},"유아부":{"1부":147},"유치부":{"1부":205},"송림유년":{"1부":36},"서현유년":{"1부":210},"송림초등":{"1부":55},"서현초등":{"1부":287},"송림소년":{"1부":63},"서현소년":{"1부":242},"중등부":{"1부":309},"고등부":{"1부":105},"수험생":{"1부":0}},"2024-04-28":{"_total":1982,"사랑부":{"1부":67},"영아부":{"1부":67},"유아부":{"1부":143},"유치부":{"1부":215},"송림유년":{"1부":28},"서현유년":{"1부":230},"송림초등":{"1부":49},"서현초등":{"1부":277},"송림소년":{"1부":67},"서현소년":{"1부":236},"중등부":{"1부":145},"고등부":{"1부":175},"수험생":{"1부":0}},"2024-05-05":{"_total":2043,"사랑부":{"1부":66},"영아부":{"1부":62},"유아부":{"1부":131},"유치부":{"1부":173},"송림유년":{"1부":28},"서현유년":{"1부":192},"송림초등":{"1부":53},"서현초등":{"1부":250},"송림소년":{"1부":63},"서현소년":{"1부":233},"중등부":{"1부":304},"고등부":{"1부":208},"수험생":{"1부":0}},"2024-05-12":{"_total":2136,"사랑부":{"1부":75},"영아부":{"1부":78},"유아부":{"1부":155},"유치부":{"1부":204},"송림유년":{"1부":30},"서현유년":{"1부":107},"송림초등":{"1부":56},"서현초등":{"1부":264},"송림소년":{"1부":71},"서현소년":{"1부":256},"중등부":{"1부":349},"고등부":{"1부":217},"수험생":{"1부":0}},"2024-05-19":{"_total":2208,"사랑부":{"1부":68},"영아부":{"1부":72},"유아부":{"1부":146},"유치부":{"1부":196},"송림유년":{"1부":34},"서현유년":{"1부":228},"송림초등":{"1부":55},"서현초등":{"1부":267},"송림소년":{"1부":65},"서현소년":{"1부":241},"중등부":{"1부":322},"고등부":{"1부":226},"수험생":{"1부":0}},"2024-05-26":{"_total":2202,"사랑부":{"1부":78},"영아부":{"1부":76},"유아부":{"1부":157},"유치부":{"1부":196},"송림유년":{"1부":37},"서현유년":{"1부":222},"송림초등":{"1부":61},"서현초등":{"1부":266},"송림소년":{"1부":65},"서현소년":{"1부":226},"중등부":{"1부":318},"고등부":{"1부":269},"수험생":{"1부":0}},"2024-06-02":{"_total":2014,"사랑부":{"1부":79},"영아부":{"1부":72},"유아부":{"1부":158},"유치부":{"1부":211},"송림유년":{"1부":33},"서현유년":{"1부":225},"송림초등":{"1부":66},"서현초등":{"1부":245},"송림소년":{"1부":60},"서현소년":{"1부":283},"중등부":{"1부":336},"고등부":{"1부":0},"수험생":{"1부":0}},"2024-06-09":{"_total":2184,"사랑부":{"1부":73},"영아부":{"1부":73},"유아부":{"1부":145},"유치부":{"1부":191},"송림유년":{"1부":31},"서현유년":{"1부":217},"송림초등":{"1부":42},"서현초등":{"1부":274},"송림소년":{"1부":63},"서현소년":{"1부":244},"중등부":{"1부":349},"고등부":{"1부":220},"수험생":{"1부":0}},"2024-06-16":{"_total":2227,"사랑부":{"1부":76},"영아부":{"1부":73},"유아부":{"1부":156},"유치부":{"1부":185},"송림유년":{"1부":35},"서현유년":{"1부":230},"송림초등":{"1부":62},"서현초등":{"1부":282},"송림소년":{"1부":69},"서현소년":{"1부":246},"중등부":{"1부":326},"고등부":{"1부":208},"수험생":{"1부":0}},"2024-06-23":{"_total":2223,"사랑부":{"1부":74},"영아부":{"1부":64},"유아부":{"1부":150},"유치부":{"1부":199},"송림유년":{"1부":39},"서현유년":{"1부":219},"송림초등":{"1부":58},"서현초등":{"1부":292},"송림소년":{"1부":64},"서현소년":{"1부":249},"중등부":{"1부":319},"고등부":{"1부":195},"수험생":{"1부":0}},"2024-06-30":{"_total":2161,"사랑부":{"1부":75},"영아부":{"1부":71},"유아부":{"1부":154},"유치부":{"1부":208},"송림유년":{"1부":39},"서현유년":{"1부":214},"송림초등":{"1부":55},"서현초등":{"1부":272},"송림소년":{"1부":69},"서현소년":{"1부":244},"중등부":{"1부":257},"고등부":{"1부":197},"수험생":{"1부":0}},"2024-07-07":{"_total":2213,"사랑부":{"1부":74},"영아부":{"1부":77},"유아부":{"1부":149},"유치부":{"1부":200},"송림유년":{"1부":40},"서현유년":{"1부":222},"송림초등":{"1부":63},"서현초등":{"1부":283},"송림소년":{"1부":65},"서현소년":{"1부":258},"중등부":{"1부":344},"고등부":{"1부":211},"수험생":{"1부":0}},"2024-07-14":{"_total":2375,"사랑부":{"1부":72},"영아부":{"1부":78},"유아부":{"1부":161},"유치부":{"1부":275},"송림유년":{"1부":42},"서현유년":{"1부":222},"송림초등":{"1부":62},"서현초등":{"1부":291},"송림소년":{"1부":61},"서현소년":{"1부":254},"중등부":{"1부":354},"고등부":{"1부":223},"수험생":{"1부":0}},"2024-07-21":{"_total":2167,"사랑부":{"1부":72},"영아부":{"1부":78},"유아부":{"1부":161},"유치부":{"1부":275},"송림유년":{"1부":35},"서현유년":{"1부":157},"송림초등":{"1부":62},"서현초등":{"1부":291},"송림소년":{"1부":61},"서현소년":{"1부":254},"중등부":{"1부":354},"고등부":{"1부":223},"수험생":{"1부":0}},"2024-07-28":{"_total":1289,"사랑부":{"1부":69},"영아부":{"1부":65},"유아부":{"1부":131},"유치부":{"1부":150},"송림유년":{"1부":39},"서현유년":{"1부":177},"송림초등":{"1부":58},"서현초등":{"1부":227},"송림소년":{"1부":52},"서현소년":{"1부":177},"중등부":{"1부":0},"고등부":{"1부":0},"수험생":{"1부":0}},"2024-08-04":{"_total":1944,"사랑부":{"1부":71},"영아부":{"1부":63},"유아부":{"1부":131},"유치부":{"1부":153},"송림유년":{"1부":22},"서현유년":{"1부":186},"송림초등":{"1부":46},"서현초등":{"1부":226},"송림소년":{"1부":48},"서현소년":{"1부":213},"중등부":{"1부":292},"고등부":{"1부":238},"수험생":{"1부":0}},"2024-08-11":{"_total":2073,"사랑부":{"1부":71},"영아부":{"1부":77},"유아부":{"1부":156},"유치부":{"1부":171},"송림유년":{"1부":35},"서현유년":{"1부":194},"송림초등":{"1부":52},"서현초등":{"1부":239},"송림소년":{"1부":58},"서현소년":{"1부":225},"중등부":{"1부":298},"고등부":{"1부":196},"수험생":{"1부":0}},"2024-08-18":{"_total":2135,"사랑부":{"1부":68},"영아부":{"1부":69},"유아부":{"1부":153},"유치부":{"1부":191},"송림유년":{"1부":37},"서현유년":{"1부":209},"송림초등":{"1부":53},"서현초등":{"1부":240},"송림소년":{"1부":63},"서현소년":{"1부":217},"중등부":{"1부":327},"고등부":{"1부":212},"수험생":{"1부":0}},"2024-08-25":{"_total":2215,"사랑부":{"1부":77},"영아부":{"1부":77},"유아부":{"1부":160},"유치부":{"1부":196},"송림유년":{"1부":35},"서현유년":{"1부":210},"송림초등":{"1부":61},"서현초등":{"1부":265},"송림소년":{"1부":66},"서현소년":{"1부":234},"중등부":{"1부":335},"고등부":{"1부":210},"수험생":{"1부":0}},"2024-09-01":{"_total":2213,"사랑부":{"1부":76},"영아부":{"1부":78},"유아부":{"1부":157},"유치부":{"1부":206},"송림유년":{"1부":39},"서현유년":{"1부":225},"송림초등":{"1부":65},"서현초등":{"1부":267},"송림소년":{"1부":61},"서현소년":{"1부":232},"중등부":{"1부":329},"고등부":{"1부":214},"수험생":{"1부":0}},"2024-09-08":{"_total":2233,"사랑부":{"1부":71},"영아부":{"1부":77},"유아부":{"1부":169},"유치부":{"1부":181},"송림유년":{"1부":41},"서현유년":{"1부":226},"송림초등":{"1부":66},"서현초등":{"1부":259},"송림소년":{"1부":67},"서현소년":{"1부":239},"중등부":{"1부":346},"고등부":{"1부":214},"수험생":{"1부":0}},"2024-09-15":{"_total":1618,"사랑부":{"1부":61},"영아부":{"1부":72},"유아부":{"1부":126},"유치부":{"1부":131},"송림유년":{"1부":27},"서현유년":{"1부":152},"송림초등":{"1부":39},"서현초등":{"1부":163},"송림소년":{"1부":49},"서현소년":{"1부":155},"중등부":{"1부":226},"고등부":{"1부":181},"수험생":{"1부":0}},"2024-09-22":{"_total":2213,"사랑부":{"1부":75},"영아부":{"1부":69},"유아부":{"1부":158},"유치부":{"1부":208},"송림유년":{"1부":39},"서현유년":{"1부":216},"송림초등":{"1부":71},"서현초등":{"1부":275},"송림소년":{"1부":75},"서현소년":{"1부":247},"중등부":{"1부":311},"고등부":{"1부":206},"수험생":{"1부":0}},"2024-09-29":{"_total":2207,"사랑부":{"1부":78},"영아부":{"1부":80},"유아부":{"1부":178},"유치부":{"1부":207},"송림유년":{"1부":35},"서현유년":{"1부":217},"송림초등":{"1부":52},"서현초등":{"1부":268},"송림소년":{"1부":77},"서현소년":{"1부":248},"중등부":{"1부":301},"고등부":{"1부":202},"수험생":{"1부":0}},"2024-10-06":{"_total":2189,"사랑부":{"1부":74},"영아부":{"1부":77},"유아부":{"1부":157},"유치부":{"1부":191},"송림유년":{"1부":27},"서현유년":{"1부":229},"송림초등":{"1부":64},"서현초등":{"1부":275},"송림소년":{"1부":65},"서현소년":{"1부":222},"중등부":{"1부":323},"고등부":{"1부":198},"수험생":{"1부":0}},"2024-10-13":{"_total":2222,"사랑부":{"1부":76},"영아부":{"1부":90},"유아부":{"1부":166},"유치부":{"1부":188},"송림유년":{"1부":38},"서현유년":{"1부":265},"송림초등":{"1부":62},"서현초등":{"1부":269},"송림소년":{"1부":75},"서현소년":{"1부":268},"중등부":{"1부":320},"고등부":{"1부":203},"수험생":{"1부":0}},"2024-10-20":{"_total":2295,"사랑부":{"1부":73},"영아부":{"1부":85},"유아부":{"1부":174},"유치부":{"1부":198},"송림유년":{"1부":40},"서현유년":{"1부":233},"송림초등":{"1부":70},"서현초등":{"1부":266},"송림소년":{"1부":71},"서현소년":{"1부":244},"중등부":{"1부":337},"고등부":{"1부":196},"수험생":{"1부":0}},"2024-10-27":{"_total":2140,"사랑부":{"1부":72},"영아부":{"1부":76},"유아부":{"1부":164},"유치부":{"1부":194},"송림유년":{"1부":41},"서현유년":{"1부":216},"송림초등":{"1부":58},"서현초등":{"1부":260},"송림소년":{"1부":27},"서현소년":{"1부":232},"중등부":{"1부":300},"고등부":{"1부":222},"수험생":{"1부":0}},"2024-11-03":{"_total":2267,"사랑부":{"1부":78},"영아부":{"1부":75},"유아부":{"1부":157},"유치부":{"1부":196},"송림유년":{"1부":42},"서현유년":{"1부":237},"송림초등":{"1부":95},"서현초등":{"1부":271},"송림소년":{"1부":96},"서현소년":{"1부":232},"중등부":{"1부":330},"고등부":{"1부":223},"수험생":{"1부":0}},"2024-11-10":{"_total":2220,"사랑부":{"1부":73},"영아부":{"1부":87},"유아부":{"1부":167},"유치부":{"1부":198},"송림유년":{"1부":38},"서현유년":{"1부":226},"송림초등":{"1부":61},"서현초등":{"1부":274},"송림소년":{"1부":79},"서현소년":{"1부":225},"중등부":{"1부":304},"고등부":{"1부":232},"수험생":{"1부":0}},"2024-11-17":{"_total":2296,"사랑부":{"1부":81},"영아부":{"1부":88},"유아부":{"1부":176},"유치부":{"1부":203},"송림유년":{"1부":37},"서현유년":{"1부":247},"송림초등":{"1부":62},"서현초등":{"1부":272},"송림소년":{"1부":77},"서현소년":{"1부":258},"중등부":{"1부":348},"고등부":{"1부":195},"수험생":{"1부":0}},"2024-11-24":{"_total":2281,"사랑부":{"1부":72},"영아부":{"1부":86},"유아부":{"1부":169},"유치부":{"1부":202},"송림유년":{"1부":40},"서현유년":{"1부":245},"송림초등":{"1부":72},"서현초등":{"1부":290},"송림소년":{"1부":74},"서현소년":{"1부":261},"중등부":{"1부":306},"고등부":{"1부":233},"수험생":{"1부":0}},"2024-12-01":{"_total":2251,"사랑부":{"1부":73},"영아부":{"1부":91},"유아부":{"1부":160},"유치부":{"1부":198},"송림유년":{"1부":42},"서현유년":{"1부":256},"송림초등":{"1부":66},"서현초등":{"1부":266},"송림소년":{"1부":76},"서현소년":{"1부":233},"중등부":{"1부":309},"고등부":{"1부":215},"수험생":{"1부":0}},"2024-12-08":{"_total":2246,"사랑부":{"1부":77},"영아부":{"1부":87},"유아부":{"1부":179},"유치부":{"1부":197},"송림유년":{"1부":46},"서현유년":{"1부":225},"송림초등":{"1부":69},"서현초등":{"1부":267},"송림소년":{"1부":68},"서현소년":{"1부":247},"중등부":{"1부":311},"고등부":{"1부":210},"수험생":{"1부":0}},"2024-12-15":{"_total":2211,"사랑부":{"1부":71},"영아부":{"1부":91},"유아부":{"1부":173},"유치부":{"1부":211},"송림유년":{"1부":41},"서현유년":{"1부":189},"송림초등":{"1부":60},"서현초등":{"1부":257},"송림소년":{"1부":72},"서현소년":{"1부":241},"중등부":{"1부":334},"고등부":{"1부":191},"수험생":{"1부":0}},"2024-12-22":{"_total":2225,"사랑부":{"1부":73},"영아부":{"1부":78},"유아부":{"1부":164},"유치부":{"1부":202},"송림유년":{"1부":47},"서현유년":{"1부":211},"송림초등":{"1부":65},"서현초등":{"1부":264},"송림소년":{"1부":69},"서현소년":{"1부":223},"중등부":{"1부":342},"고등부":{"1부":230},"수험생":{"1부":0}},"2024-12-29":{"_total":2274,"사랑부":{"1부":66},"영아부":{"1부":83},"유아부":{"1부":154},"유치부":{"1부":203},"송림유년":{"1부":44},"서현유년":{"1부":238},"송림초등":{"1부":69},"서현초등":{"1부":257},"송림소년":{"1부":73},"서현소년":{"1부":255},"중등부":{"1부":337},"고등부":{"1부":244},"수험생":{"1부":0}},"2025-01-05":{"_total":2065,"사랑부":{"1부":65},"영아부":{"1부":34},"유아부":{"1부":99},"유치부":{"1부":184},"송림유년":{"1부":28},"서현유년":{"1부":183},"송림초등":{"1부":60},"서현초등":{"1부":227},"송림소년":{"1부":60},"서현소년":{"1부":218},"중등부":{"1부":364},"고등부":{"1부":243},"수험생":{"1부":0}},"2025-01-12":{"_total":2316,"사랑부":{"1부":76},"영아부":{"1부":60},"유아부":{"1부":146},"유치부":{"1부":229},"송림유년":{"1부":30},"서현유년":{"1부":216},"송림초등":{"1부":65},"서현초등":{"1부":263},"송림소년":{"1부":74},"서현소년":{"1부":249},"중등부":{"1부":414},"고등부":{"1부":237},"수험생":{"1부":0}},"2025-01-19":{"_total":2195,"사랑부":{"1부":66},"영아부":{"1부":50},"유아부":{"1부":140},"유치부":{"1부":215},"송림유년":{"1부":14},"서현유년":{"1부":214},"송림초등":{"1부":32},"서현초등":{"1부":262},"송림소년":{"1부":71},"서현소년":{"1부":259},"중등부":{"1부":381},"고등부":{"1부":234},"수험생":{"1부":0}},"2025-01-26":{"_total":1849,"사랑부":{"1부":68},"영아부":{"1부":47},"유아부":{"1부":127},"유치부":{"1부":186},"송림유년":{"1부":11},"서현유년":{"1부":189},"송림초등":{"1부":34},"서현초등":{"1부":200},"송림소년":{"1부":68},"서현소년":{"1부":215},"중등부":{"1부":372},"고등부":{"1부":107},"수험생":{"1부":0}},"2025-02-02":{"_total":2206,"사랑부":{"1부":72},"영아부":{"1부":52},"유아부":{"1부":142},"유치부":{"1부":227},"송림유년":{"1부":16},"서현유년":{"1부":208},"송림초등":{"1부":30},"서현초등":{"1부":269},"송림소년":{"1부":74},"서현소년":{"1부":253},"중등부":{"1부":373},"고등부":{"1부":261},"수험생":{"1부":0}},"2025-02-09":{"_total":2284,"사랑부":{"1부":73},"영아부":{"1부":55},"유아부":{"1부":138},"유치부":{"1부":219},"송림유년":{"1부":34},"서현유년":{"1부":223},"송림초등":{"1부":36},"서현초등":{"1부":251},"송림소년":{"1부":71},"서현소년":{"1부":279},"송림청소년부":{"1부":85},"중등부":{"1부":365},"고등부":{"1부":249},"수험생":{"1부":0}},"2025-02-16":{"_total":1835,"사랑부":{"1부":71},"영아부":{"1부":49},"유아부":{"1부":138},"유치부":{"1부":69},"송림유년":{"1부":41},"서현유년":{"1부":74},"송림초등":{"1부":47},"서현초등":{"1부":257},"송림소년":{"1부":76},"서현소년":{"1부":258},"송림청소년부":{"1부":66},"중등부":{"1부":206},"고등부":{"1부":245},"수험생":{"1부":0}},"2025-02-23":{"_total":1525,"사랑부":{"1부":75},"영아부":{"1부":55},"유아부":{"1부":155},"유치부":{"1부":216},"송림유년":{"1부":39},"서현유년":{"1부":209},"송림초등":{"1부":42},"서현초등":{"1부":250},"송림소년":{"1부":74},"서현소년":{"1부":242},"송림청소년부":{"1부":19},"중등부":{"1부":0},"고등부":{"1부":0},"수험생":{"1부":0}},"2025-03-02":{"_total":2384,"사랑부":{"1부":70},"영아부":{"1부":65},"유아부":{"1부":139},"유치부":{"1부":204},"송림유년":{"1부":40},"서현유년":{"1부":229},"송림초등":{"1부":73},"서현초등":{"1부":236},"송림소년":{"1부":73},"서현소년":{"1부":265},"송림청소년부":{"1부":80},"중등부":{"1부":407},"고등부":{"1부":271},"수험생":{"1부":0}},"2025-03-09":{"_total":2456,"사랑부":{"1부":70},"영아부":{"1부":75},"유아부":{"1부":147},"유치부":{"1부":244},"송림유년":{"1부":43},"서현유년":{"1부":243},"송림초등":{"1부":81},"서현초등":{"1부":271},"송림소년":{"1부":79},"서현소년":{"1부":259},"송림청소년부":{"1부":78},"중등부":{"1부":391},"고등부":{"1부":243},"수험생":{"1부":0}},"2025-03-16":{"_total":2221,"사랑부":{"1부":70},"영아부":{"1부":65},"유아부":{"1부":149},"유치부":{"1부":218},"송림유년":{"1부":45},"서현유년":{"1부":159},"송림초등":{"1부":87},"서현초등":{"1부":268},"송림소년":{"1부":79},"서현소년":{"1부":98},"송림청소년부":{"1부":79},"중등부":{"1부":410},"고등부":{"1부":246},"수험생":{"1부":0}},"2025-03-23":{"_total":2307,"사랑부":{"1부":68},"영아부":{"1부":59},"유아부":{"1부":147},"유치부":{"1부":219},"송림유년":{"1부":39},"서현유년":{"1부":236},"송림초등":{"1부":79},"서현초등":{"1부":248},"송림소년":{"1부":86},"서현소년":{"1부":237},"송림청소년부":{"1부":75},"중등부":{"1부":403},"고등부":{"1부":233},"수험생":{"1부":0}},"2025-03-30":{"_total":2315,"사랑부":{"1부":67},"영아부":{"1부":77},"유아부":{"1부":148},"유치부":{"1부":224},"송림유년":{"1부":39},"서현유년":{"1부":220},"송림초등":{"1부":72},"서현초등":{"1부":259},"송림소년":{"1부":75},"서현소년":{"1부":286},"송림청소년부":{"1부":68},"중등부":{"1부":386},"고등부":{"1부":259},"수험생":{"1부":0}},"2025-04-06":{"_total":2558,"사랑부":{"1부":68},"영아부":{"1부":80},"유아부":{"1부":147},"유치부":{"1부":231},"송림유년":{"1부":172},"서현유년":{"1부":220},"송림초등":{"1부":76},"서현초등":{"1부":251},"송림소년":{"1부":86},"서현소년":{"1부":278},"송림청소년부":{"1부":73},"중등부":{"1부":393},"고등부":{"1부":264},"수험생":{"1부":0}},"2025-04-13":{"_total":2148,"사랑부":{"1부":0},"영아부":{"1부":76},"유아부":{"1부":139},"유치부":{"1부":212},"송림유년":{"1부":23},"서현유년":{"1부":234},"송림초등":{"1부":76},"서현초등":{"1부":248},"송림소년":{"1부":48},"서현소년":{"1부":259},"송림청소년부":{"1부":69},"중등부":{"1부":368},"고등부":{"1부":213},"수험생":{"1부":0}},"2025-04-20":{"_total":2189,"사랑부":{"1부":70},"영아부":{"1부":85},"유아부":{"1부":164},"유치부":{"1부":240},"송림유년":{"1부":48},"서현유년":{"1부":229},"송림초등":{"1부":80},"서현초등":{"1부":75},"송림소년":{"1부":88},"서현소년":{"1부":257},"송림청소년부":{"1부":81},"중등부":{"1부":370},"고등부":{"1부":212},"수험생":{"1부":0}},"2025-04-27":{"_total":1949,"사랑부":{"1부":64},"영아부":{"1부":95},"유아부":{"1부":149},"유치부":{"1부":228},"송림유년":{"1부":36},"서현유년":{"1부":212},"송림초등":{"1부":69},"서현초등":{"1부":70},"송림소년":{"1부":79},"서현소년":{"1부":274},"송림청소년부":{"1부":0},"중등부":{"1부":346},"고등부":{"1부":186},"수험생":{"1부":0}},"2025-05-04":{"_total":1577,"사랑부":{"1부":61},"영아부":{"1부":69},"유아부":{"1부":146},"유치부":{"1부":176},"송림유년":{"1부":12},"서현유년":{"1부":103},"송림초등":{"1부":34},"서현초등":{"1부":29},"송림소년":{"1부":72},"서현소년":{"1부":164},"송림청소년부":{"1부":0},"중등부":{"1부":317},"고등부":{"1부":235},"수험생":{"1부":0}},"2025-05-11":{"_total":2091,"사랑부":{"1부":73},"영아부":{"1부":78},"유아부":{"1부":155},"유치부":{"1부":250},"송림유년":{"1부":38},"서현유년":{"1부":140},"송림초등":{"1부":75},"서현초등":{"1부":74},"송림소년":{"1부":31},"서현소년":{"1부":275},"송림청소년부":{"1부":70},"중등부":{"1부":377},"고등부":{"1부":245},"수험생":{"1부":0}},"2025-05-18":{"_total":2213,"사랑부":{"1부":71},"영아부":{"1부":80},"유아부":{"1부":155},"유치부":{"1부":222},"송림유년":{"1부":41},"서현유년":{"1부":216},"송림초등":{"1부":30},"서현초등":{"1부":233},"송림소년":{"1부":79},"서현소년":{"1부":255},"송림청소년부":{"1부":69},"중등부":{"1부":392},"고등부":{"1부":235},"수험생":{"1부":0}},"2025-05-25":{"_total":2049,"사랑부":{"1부":72},"영아부":{"1부":51},"유아부":{"1부":148},"유치부":{"1부":228},"송림유년":{"1부":33},"서현유년":{"1부":209},"송림초등":{"1부":68},"서현초등":{"1부":267},"송림소년":{"1부":29},"서현소년":{"1부":150},"송림청소년부":{"1부":81},"중등부":{"1부":380},"고등부":{"1부":148},"수험생":{"1부":0}},"2025-06-01":{"_total":2053,"사랑부":{"1부":78},"영아부":{"1부":97},"유아부":{"1부":159},"유치부":{"1부":215},"송림유년":{"1부":39},"서현유년":{"1부":200},"송림초등":{"1부":81},"서현초등":{"1부":69},"송림소년":{"1부":83},"서현소년":{"1부":250},"송림청소년부":{"1부":84},"중등부":{"1부":352},"고등부":{"1부":236},"수험생":{"1부":0}},"2025-06-08":{"_total":2006,"사랑부":{"1부":59},"영아부":{"1부":90},"유아부":{"1부":159},"유치부":{"1부":205},"송림유년":{"1부":39},"서현유년":{"1부":75},"송림초등":{"1부":66},"서현초등":{"1부":228},"송림소년":{"1부":84},"서현소년":{"1부":250},"송림청소년부":{"1부":75},"중등부":{"1부":370},"고등부":{"1부":223},"수험생":{"1부":0}},"2025-06-15":{"_total":1819,"사랑부":{"1부":71},"영아부":{"1부":96},"유아부":{"1부":164},"유치부":{"1부":154},"송림유년":{"1부":40},"서현유년":{"1부":85},"송림초등":{"1부":76},"서현초등":{"1부":266},"송림소년":{"1부":85},"서현소년":{"1부":268},"송림청소년부":{"1부":0},"중등부":{"1부":162},"고등부":{"1부":207},"수험생":{"1부":0}},"2025-06-22":{"_total":2201,"사랑부":{"1부":67},"영아부":{"1부":89},"유아부":{"1부":158},"유치부":{"1부":225},"송림유년":{"1부":44},"서현유년":{"1부":218},"송림초등":{"1부":70},"서현초등":{"1부":255},"송림소년":{"1부":78},"서현소년":{"1부":273},"송림청소년부":{"1부":80},"중등부":{"1부":334},"고등부":{"1부":190},"수험생":{"1부":0}},"2025-06-29":{"_total":2230,"사랑부":{"1부":42},"영아부":{"1부":85},"유아부":{"1부":156},"유치부":{"1부":235},"송림유년":{"1부":36},"서현유년":{"1부":215},"송림초등":{"1부":72},"서현초등":{"1부":253},"송림소년":{"1부":87},"서현소년":{"1부":263},"송림청소년부":{"1부":75},"중등부":{"1부":322},"고등부":{"1부":191}},"2025-07-06":{"_total":2141,"사랑부":{"1부":74},"영아부":{"1부":91},"유아부":{"1부":168},"유치부":{"1부":229},"송림유년":{"1부":15},"서현유년":{"1부":103},"송림초등":{"1부":68},"서현초등":{"1부":242},"송림소년":{"1부":81},"서현소년":{"1부":258},"송림청소년부":{"1부":76},"중등부":{"1부":365},"고등부":{"1부":208}},"2025-07-13":{"_total":1967,"사랑부":{"1부":68},"영아부":{"1부":92},"유아부":{"1부":168},"유치부":{"1부":230},"송림유년":{"1부":37},"서현유년":{"1부":213},"송림초등":{"1부":81},"서현초등":{"1부":262},"송림소년":{"1부":85},"서현소년":{"1부":270},"송림청소년부":{"1부":82},"중등부":{"1부":0},"고등부":{"1부":235}},"2025-07-20":{"_total":2164,"사랑부":{"1부":70},"영아부":{"1부":89},"유아부":{"1부":162},"유치부":{"1부":225},"송림유년":{"1부":42},"서현유년":{"1부":198},"송림초등":{"1부":81},"서현초등":{"1부":244},"송림소년":{"1부":1},"서현소년":{"1부":279},"송림청소년부":{"1부":76},"중등부":{"1부":352},"고등부":{"1부":230}},"2025-07-27":{"_total":1992,"사랑부":{"1부":70},"영아부":{"1부":85},"유아부":{"1부":138},"유치부":{"1부":75},"송림유년":{"1부":39},"서현유년":{"1부":208},"송림초등":{"1부":71},"서현초등":{"1부":232},"송림소년":{"1부":45},"서현소년":{"1부":238},"송림청소년부":{"1부":72},"중등부":{"1부":312},"고등부":{"1부":213}},"2025-08-03":{"_total":1848,"사랑부":{"1부":68},"영아부":{"1부":90},"유아부":{"1부":149},"유치부":{"1부":65},"송림유년":{"1부":39},"서현유년":{"1부":159},"송림초등":{"1부":63},"서현초등":{"1부":182},"송림소년":{"1부":47},"서현소년":{"1부":199},"송림청소년부":{"1부":61},"중등부":{"1부":315},"고등부":{"1부":157}},"2025-08-10":{"_total":2060,"사랑부":{"1부":72},"영아부":{"1부":100},"유아부":{"1부":156},"유치부":{"1부":214},"송림유년":{"1부":36},"서현유년":{"1부":187},"송림초등":{"1부":61},"서현초등":{"1부":217},"송림소년":{"1부":48},"서현소년":{"1부":224},"송림청소년부":{"1부":0},"중등부":{"1부":305},"고등부":{"1부":231}},"2025-08-17":{"_total":2036,"사랑부":{"1부":67},"영아부":{"1부":84},"유아부":{"1부":165},"유치부":{"1부":221},"송림유년":{"1부":15},"서현유년":{"1부":95},"송림초등":{"1부":61},"서현초등":{"1부":228},"송림소년":{"1부":48},"서현소년":{"1부":208},"송림청소년부":{"1부":65},"중등부":{"1부":350},"고등부":{"1부":216}},"2025-08-24":{"_total":2160,"사랑부":{"1부":67},"영아부":{"1부":95},"유아부":{"1부":155},"유치부":{"1부":227},"송림유년":{"1부":37},"서현유년":{"1부":210},"송림초등":{"1부":69},"서현초등":{"1부":247},"송림소년":{"1부":53},"서현소년":{"1부":245},"송림청소년부":{"1부":0},"중등부":{"1부":364},"고등부":{"1부":216}},"2025-08-31":{"_total":2230,"사랑부":{"1부":70},"영아부":{"1부":97},"유아부":{"1부":160},"유치부":{"1부":227},"송림유년":{"1부":40},"서현유년":{"1부":219},"송림초등":{"1부":69},"서현초등":{"1부":257},"송림소년":{"1부":52},"서현소년":{"1부":245},"송림청소년부":{"1부":73},"중등부":{"1부":339},"고등부":{"1부":227}},"2025-09-07":{"_total":2148,"사랑부":{"1부":73},"영아부":{"1부":94},"유아부":{"1부":158},"유치부":{"1부":217},"송림유년":{"1부":34},"서현유년":{"1부":216},"송림초등":{"1부":80},"서현초등":{"1부":245},"송림소년":{"1부":45},"서현소년":{"1부":165},"송림청소년부":{"1부":72},"중등부":{"1부":326},"고등부":{"1부":216}},"2025-09-14":{"_total":2271,"사랑부":{"1부":75},"영아부":{"1부":109},"유아부":{"1부":163},"유치부":{"1부":233},"송림유년":{"1부":45},"서현유년":{"1부":220},"송림초등":{"1부":68},"서현초등":{"1부":257},"송림소년":{"1부":55},"서현소년":{"1부":263},"송림청소년부":{"1부":75},"중등부":{"1부":346},"고등부":{"1부":196}},"2025-09-21":{"_total":2180,"사랑부":{"1부":70},"영아부":{"1부":104},"유아부":{"1부":160},"유치부":{"1부":221},"송림유년":{"1부":38},"서현유년":{"1부":221},"송림초등":{"1부":74},"서현초등":{"1부":245},"송림소년":{"1부":54},"서현소년":{"1부":229},"송림청소년부":{"1부":64},"중등부":{"1부":310},"고등부":{"1부":213}},"2025-09-28":{"_total":2073,"사랑부":{"1부":72},"영아부":{"1부":85},"유아부":{"1부":147},"유치부":{"1부":223},"송림유년":{"1부":36},"서현유년":{"1부":195},"송림초등":{"1부":65},"서현초등":{"1부":231},"송림소년":{"1부":44},"서현소년":{"1부":239},"송림청소년부":{"1부":57},"중등부":{"1부":317},"고등부":{"1부":177}},"2025-10-05":{"_total":1428,"사랑부":{"1부":52},"영아부":{"1부":64},"유아부":{"1부":105},"유치부":{"1부":55},"송림유년":{"1부":24},"서현유년":{"1부":137},"송림초등":{"1부":58},"서현초등":{"1부":142},"송림소년":{"1부":28},"서현소년":{"1부":152},"송림청소년부":{"1부":43},"중등부":{"1부":217},"고등부":{"1부":158}},"2025-10-12":{"_total":2190,"사랑부":{"1부":70},"영아부":{"1부":107},"유아부":{"1부":164},"유치부":{"1부":234},"송림유년":{"1부":37},"서현유년":{"1부":218},"송림초등":{"1부":64},"서현초등":{"1부":253},"송림소년":{"1부":55},"서현소년":{"1부":239},"송림청소년부":{"1부":74},"중등부":{"1부":322},"고등부":{"1부":215}},"2025-10-19":{"_total":2232,"사랑부":{"1부":73},"영아부":{"1부":106},"유아부":{"1부":164},"유치부":{"1부":238},"송림유년":{"1부":39},"서현유년":{"1부":247},"송림초등":{"1부":76},"서현초등":{"1부":266},"송림소년":{"1부":53},"서현소년":{"1부":169},"송림청소년부":{"1부":83},"중등부":{"1부":326},"고등부":{"1부":213}},"2025-10-26":{"_total":2232,"사랑부":{"1부":73},"영아부":{"1부":106},"유아부":{"1부":164},"유치부":{"1부":238},"송림유년":{"1부":39},"서현유년":{"1부":247},"송림초등":{"1부":76},"서현초등":{"1부":266},"송림소년":{"1부":53},"서현소년":{"1부":169},"송림청소년부":{"1부":83},"중등부":{"1부":326},"고등부":{"1부":213}},"2025-11-02":{"_total":2123,"사랑부":{"1부":60},"영아부":{"1부":108},"유아부":{"1부":152},"유치부":{"1부":213},"송림유년":{"1부":43},"서현유년":{"1부":208},"송림초등":{"1부":88},"서현초등":{"1부":242},"송림소년":{"1부":55},"서현소년":{"1부":239},"송림청소년부":{"1부":73},"중등부":{"1부":328},"고등부":{"1부":195}},"2025-11-09":{"_total":2231,"사랑부":{"1부":67},"영아부":{"1부":96},"유아부":{"1부":143},"유치부":{"1부":201},"송림유년":{"1부":35},"서현유년":{"1부":196},"송림초등":{"1부":81},"서현초등":{"1부":286},"송림소년":{"1부":54},"서현소년":{"1부":242},"송림청소년부":{"1부":72},"중등부":{"1부":319},"고등부":{"1부":202}},"2025-11-16":{"_total":2246,"사랑부":{"1부":59},"영아부":{"1부":104},"유아부":{"1부":161},"유치부":{"1부":203},"송림유년":{"1부":40},"서현유년":{"1부":217},"송림초등":{"1부":75},"서현초등":{"1부":251},"송림소년":{"1부":62},"서현소년":{"1부":287},"송림청소년부":{"1부":68},"중등부":{"1부":310},"고등부":{"1부":200}},"2025-11-23":{"_total":2080,"사랑부":{"1부":71},"영아부":{"1부":98},"유아부":{"1부":152},"유치부":{"1부":206},"송림유년":{"1부":35},"서현유년":{"1부":151},"송림초등":{"1부":69},"서현초등":{"1부":244},"송림소년":{"1부":44},"서현소년":{"1부":280},"송림청소년부":{"1부":69},"중등부":{"1부":305},"고등부":{"1부":203}},"2025-11-30":{"_total":2033,"사랑부":{"1부":62},"영아부":{"1부":103},"유아부":{"1부":155},"유치부":{"1부":235},"송림유년":{"1부":48},"서현유년":{"1부":224},"송림초등":{"1부":68},"서현초등":{"1부":76},"송림소년":{"1부":55},"서현소년":{"1부":261},"송림청소년부":{"1부":57},"중등부":{"1부":310},"고등부":{"1부":219}},"2025-12-07":{"_total":2017,"사랑부":{"1부":72},"영아부":{"1부":108},"유아부":{"1부":90},"유치부":{"1부":228},"송림유년":{"1부":39},"서현유년":{"1부":202},"송림초등":{"1부":80},"서현초등":{"1부":237},"송림소년":{"1부":56},"서현소년":{"1부":239},"송림청소년부":{"1부":58},"중등부":{"1부":288},"고등부":{"1부":197}},"2025-12-14":{"_total":1830,"사랑부":{"1부":72},"영아부":{"1부":47},"유아부":{"1부":171},"유치부":{"1부":89},"송림유년":{"1부":43},"서현유년":{"1부":226},"송림초등":{"1부":68},"서현초등":{"1부":72},"송림소년":{"1부":49},"서현소년":{"1부":242},"송림청소년부":{"1부":60},"중등부":{"1부":295},"고등부":{"1부":195}},"2025-12-21":{"_total":2231,"사랑부":{"1부":69},"영아부":{"1부":127},"유아부":{"1부":159},"유치부":{"1부":235},"송림유년":{"1부":43},"서현유년":{"1부":227},"송림초등":{"1부":75},"서현초등":{"1부":250},"송림소년":{"1부":62},"서현소년":{"1부":264},"송림청소년부":{"1부":80},"중등부":{"1부":308},"고등부":{"1부":217}},"2025-12-28":{"_total":2294,"사랑부":{"1부":70},"영아부":{"1부":107},"유아부":{"1부":155},"유치부":{"1부":240},"송림유년":{"1부":45},"서현유년":{"1부":226},"송림초등":{"1부":77},"서현초등":{"1부":249},"송림소년":{"1부":57},"서현소년":{"1부":274},"송림청소년부":{"1부":75},"중등부":{"1부":359},"고등부":{"1부":235}}},"youth":{"2023-06-11":{"1청년부":{"예배":320,"팀":{}},"2청년부":{"예배":251,"팀":{}},"대학1부":{"예배":196,"팀":{}},"대학2부":{"예배":199,"팀":{}}},"2023-06-18":{"1청년부":{"예배":281,"팀":{}},"2청년부":{"예배":254,"팀":{}},"대학1부":{"예배":204,"팀":{}},"대학2부":{"예배":196,"팀":{}}},"2023-06-25":{"1청년부":{"예배":323,"팀":{}},"2청년부":{"예배":250,"팀":{}},"대학1부":{"예배":209,"팀":{}},"대학2부":{"예배":196,"팀":{}}},"2023-07-02":{"1청년부":{"예배":289,"팀":{}},"2청년부":{"예배":265,"팀":{}},"대학2부":{"예배":225,"팀":{}}},"2023-07-09":{"1청년부":{"예배":283,"팀":{}},"2청년부":{"예배":274,"팀":{}},"대학1부":{"예배":182,"팀":{}},"대학2부":{"예배":208,"팀":{}}},"2023-07-16":{"1청년부":{"예배":277,"팀":{}},"2청년부":{"예배":234,"팀":{}},"대학1부":{"예배":178,"팀":{}},"대학2부":{"예배":191,"팀":{}}},"2023-07-23":{"1청년부":{"예배":86,"팀":{}},"2청년부":{"예배":98,"팀":{}},"대학1부":{"예배":166,"팀":{}},"대학2부":{"예배":164,"팀":{}}},"2023-07-30":{"1청년부":{"예배":86,"팀":{}},"2청년부":{"예배":98,"팀":{}},"대학1부":{"예배":166,"팀":{}},"대학2부":{"예배":164,"팀":{}}},"2023-08-06":{"1청년부":{"예배":86,"팀":{}},"2청년부":{"예배":98,"팀":{}},"대학1부":{"예배":166,"팀":{}},"대학2부":{"예배":164,"팀":{}}},"2023-08-13":{"1청년부":{"예배":315,"팀":{}},"2청년부":{"예배":203,"팀":{}},"대학1부":{"예배":185,"팀":{}},"대학2부":{"예배":190,"팀":{}}},"2023-08-20":{"1청년부":{"예배":306,"팀":{}},"2청년부":{"예배":205,"팀":{}},"대학1부":{"예배":202,"팀":{}},"대학2부":{"예배":195,"팀":{}}},"2023-08-27":{"1청년부":{"예배":296,"팀":{}},"2청년부":{"예배":277,"팀":{}},"대학1부":{"예배":190,"팀":{}},"대학2부":{"예배":189,"팀":{}}},"2023-09-03":{"1청년부":{"예배":307,"팀":{}},"2청년부":{"예배":265,"팀":{}},"대학1부":{"예배":192,"팀":{}},"대학2부":{"예배":192,"팀":{}}},"2023-09-10":{"1청년부":{"예배":297,"팀":{}},"2청년부":{"예배":266,"팀":{}},"대학1부":{"예배":206,"팀":{}},"대학2부":{"예배":197,"팀":{}}},"2023-09-17":{"1청년부":{"예배":303,"팀":{}},"2청년부":{"예배":257,"팀":{}},"대학1부":{"예배":194,"팀":{}},"대학2부":{"예배":202,"팀":{}}},"2023-09-24":{"1청년부":{"예배":317,"팀":{}},"2청년부":{"예배":260,"팀":{}},"대학1부":{"예배":197,"팀":{}},"대학2부":{"예배":203,"팀":{}}},"2023-10-01":{"1청년부":{"예배":165,"팀":{}},"2청년부":{"예배":157,"팀":{}},"대학1부":{"예배":150,"팀":{}},"대학2부":{"예배":141,"팀":{}}},"2023-10-08":{"1청년부":{"예배":290,"팀":{}},"2청년부":{"예배":247,"팀":{}},"대학1부":{"예배":198,"팀":{}},"대학2부":{"예배":190,"팀":{}}},"2023-10-15":{"1청년부":{"예배":283,"팀":{}},"2청년부":{"예배":272,"팀":{}},"대학1부":{"예배":193,"팀":{}},"대학2부":{"예배":187,"팀":{}}},"2023-10-22":{"1청년부":{"예배":328,"팀":{}},"2청년부":{"예배":258,"팀":{}},"대학1부":{"예배":197,"팀":{}},"대학2부":{"예배":183,"팀":{}}},"2023-10-29":{"1청년부":{"예배":307,"팀":{}},"2청년부":{"예배":250,"팀":{}},"대학1부":{"예배":198,"팀":{}},"대학2부":{"예배":168,"팀":{}}},"2023-11-05":{"1청년부":{"예배":287,"팀":{}},"2청년부":{"예배":273,"팀":{}},"대학1부":{"예배":217,"팀":{}},"대학2부":{"예배":180,"팀":{}}},"2023-11-12":{"1청년부":{"예배":308,"팀":{}},"2청년부":{"예배":280,"팀":{}},"대학1부":{"예배":189,"팀":{}},"대학2부":{"예배":195,"팀":{}}},"2023-11-19":{"1청년부":{"예배":323,"팀":{}},"2청년부":{"예배":290,"팀":{}},"대학1부":{"예배":200,"팀":{}},"대학2부":{"예배":213,"팀":{}}},"2023-11-26":{"1청년부":{"예배":326,"팀":{}},"2청년부":{"예배":250,"팀":{}},"대학1부":{"예배":193,"팀":{}},"대학2부":{"예배":186,"팀":{}}},"2023-12-03":{"1청년부":{"예배":276,"팀":{}},"2청년부":{"예배":242,"팀":{}},"대학1부":{"예배":210,"팀":{}},"대학2부":{"예배":193,"팀":{}}},"2023-12-10":{"1청년부":{"예배":301,"팀":{}},"2청년부":{"예배":263,"팀":{}},"대학1부":{"예배":205,"팀":{}},"대학2부":{"예배":194,"팀":{}}},"2023-12-24":{"1청년부":{"예배":269,"팀":{}},"2청년부":{"예배":198,"팀":{}},"대학1부":{"예배":249,"팀":{}},"대학2부":{"예배":207,"팀":{}}},"2023-12-31":{"1청년부":{"예배":280,"팀":{}},"2청년부":{"예배":216,"팀":{}},"대학1부":{"예배":191,"팀":{}},"대학2부":{"예배":212,"팀":{}}},"2024-01-07":{"1청년부":{"예배":330,"팀":{}},"2청년부":{"예배":215,"팀":{}},"대학1부":{"예배":211,"팀":{}},"대학2부":{"예배":255,"팀":{}}},"2024-01-14":{"1청년부":{"예배":328,"팀":{}},"2청년부":{"예배":250,"팀":{}},"대학1부":{"예배":205,"팀":{}},"대학2부":{"예배":253,"팀":{}}},"2024-01-21":{"1청년부":{"예배":359,"팀":{}},"2청년부":{"예배":231,"팀":{}},"대학1부":{"예배":223,"팀":{}}},"2024-01-28":{"1청년부":{"예배":391,"팀":{}},"2청년부":{"예배":337,"팀":{}},"대학1부":{"예배":218,"팀":{}},"대학2부":{"예배":229,"팀":{}}},"2024-02-04":{"1청년부":{"예배":360,"팀":{}},"2청년부":{"예배":302,"팀":{}},"대학1부":{"예배":211,"팀":{}},"대학2부":{"예배":238,"팀":{}}},"2024-02-11":{"1청년부":{"예배":182,"팀":{}},"2청년부":{"예배":159,"팀":{}},"대학1부":{"예배":135,"팀":{}},"대학2부":{"예배":132,"팀":{}}},"2024-02-18":{"1청년부":{"예배":357,"팀":{}},"2청년부":{"예배":314,"팀":{}},"대학1부":{"예배":236,"팀":{}},"대학2부":{"예배":237,"팀":{}}},"2024-02-25":{"1청년부":{"예배":361,"팀":{}},"2청년부":{"예배":307,"팀":{}},"대학1부":{"예배":209,"팀":{}},"대학2부":{"예배":232,"팀":{}}},"2024-03-03":{"1청년부":{"예배":357,"팀":{}},"2청년부":{"예배":290,"팀":{}},"대학1부":{"예배":227,"팀":{}},"대학2부":{"예배":231,"팀":{}}},"2024-03-10":{"1청년부":{"예배":280,"팀":{}},"2청년부":{"예배":247,"팀":{}},"대학1부":{"예배":243,"팀":{}},"대학2부":{"예배":232,"팀":{}}},"2024-03-17":{"1청년부":{"예배":376,"팀":{}},"2청년부":{"예배":290,"팀":{}},"대학1부":{"예배":234,"팀":{}},"대학2부":{"예배":222,"팀":{}}},"2024-03-24":{"1청년부":{"예배":372,"팀":{}},"2청년부":{"예배":307,"팀":{}},"대학1부":{"예배":244,"팀":{}},"대학2부":{"예배":216,"팀":{}}},"2024-03-31":{"1청년부":{"예배":354,"팀":{}},"2청년부":{"예배":292,"팀":{}},"대학1부":{"예배":256,"팀":{}},"대학2부":{"예배":227,"팀":{}}},"2024-04-07":{"1청년부":{"예배":358,"팀":{}},"2청년부":{"예배":284,"팀":{}},"대학1부":{"예배":261,"팀":{}},"대학2부":{"예배":218,"팀":{}}},"2024-04-14":{"1청년부":{"예배":368,"팀":{}},"2청년부":{"예배":292,"팀":{}},"대학1부":{"예배":243,"팀":{}},"대학2부":{"예배":213,"팀":{}}},"2024-04-21":{"1청년부":{"예배":327,"팀":{}},"2청년부":{"예배":301,"팀":{}},"대학1부":{"예배":234,"팀":{}},"대학2부":{"예배":181,"팀":{}}},"2024-04-28":{"1청년부":{"예배":0,"팀":{}},"2청년부":{"예배":0,"팀":{}},"대학1부":{"예배":0,"팀":{}},"대학2부":{"예배":0,"팀":{}}},"2024-05-05":{"1청년부":{"예배":337,"팀":{}},"2청년부":{"예배":273,"팀":{}},"대학1부":{"예배":222,"팀":{}},"대학2부":{"예배":193,"팀":{}}},"2024-05-12":{"1청년부":{"예배":366,"팀":{}},"2청년부":{"예배":304,"팀":{}},"대학1부":{"예배":231,"팀":{}},"대학2부":{"예배":218,"팀":{}}},"2024-05-19":{"1청년부":{"예배":363,"팀":{}},"2청년부":{"예배":297,"팀":{}},"대학1부":{"예배":236,"팀":{}},"대학2부":{"예배":215,"팀":{}}},"2024-05-26":{"1청년부":{"예배":363,"팀":{}},"2청년부":{"예배":278,"팀":{}},"대학1부":{"예배":246,"팀":{}},"대학2부":{"예배":209,"팀":{}}},"2024-06-02":{"1청년부":{"예배":345,"팀":{}},"2청년부":{"예배":268,"팀":{}},"대학1부":{"예배":225,"팀":{}},"대학2부":{"예배":210,"팀":{}}},"2024-06-09":{"1청년부":{"예배":363,"팀":{}},"2청년부":{"예배":281,"팀":{}},"대학1부":{"예배":232,"팀":{}},"대학2부":{"예배":226,"팀":{}}},"2024-06-16":{"1청년부":{"예배":358,"팀":{}},"2청년부":{"예배":303,"팀":{}},"대학1부":{"예배":232,"팀":{}},"대학2부":{"예배":199,"팀":{}}},"2024-06-23":{"1청년부":{"예배":357,"팀":{}},"2청년부":{"예배":294,"팀":{}},"대학1부":{"예배":261,"팀":{}},"대학2부":{"예배":231,"팀":{}}},"2024-06-30":{"1청년부":{"예배":369,"팀":{}},"2청년부":{"예배":300,"팀":{}},"대학1부":{"예배":247,"팀":{}},"대학2부":{"예배":222,"팀":{}}},"2024-07-07":{"1청년부":{"예배":335,"팀":{}},"2청년부":{"예배":324,"팀":{}},"대학2부":{"예배":238,"팀":{}}},"2024-07-14":{"1청년부":{"예배":320,"팀":{}},"2청년부":{"예배":274,"팀":{}},"대학1부":{"예배":244,"팀":{}}},"2024-07-21":{"1청년부":{"예배":334,"팀":{}},"2청년부":{"예배":292,"팀":{}},"대학1부":{"예배":177,"팀":{}},"대학2부":{"예배":204,"팀":{}}},"2024-07-28":{"1청년부":{"예배":370,"팀":{}},"2청년부":{"예배":260,"팀":{}},"대학1부":{"예배":186,"팀":{}},"대학2부":{"예배":185,"팀":{}}},"2024-08-04":{"1청년부":{"예배":325,"팀":{}},"2청년부":{"예배":214,"팀":{}},"대학1부":{"예배":226,"팀":{}},"대학2부":{"예배":206,"팀":{}}},"2024-08-11":{"1청년부":{"예배":333,"팀":{}},"2청년부":{"예배":246,"팀":{}},"대학1부":{"예배":239,"팀":{}},"대학2부":{"예배":192,"팀":{}}},"2024-08-18":{"1청년부":{"예배":298,"팀":{}},"2청년부":{"예배":206,"팀":{}},"대학1부":{"예배":238,"팀":{}},"대학2부":{"예배":197,"팀":{}}},"2024-08-25":{"1청년부":{"예배":332,"팀":{}},"2청년부":{"예배":231,"팀":{}},"대학1부":{"예배":207,"팀":{}},"대학2부":{"예배":200,"팀":{}}},"2024-09-01":{"1청년부":{"예배":359,"팀":{}},"2청년부":{"예배":278,"팀":{}},"대학1부":{"예배":223,"팀":{}},"대학2부":{"예배":190,"팀":{}}},"2024-09-08":{"1청년부":{"예배":334,"팀":{}},"2청년부":{"예배":291,"팀":{}},"대학1부":{"예배":227,"팀":{}},"대학2부":{"예배":198,"팀":{}}},"2024-09-15":{"1청년부":{"예배":256,"팀":{}},"2청년부":{"예배":169,"팀":{}},"대학1부":{"예배":180,"팀":{}},"대학2부":{"예배":139,"팀":{}}},"2024-09-22":{"1청년부":{"예배":362,"팀":{}},"2청년부":{"예배":280,"팀":{}},"대학1부":{"예배":220,"팀":{}},"대학2부":{"예배":195,"팀":{}}},"2024-09-29":{"1청년부":{"예배":361,"팀":{}},"2청년부":{"예배":265,"팀":{}},"대학1부":{"예배":214,"팀":{}},"대학2부":{"예배":201,"팀":{}}},"2024-10-06":{"1청년부":{"예배":364,"팀":{}},"2청년부":{"예배":276,"팀":{}},"대학1부":{"예배":218,"팀":{}},"대학2부":{"예배":192,"팀":{}}},"2024-10-13":{"1청년부":{"예배":362,"팀":{}},"2청년부":{"예배":276,"팀":{}},"대학1부":{"예배":222,"팀":{}},"대학2부":{"예배":197,"팀":{}}},"2024-10-20":{"1청년부":{"예배":363,"팀":{}},"2청년부":{"예배":293,"팀":{}},"대학1부":{"예배":205,"팀":{}},"대학2부":{"예배":179,"팀":{}}},"2024-10-27":{"1청년부":{"예배":349,"팀":{}},"2청년부":{"예배":294,"팀":{}},"대학1부":{"예배":213,"팀":{}},"대학2부":{"예배":190,"팀":{}}},"2024-11-03":{"1청년부":{"예배":394,"팀":{}},"2청년부":{"예배":273,"팀":{}},"대학1부":{"예배":208,"팀":{}},"대학2부":{"예배":187,"팀":{}}},"2024-11-10":{"1청년부":{"예배":377,"팀":{}},"2청년부":{"예배":257,"팀":{}},"대학1부":{"예배":209,"팀":{}},"대학2부":{"예배":191,"팀":{}}},"2024-11-17":{"1청년부":{"예배":381,"팀":{}},"2청년부":{"예배":287,"팀":{}},"대학1부":{"예배":213,"팀":{}},"대학2부":{"예배":188,"팀":{}}},"2024-11-24":{"1청년부":{"예배":378,"팀":{}},"2청년부":{"예배":289,"팀":{}},"대학1부":{"예배":227,"팀":{}},"대학2부":{"예배":184,"팀":{}}},"2024-12-01":{"1청년부":{"예배":377,"팀":{}},"2청년부":{"예배":285,"팀":{}},"대학1부":{"예배":228,"팀":{}},"대학2부":{"예배":205,"팀":{}}},"2024-12-08":{"1청년부":{"예배":382,"팀":{}},"2청년부":{"예배":273,"팀":{}},"대학1부":{"예배":231,"팀":{}},"대학2부":{"예배":204,"팀":{}}},"2024-12-15":{"1청년부":{"예배":394,"팀":{}},"2청년부":{"예배":257,"팀":{}},"대학1부":{"예배":222,"팀":{}},"대학2부":{"예배":208,"팀":{}}},"2024-12-22":{"1청년부":{"예배":355,"팀":{}},"2청년부":{"예배":205,"팀":{}},"대학1부":{"예배":244,"팀":{}},"대학2부":{"예배":238,"팀":{}}},"2024-12-29":{"1청년부":{"예배":395,"팀":{}},"2청년부":{"예배":232,"팀":{}},"대학1부":{"예배":247,"팀":{}},"대학2부":{"예배":238,"팀":{}}},"2025-01-12":{"1청년부":{"예배":506,"팀":{}},"2청년부":{"예배":424,"팀":{}},"3청년부":{"예배":203,"팀":{}},"4청년부":{"예배":25,"팀":{}}},"2025-01-19":{"1청년부":{"예배":496,"팀":{}},"2청년부":{"예배":404,"팀":{}},"3청년부":{"예배":240,"팀":{}},"4청년부":{"예배":21,"팀":{}}},"2025-01-26":{"1청년부":{"예배":339,"팀":{}},"2청년부":{"예배":277,"팀":{}},"3청년부":{"예배":85,"팀":{}},"4청년부":{"예배":0,"팀":{}}},"2025-02-02":{"1청년부":{"예배":487,"팀":{}},"2청년부":{"예배":375,"팀":{}},"3청년부":{"예배":244,"팀":{}},"4청년부":{"예배":26,"팀":{}}},"2025-02-09":{"1청년부":{"예배":446,"팀":{}},"2청년부":{"예배":354,"팀":{}},"3청년부":{"예배":236,"팀":{}},"4청년부":{"예배":19,"팀":{}}},"2025-02-16":{"1청년부":{"예배":464,"팀":{}},"2청년부":{"예배":377,"팀":{}},"3청년부":{"예배":232,"팀":{}},"4청년부":{"예배":24,"팀":{}}},"2025-02-23":{"1청년부":{"예배":400,"팀":{}},"2청년부":{"예배":383,"팀":{}},"3청년부":{"예배":235,"팀":{}},"4청년부":{"예배":42,"팀":{}}},"2025-03-02":{"1청년부":{"예배":470,"팀":{}},"2청년부":{"예배":373,"팀":{}},"3청년부":{"예배":241,"팀":{}},"4청년부":{"예배":43,"팀":{}}},"2025-03-09":{"1청년부":{"예배":488,"팀":{}},"2청년부":{"예배":411,"팀":{}},"3청년부":{"예배":254,"팀":{}},"4청년부":{"예배":49,"팀":{}}},"2025-03-16":{"1청년부":{"예배":410,"팀":{}},"2청년부":{"예배":424,"팀":{}},"3청년부":{"예배":242,"팀":{}},"4청년부":{"예배":40,"팀":{}}},"2025-03-23":{"1청년부":{"예배":446,"팀":{}},"2청년부":{"예배":436,"팀":{}},"3청년부":{"예배":242,"팀":{}},"4청년부":{"예배":42,"팀":{}}},"2025-03-30":{"1청년부":{"예배":427,"팀":{}},"2청년부":{"예배":393,"팀":{}},"3청년부":{"예배":245,"팀":{}},"4청년부":{"예배":41,"팀":{}}},"2025-04-06":{"1청년부":{"예배":433,"팀":{}},"2청년부":{"예배":380,"팀":{}},"3청년부":{"예배":243,"팀":{}},"4청년부":{"예배":37,"팀":{}}},"2025-04-13":{"1청년부":{"예배":405,"팀":{}},"2청년부":{"예배":388,"팀":{}},"3청년부":{"예배":254,"팀":{}},"4청년부":{"예배":40,"팀":{}}},"2025-04-20":{"1청년부":{"예배":396,"팀":{}},"2청년부":{"예배":394,"팀":{}},"3청년부":{"예배":251,"팀":{}},"4청년부":{"예배":41,"팀":{}}},"2025-04-27":{"1청년부":{"예배":422,"팀":{}},"2청년부":{"예배":383,"팀":{}},"3청년부":{"예배":236,"팀":{}},"4청년부":{"예배":43,"팀":{}}},"2025-05-04":{"1청년부":{"예배":412,"팀":{}},"2청년부":{"예배":362,"팀":{}},"3청년부":{"예배":228,"팀":{}},"4청년부":{"예배":43,"팀":{}}},"2025-05-11":{"1청년부":{"예배":430,"팀":{}},"2청년부":{"예배":384,"팀":{}},"3청년부":{"예배":243,"팀":{}},"4청년부":{"예배":47,"팀":{}}},"2025-05-18":{"1청년부":{"예배":414,"팀":{}},"2청년부":{"예배":381,"팀":{}},"3청년부":{"예배":254,"팀":{}},"4청년부":{"예배":46,"팀":{}}},"2025-05-25":{"1청년부":{"예배":440,"팀":{}},"2청년부":{"예배":378,"팀":{}},"3청년부":{"예배":240,"팀":{}},"4청년부":{"예배":55,"팀":{}}},"2025-06-01":{"1청년부":{"예배":455,"팀":{}},"2청년부":{"예배":391,"팀":{}},"3청년부":{"예배":242,"팀":{}},"4청년부":{"예배":44,"팀":{}}},"2025-06-08":{"1청년부":{"예배":451,"팀":{}},"2청년부":{"예배":381,"팀":{}},"3청년부":{"예배":248,"팀":{}},"4청년부":{"예배":48,"팀":{}}},"2025-06-29":{"1청년부":{"예배":488,"팀":{}},"2청년부":{"예배":384,"팀":{}},"3청년부":{"예배":237,"팀":{}},"4청년부":{"예배":44,"팀":{}}},"2025-07-06":{"1청년부":{"예배":490,"팀":{}},"2청년부":{"예배":379,"팀":{}},"3청년부":{"예배":248,"팀":{}},"4청년부":{"예배":50,"팀":{}}},"2025-07-13":{"1청년부":{"예배":483,"팀":{}},"2청년부":{"예배":393,"팀":{}},"3청년부":{"예배":223,"팀":{}},"4청년부":{"예배":53,"팀":{}}},"2025-07-20":{"1청년부":{"예배":458,"팀":{}},"2청년부":{"예배":384,"팀":{}},"3청년부":{"예배":218,"팀":{}},"4청년부":{"예배":49,"팀":{}}},"2025-07-27":{"1청년부":{"예배":384,"팀":{}}},"2025-08-03":{"1청년부":{"예배":426,"팀":{}},"2청년부":{"예배":387,"팀":{}},"3청년부":{"예배":232,"팀":{}},"4청년부":{"예배":52,"팀":{}}},"2025-08-10":{"1청년부":{"예배":421,"팀":{}},"2청년부":{"예배":377,"팀":{}},"3청년부":{"예배":0,"팀":{}},"4청년부":{"예배":24,"팀":{}}},"2025-08-17":{"1청년부":{"예배":414,"팀":{}},"2청년부":{"예배":344,"팀":{}},"3청년부":{"예배":19,"팀":{}},"4청년부":{"예배":17,"팀":{}}},"2025-08-24":{"1청년부":{"예배":340,"팀":{}},"2청년부":{"예배":363,"팀":{}},"3청년부":{"예배":0,"팀":{}},"4청년부":{"예배":25,"팀":{}}},"2025-08-31":{"1청년부":{"예배":439,"팀":{}},"2청년부":{"예배":390,"팀":{}},"3청년부":{"예배":186,"팀":{}},"4청년부":{"예배":62,"팀":{}}},"2025-09-07":{"1청년부":{"예배":447,"팀":{}},"2청년부":{"예배":410,"팀":{}},"3청년부":{"예배":238,"팀":{}},"4청년부":{"예배":51,"팀":{}}},"2025-09-14":{"1청년부":{"예배":421,"팀":{}},"2청년부":{"예배":410,"팀":{}},"3청년부":{"예배":236,"팀":{}},"4청년부":{"예배":47,"팀":{}}},"2025-09-21":{"1청년부":{"예배":421,"팀":{}},"2청년부":{"예배":401,"팀":{}},"3청년부":{"예배":241,"팀":{}},"4청년부":{"예배":50,"팀":{}}},"2025-09-28":{"1청년부":{"예배":420,"팀":{}},"2청년부":{"예배":382,"팀":{}},"3청년부":{"예배":232,"팀":{}},"4청년부":{"예배":45,"팀":{}}},"2025-10-12":{"1청년부":{"예배":411,"팀":{}},"2청년부":{"예배":376,"팀":{}},"3청년부":{"예배":233,"팀":{}},"4청년부":{"예배":49,"팀":{}}},"2025-10-19":{"1청년부":{"예배":410,"팀":{}},"2청년부":{"예배":381,"팀":{}},"3청년부":{"예배":232,"팀":{}},"4청년부":{"예배":46,"팀":{}}},"2025-10-26":{"1청년부":{"예배":410,"팀":{}},"2청년부":{"예배":381,"팀":{}},"3청년부":{"예배":232,"팀":{}},"4청년부":{"예배":46,"팀":{}}},"2025-11-09":{"1청년부":{"예배":478,"팀":{}},"2청년부":{"예배":442,"팀":{}},"3청년부":{"예배":254,"팀":{}},"4청년부":{"예배":56,"팀":{}}},"2025-11-16":{"1청년부":{"예배":457,"팀":{}},"2청년부":{"예배":425,"팀":{}},"3청년부":{"예배":243,"팀":{}},"4청년부":{"예배":49,"팀":{}}},"2025-11-23":{"1청년부":{"예배":451,"팀":{}},"2청년부":{"예배":413,"팀":{}},"3청년부":{"예배":244,"팀":{}},"4청년부":{"예배":56,"팀":{}}},"2025-11-30":{"1청년부":{"예배":427,"팀":{}},"2청년부":{"예배":407,"팀":{}},"3청년부":{"예배":248,"팀":{}},"4청년부":{"예배":43,"팀":{}}},"2025-12-07":{"1청년부":{"예배":425,"팀":{}},"2청년부":{"예배":399,"팀":{}},"3청년부":{"예배":232,"팀":{}},"4청년부":{"예배":52,"팀":{}}},"2025-12-21":{"1청년부":{"예배":501,"팀":{}},"2청년부":{"예배":435,"팀":{}},"3청년부":{"예배":249,"팀":{}},"4청년부":{"예배":66,"팀":{}}},"2025-12-28":{"1청년부":{"예배":536,"팀":{}},"2청년부":{"예배":439,"팀":{}}}}};
 
+/* 폐지된 청년 조직 — 2024년까지만 존재. 과거 데이터에 남아 있어도 화면에 노출하지 않는다. */
+const RETIRED_YOUTH_DEPTS = ['대학1부', '대학2부'];
+
+/* 과거 XLS 파싱본(HIST)과 구글 시트(GAS)를 주차·그룹 단위로 병합한다.
+   예전에는 "D에 없는 주차만" HIST로 채웠는데, GAS 시트는 2026년 운영용이라
+   2023–2025 구간이 부분적으로만 입력돼 있다. 그 결과
+     · 2025년 청년교구가 1청년부 하나(141명)만 잡히고 (HIST는 4개 부서 1,158명)
+     · 수요/금요 '현장'에 온라인 포함 총계가 들어가
+   연도비교가 통째로 왜곡됐다. 이제 같은 주차라도 그룹별로 '더 완전한 쪽'을 쓴다. */
+function pickRicher(bucket, date, score) {
+  const hist = HIST[bucket]?.[date];
+  if (!hist) return;
+  const live = D[bucket][date];
+  if (!live || score(hist) > score(live)) D[bucket][date] = hist;
+}
+
+const _scoreSunday = r => ['1부','2부','3부'].reduce((a,p) =>
+  a + (r?.bu?.[p]?.['장년'] != null ? 1 : 0) + (r?.bu?.[p]?.['송림'] != null ? 1 : 0), 0);
+const _scoreKeys = r => Object.keys(r || {}).length;
+// 현장/온라인이 분리된 레코드에 가중치 — 분리되지 않은 쪽은 '인원'이 총계일 수 있다
+const _scoreWeekday = r => (r?.wed_on != null ? 2 : 0) + (r?.fri_on != null ? 2 : 0)
+                         + (r?.wed_off != null ? 1 : 0) + (r?.fri_off != null ? 1 : 0);
+const _scoreDawn = r => Object.values(r?.offline || {}).filter(x => Number(x) > 0).length
+                      + Object.values(r?.online  || {}).filter(x => Number(x) > 0).length;
+
 function mergeHist() {
+  Object.values(HIST.youth || {}).forEach(rec => {
+    RETIRED_YOUTH_DEPTS.forEach(d => { delete rec[d]; });
+  });
+
   const live = new Set(D.weeks);
   HIST.weeks.forEach(date => {
-    if (live.has(date)) return;
-    D.weeks.push(date);
-    if (HIST.sunday[date])  D.sunday[date]  = HIST.sunday[date];
-    if (HIST.weekday[date]) D.weekday[date] = HIST.weekday[date];
-    if (HIST.dawn[date])    D.dawn[date]    = HIST.dawn[date];
-    if (HIST.school[date])  D.school[date]  = HIST.school[date];
-    if (HIST.youth[date])   D.youth[date]   = HIST.youth[date];
+    if (!live.has(date)) D.weeks.push(date);
+    pickRicher('sunday',  date, _scoreSunday);
+    pickRicher('school',  date, _scoreKeys);
+    pickRicher('youth',   date, _scoreKeys);
+    pickRicher('weekday', date, _scoreWeekday);
+    pickRicher('dawn',    date, _scoreDawn);
   });
   D.weeks.sort();
 }
+
 
 // 새 탭용 데이터 — 구글 시트(교구 순장반 / 교구 다락방 / 새가족) 연동으로만 채워진다.
 // 더미를 두면 시트에 값이 없어도 화면에 숫자가 그려져 실제 집계처럼 보이므로 반드시 비워 둔다.
@@ -1476,6 +1514,15 @@ function exportCSV() {
         ]);
       });
     });
+  } else if (tab === 'yearcomp') {
+    const m = ycMetric(YC_METRIC);
+    name = `연도비교_${m.label}`;
+    rows.push(['주차', ...YC_YEARS.map(y => `${y}년`)]);
+    const cols = YC_YEARS.map(y => ycWeekArr(y, m.fn));
+    for (let i = 0; i < YC_MAX_WK; i++) {
+      if (cols.every(c => c[i] == null)) continue;
+      rows.push([`${i + 1}주`, ...cols.map(c => c[i] ?? '')]);
+    }
   }
 
   if (!rows.length) { alert('내보낼 데이터가 없습니다.'); return; }
@@ -2623,30 +2670,9 @@ function initSchool() {
     const tots2 = fw2.map(w => schoolGroupTotal(w));
     mkChart('c-school-trend','line',getWL(fw2),[lds('주일학교 합계',tots2,C.b,true)]);
   };
-  const renderSchoolKpi = (fw2) => {
-    const tots2 = fw2.map(w => schoolGroupTotal(w));
-    // '최근'은 마지막 주가 아니라 실제로 입력된 마지막 주 기준
-    const li = lastFilledIdx(tots2), pi = lastFilledIdx(tots2, li);
-    const lat2 = li >= 0 ? tots2[li] : null;
-    const prv2 = pi >= 0 ? tots2[pi] : null;
-    const dT2 = lat2 != null && prv2 != null ? lat2 - prv2 : null;
-    const lW2 = li >= 0 ? fw2[li] : '';
-    const lblDate = lW2 ? `${Number(lW2.slice(5,7))}/${Number(lW2.slice(8,10))} 기준` : '입력 대기';
-    const filled = tots2.filter(x => x != null);
-    const maxT2 = filled.length ? Math.max(...filled) : null;
-    const maxW2 = maxT2 != null ? fw2[tots2.indexOf(maxT2)] : '';
-    const maxD2 = maxW2 ? `${Number(maxW2.slice(5,7))}/${Number(maxW2.slice(8,10))}` : '';
-    mkKPI('kk-school',[
-      {label:'주일학교 합계 (최근)',value:fmtOr(lat2),sub:`${lblDate} · ${fw2.length}주 평균 ${fmt(avg(tots2))}명`,color:'blue',
-        trend: dT2 == null ? '' : `${dT2>=0?'▲':'▼'} 직전 ${dT2>=0?'+':''}${fmt(dT2)}`, td: dT2>=0?'up':'dn'},
-      {label:'중등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'중등부')),sub:lblDate,color:'purple'},
-      {label:'고등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'고등부')),sub:lblDate,color:'teal'},
-      {label:'기간 내 최고',value:fmtOr(maxT2),sub:maxD2,color:'gold'},
-    ]);
-  };
-  renderSchoolKpi(fw);
+  renderSchoolKpiAll(fw);
   renderSchoolTrend(fw);
-  addCardPeriod('c-school-trend', renderSchoolTrend, renderSchoolKpi);
+  addCardPeriod('c-school-trend', renderSchoolTrend, renderSchoolKpiAll);
   const deptSums = SCHOOL_DEPTS.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
   mkChart('c-school-pie','doughnut',SCHOOL_DEPTS,dnut(SCHOOL_DEPTS,deptSums,SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length])),{});
   const avgs4 = SCHOOL_DEPTS.map(d=>last4avg(fw.map(w=>schoolDeptValue(w,d))));
@@ -2677,44 +2703,136 @@ function initSchool() {
   });
 }
 
+function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
+
+/* 부서 레코드에서 세부 값 꺼내기 (1부/2부/학생/교사) */
+function schoolPart(w, dept, key) { return nn(D.school[w]?.[dept]?.[key]); }
+
+/* 전년 동기(52주 전) 시리즈 */
+function yoySeries(fw, valueFn) {
+  return fw.map(w => {
+    const y = shiftWeekKey(w, -52);
+    return D.weeks.includes(y) ? valueFn(y) : null;
+  });
+}
+
+/* 결측을 건너뛰는 N주 이동평균 */
+function movAvg(arr, n) {
+  return arr.map((x, i) => {
+    if (x == null) return null;
+    const win = arr.slice(Math.max(0, i - n + 1), i + 1).filter(v2 => v2 != null);
+    return win.length ? Math.round(win.reduce((a, b) => a + b, 0) / win.length) : null;
+  });
+}
+
+/* 주일학교 '전체' KPI — initSchool과 부서 선택 해제 시 공용 */
+function renderSchoolKpiAll(fw2) {
+    const tots2 = fw2.map(w => schoolGroupTotal(w));
+    // '최근'은 마지막 주가 아니라 실제로 입력된 마지막 주 기준
+    const li = lastFilledIdx(tots2), pi = lastFilledIdx(tots2, li);
+    const lat2 = li >= 0 ? tots2[li] : null;
+    const prv2 = pi >= 0 ? tots2[pi] : null;
+    const dT2 = lat2 != null && prv2 != null ? lat2 - prv2 : null;
+    const lW2 = li >= 0 ? fw2[li] : '';
+    const lblDate = lW2 ? `${Number(lW2.slice(5,7))}/${Number(lW2.slice(8,10))} 기준` : '입력 대기';
+    const filled = tots2.filter(x => x != null);
+    const maxT2 = filled.length ? Math.max(...filled) : null;
+    const maxW2 = maxT2 != null ? fw2[tots2.indexOf(maxT2)] : '';
+    const maxD2 = maxW2 ? `${Number(maxW2.slice(5,7))}/${Number(maxW2.slice(8,10))}` : '';
+    mkKPI('kk-school',[
+      {label:'주일학교 합계 (최근)',value:fmtOr(lat2),sub:`${lblDate} · ${fw2.length}주 평균 ${fmt(avg(tots2))}명`,color:'blue',
+        trend: dT2 == null ? '' : `${dT2>=0?'▲':'▼'} 직전 ${dT2>=0?'+':''}${fmt(dT2)}`, td: dT2>=0?'up':'dn'},
+      {label:'중등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'중등부')),sub:lblDate,color:'purple'},
+      {label:'고등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'고등부')),sub:lblDate,color:'teal'},
+      {label:'기간 내 최고',value:fmtOr(maxT2),sub:maxD2,color:'gold'},
+    ]);
+}
+
 function renderSchoolDept() {
   const fw = getFW(); const wl = getWL(fw);
   const sel = document.getElementById('school-dept-sel');
   const dept = sel?.value || '';
+
   if (!dept) {
-    // 전체 선택 시 전체 추이 복원
-    const tots=fw.map(w=>schoolGroupTotal(w));
-    mkChart('c-school-trend','line',wl,[lds('주일학교 합계',tots,C.b,true)]);
-    const deptSums=SCHOOL_DEPTS.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
+    // ── 전체 보기 복원 ──
+    setText('ct-school-trend', '주일학교 전체 출석 추이');
+    setText('ct-school-pie',   '부서별 비중 (누적)');
+    setText('ct-school-bar',   '부서별 최근 4주 평균 출석');
+    setText('ct-school-table', '부서별 주별 출석 상세');
+    const tots = fw.map(w => schoolGroupTotal(w));
+    mkChart('c-school-trend','line',wl,[lds('주일학교 합계',tots,C.b,true)],{fw});
+    const deptSums = SCHOOL_DEPTS.map(d => fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
     mkChart('c-school-pie','doughnut',SCHOOL_DEPTS,dnut(SCHOOL_DEPTS,deptSums,SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length])),{});
-    const avgs4=SCHOOL_DEPTS.map(d=>last4avg(fw.map(w=>schoolDeptValue(w,d))));
+    const avgs4 = SCHOOL_DEPTS.map(d => last4avg(fw.map(w=>schoolDeptValue(w,d))));
     mkChart('c-school-bar','bar',SCHOOL_DEPTS,[{data:avgs4,backgroundColor:SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
     mkTable('t-school',['날짜',...SCHOOL_DEPTS,'합계'],
-      fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmtOr(schoolDeptTotal(w,d))),
-        fmtOr(schoolGroupTotal(w))]));
+      fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmtOr(schoolDeptTotal(w,d))), fmtOr(schoolGroupTotal(w))]));
+    renderSchoolKpiAll(fw);
     return;
   }
-  // 특정 부서 선택
+
+  // ══ 개별 부서 보기 ══
   const ci = SCHOOL_DEPTS.indexOf(dept);
   const color = CA[ci >= 0 ? ci % CA.length : 0];
-  const series = fw.map(w=>schoolDeptValue(w,dept));
-  const latest = series[series.length-1];
-  const prev = series[series.length-2]||latest;
-  const diff = latest-prev;
-  mkKPI('kk-school',[
-    {label:`${dept} (최근)`,value:fmt(latest),sub:`${fw.length}주 평균 ${fmt(avg(series))}명`,color:'blue',
-      trend:`${diff>=0?'▲':'▼'} 전주 ${diff>=0?'+':''}${fmt(diff)}`,td:diff>=0?'up':'dn'},
-    {label:'기간 최고',value:fmt(Math.max(...series)),sub:'',color:'green'},
-    {label:'기간 최저',value:fmt(Math.min(...series.filter(x=>x>0))||0),sub:'',color:'orange'},
-    {label:'집계 기간',value:fw.length+'주',sub:'',color:'teal'},
+
+  const total = schoolSeries(dept, fw);                       // 합계 (null 보존)
+  const bu1   = fw.map(w => schoolPart(w, dept, '1부'));
+  const bu2   = fw.map(w => schoolPart(w, dept, '2부'));
+  const stu   = fw.map(w => schoolPart(w, dept, '학생'));
+  const tea   = fw.map(w => schoolPart(w, dept, '교사'));
+  const yoy   = yoySeries(fw, y => schoolDeptTotal(y, dept));
+
+  const li = lastFilledIdx(total), pi = lastFilledIdx(total, li);
+  const latest = li >= 0 ? total[li] : null;
+  const prev   = pi >= 0 ? total[pi] : null;
+  const diff   = latest != null && prev != null ? latest - prev : null;
+  const lW     = li >= 0 ? fw[li] : '';
+  const lDate  = lW ? `${Number(lW.slice(5,7))}/${Number(lW.slice(8,10))} 기준` : '입력 대기';
+  const yoyVal = lW ? (D.weeks.includes(shiftWeekKey(lW,-52)) ? schoolDeptTotal(shiftWeekKey(lW,-52), dept) : null) : null;
+  const yoyDiff = latest != null && yoyVal != null ? latest - yoyVal : null;
+
+  const filled = total.filter(x => x != null);
+  const maxV = filled.length ? Math.max(...filled) : null;
+  const maxW = maxV != null ? fw[total.indexOf(maxV)] : '';
+  const stuL = li >= 0 ? stu[li] : null, teaL = li >= 0 ? tea[li] : null;
+
+  mkKPI('kk-school', [
+    { label:`${dept} (최근)`, value:fmtOr(latest), sub:`${lDate} · ${fw.length}주 평균 ${fmt(avg(total))}명`, color:'blue',
+      trend: diff == null ? '' : `${diff>=0?'▲':'▼'} 직전 ${diff>=0?'+':''}${fmt(diff)}`, td: diff>=0?'up':'dn' },
+    { label:'전년 동주 대비', value: yoyDiff == null ? '–' : `${yoyDiff>=0?'+':''}${fmt(yoyDiff)}`,
+      sub: yoyVal == null ? '전년 데이터 없음' : `작년 같은 주 ${fmt(yoyVal)}명`, color: yoyDiff >= 0 ? 'green' : 'orange' },
+    { label:'학생 : 교사', value: (stuL != null && teaL) ? `${(stuL/teaL).toFixed(1)} : 1` : '–',
+      sub: (stuL != null || teaL != null) ? `학생 ${fmtOr(stuL)} · 교사 ${fmtOr(teaL)}` : '세부 미입력', color:'purple' },
+    { label:'기간 내 최고', value:fmtOr(maxV),
+      sub: maxW ? `${Number(maxW.slice(5,7))}/${Number(maxW.slice(8,10))}` : '', color:'gold' },
   ]);
-  mkChart('c-school-trend','line',wl,[lds(dept, series, color, true)]);
-  mkChart('c-school-pie','doughnut',[dept,'기타'],dnut([dept,'기타'],
-    [fw.reduce((a,w)=>a+schoolDeptValue(w,dept),0),
-     fw.reduce((a,w)=>a+SCHOOL_DEPTS.filter(d=>d!==dept).reduce((s,d2)=>s+schoolDeptValue(w,d2),0),0)],
-    [color, '#e2e8f0']),{});
-  mkChart('c-school-bar','bar',['최근 4주 평균'],[{data:[last4avg(series)],backgroundColor:[color],borderRadius:4,borderWidth:0}],{horiz:true});
-  mkTable('t-school',['날짜',dept],fw.map(w=>[w,fmt(schoolDeptValue(w,dept))]));
+
+  // ① 추이 + 4주 이동평균 + 전년 동기
+  setText('ct-school-trend', `${dept} 출석 추이`);
+  const ds1 = [lds(dept, total, color, true), ldsDash('4주 이동평균', movAvg(total, 4), C.p)];
+  if (yoy.some(x => x != null)) ds1.push(ldsDash('전년 동기', yoy, '#94a3b8'));
+  mkChart('c-school-trend','line',wl,ds1,{fw});
+
+  // ② 1부 / 2부 구성
+  setText('ct-school-pie', `${dept} 1부 · 2부 구성`);
+  if (bu1.some(x=>x!=null) || bu2.some(x=>x!=null)) {
+    mkChart('c-school-pie','bar',wl,[bds('1부',bu1,C.b),bds('2부',bu2,C.t)],{stack:true,fw,total:true});
+  } else {
+    mkChart('c-school-pie','line',wl,[lds(dept,total,color,true)],{fw});
+  }
+
+  // ③ 학생 / 교사 추이
+  setText('ct-school-bar', `${dept} 학생 · 교사 추이`);
+  if (stu.some(x=>x!=null) || tea.some(x=>x!=null)) {
+    mkChart('c-school-bar','line',wl,[lds('학생',stu,C.gr,true),lds('교사',tea,C.or)],{fw});
+  } else {
+    mkChart('c-school-bar','bar',[dept],[{data:[last4avg(total)],backgroundColor:[color],borderRadius:4,borderWidth:0}],{horiz:true});
+  }
+
+  // ④ 주별 상세
+  setText('ct-school-table', `${dept} 주별 상세`);
+  mkTable('t-school',['날짜','1부','2부','학생','교사','합계'],
+    fw.map((w,i)=>[w,fmtOr(bu1[i]),fmtOr(bu2[i]),fmtOr(stu[i]),fmtOr(tea[i]),fmtOr(total[i])]));
 }
 
 // ── WEEKDAY ──
@@ -3030,295 +3148,315 @@ function initNewFam() {
 }
 
 // ── 연도별 비교 ──
+/* ══════════════════════════════════════════════════
+   연도별 비교
+   같은 '주차 번호'로 정렬해 비교한다. 예전 구현은 그 해에 존재하는
+   주차 배열의 순번(indexOf)을 썼기 때문에, 결측 주가 있는 해는 시점이
+   통째로 밀려 엉뚱한 시기끼리 비교됐다.
+   ══════════════════════════════════════════════════ */
+const YC_COLORS = { 2023:'#f97316', 2024:'#3b82f6', 2025:'#09825d', 2026:'#635bff' };
+const YC_MAX_WK = 53;
+let YC_YEARS = [];
+let YC_BY_YEAR = {};
+let YC_METRIC = 'adult';
+let YC_GRAN = 'week';
+
+/* 그 해 첫 일요일을 1주차로 하는 주차 번호 */
+function ycWeekNo(weekKey) {
+  const y = Number(weekKey.slice(0, 4));
+  const jan1 = new Date(y, 0, 1);
+  const firstSun = new Date(y, 0, 1 + ((7 - jan1.getDay()) % 7));
+  return Math.round((parseWeekDate(weekKey) - firstSun) / (7 * 86400000)) + 1;
+}
+
+function ycAdult(d) {
+  const bu = D.sunday[d]?.bu; if (!bu) return null;
+  let t = 0, has = false;
+  ['1부','2부','3부'].forEach(p => {
+    ['장년','송림'].forEach(c => { const x = bu[p]?.[c]; if (x != null) { t += Number(x)||0; has = true; } });
+  });
+  return has ? t : null;
+}
+function ycYouth(d) {
+  const yu = D.youth[d]; if (!yu) return null;
+  let t = 0, has = false;
+  YOUTH_DEPTS.forEach(p => { const x = yu[p]?.예배; if (x != null) { t += Number(x)||0; has = true; } });
+  return has ? t : null;
+}
+function ycDawnOff(d) {
+  const o = D.dawn[d]?.offline; if (!o) return null;
+  const vals = Object.values(o).map(x => Number(x)||0).filter(x => x > 0);
+  return vals.length ? vals.reduce((a,b)=>a+b,0) : null;
+}
+
+const YC_METRICS = [
+  { key:'adult',  label:'주일 장년',   sub:'서현+송림 1–3부 현장', color:'#635bff', fn: ycAdult },
+  { key:'school', label:'주일학교',   sub:'전 부서 합산',        color:'#e5a823', fn: w => schoolTot(w) },
+  { key:'youth',  label:'청년교구',   sub:'1–4청년부 예배',      color:'#09825d', fn: ycYouth },
+  { key:'wed',    label:'수요예배',   sub:'현장 출석',           color:'#0891b2', fn: w => nn(D.weekday[w]?.wed_off) },
+  { key:'fri',    label:'금요기도회', sub:'현장 출석',           color:'#c0123c', fn: w => nn(D.weekday[w]?.fri_off) },
+  { key:'dawn',   label:'새벽기도',   sub:'주간 현장 합계',      color:'#7c3aed', fn: ycDawnOff },
+];
+const ycMetric = key => YC_METRICS.find(m => m.key === key) || YC_METRICS[0];
+
+/* 연도 × 주차번호 값 맵 */
+function ycWeekMap(year, fn) {
+  const map = {};
+  (YC_BY_YEAR[year] || []).forEach(d => {
+    const val = fn(d);
+    if (val != null) map[ycWeekNo(d)] = val;
+  });
+  return map;
+}
+function ycWeekArr(year, fn) {
+  const map = ycWeekMap(year, fn);
+  return Array.from({ length: YC_MAX_WK }, (_, i) => map[i + 1] ?? null);
+}
+function ycMonthArr(year, fn) {
+  const sums = new Array(12).fill(0), cnts = new Array(12).fill(0);
+  (YC_BY_YEAR[year] || []).forEach(d => {
+    const val = fn(d);
+    if (val == null) return;
+    const mo = Number(d.slice(5, 7)) - 1;
+    sums[mo] += val; cnts[mo]++;
+  });
+  return sums.map((v2, i) => cnts[i] ? Math.round(v2 / cnts[i]) : null);
+}
+
+/* 두 해를 '둘 다 값이 있는 주차'로만 비교 — 결측 때문에 평균이 왜곡되지 않게 */
+function ycCompare(fn, curYear, prevYear) {
+  const cur = ycWeekMap(curYear, fn), prv = ycWeekMap(prevYear, fn);
+  const common = Object.keys(cur).map(Number).filter(w => prv[w] != null).sort((a, b) => a - b);
+  if (!common.length) return null;
+  const mean = (m) => Math.round(common.reduce((a, w) => a + m[w], 0) / common.length);
+  const a = mean(cur), b = mean(prv);
+  return { cur: a, prev: b, diff: a - b, pct: b ? (a - b) / b * 100 : null,
+           n: common.length, from: common[0], to: common[common.length - 1] };
+}
+
 function initYearComp() {
-  const YEARS = [2023, 2024, 2025, 2026];
-  const COLORS = { 2023:'#f97316', 2024:'#3b82f6', 2025:'#22c55e', 2026:'#a855f7' };
+  YC_YEARS = [...new Set(D.weeks.map(d => Number(d.slice(0, 4))))].sort();
+  YC_BY_YEAR = {};
+  YC_YEARS.forEach(y => YC_BY_YEAR[y] = []);
+  D.weeks.forEach(d => YC_BY_YEAR[Number(d.slice(0, 4))]?.push(d));
 
-  // group D.weeks by year → { 2023:[dates...], 2024:[...], ... }
+  // 지표 버튼
+  const btns = document.getElementById('yc-metric-btns');
+  if (btns) btns.innerHTML = YC_METRICS.map(m =>
+    `<button class="yc-seg${m.key === YC_METRIC ? ' on' : ''}" id="yc-m-${m.key}" onclick="setYCMetric('${m.key}')">${m.label}</button>`
+  ).join('');
+
+  // 히트맵 지표 선택
+  const heatSel = document.getElementById('yc-heat-metric');
+  if (heatSel && !heatSel.options.length) {
+    heatSel.innerHTML = YC_METRICS.map(m => `<option value="${m.key}">${m.label}</option>`).join('');
+  }
+
+  initYCPointControls();
+  renderYCSummary();
+  renderYCHeat();
+  renderYCTrend();
+  updateYCPoint();
+}
+
+/* ─── 연도 요약 ─── */
+function renderYCSummary() {
+  const cur = YC_YEARS[YC_YEARS.length - 1], prev = cur - 1;
+  const cards = YC_METRICS.map(m => {
+    const c = ycCompare(m.fn, cur, prev);
+    if (!c) return { label: m.label, value: '–', sub: `${prev}년 비교 데이터 없음`, color: 'blue' };
+    const sign = c.diff >= 0 ? '+' : '';
+    const pct = c.pct == null ? '' : ` (${sign}${c.pct.toFixed(1)}%)`;
+    return {
+      label: `${m.label} · ${cur}`,
+      value: fmt(c.cur),
+      sub: `${prev}년 같은 구간 ${fmt(c.prev)}명 · ${c.from}–${c.to}주차 ${c.n}주`,
+      color: c.diff >= 0 ? 'green' : 'orange',
+      trend: `${c.diff >= 0 ? '▲' : '▼'} 전년 ${sign}${fmt(c.diff)}${pct}`,
+      td: c.diff >= 0 ? 'up' : 'dn',
+    };
+  });
+  mkKPI('kk-yearcomp', cards);
+
+  const banner = document.getElementById('yc-summary-banner');
+  if (!banner) return;
+  const up = [], down = [];
+  YC_METRICS.forEach(m => {
+    const c = ycCompare(m.fn, cur, prev);
+    if (!c || c.pct == null) return;
+    (c.pct >= 0 ? up : down).push(`${m.label} ${c.pct >= 0 ? '+' : ''}${c.pct.toFixed(1)}%`);
+  });
+  const head = ycCompare(ycMetric('adult').fn, cur, prev);
+  banner.innerHTML = head
+    ? `<div><b>${cur}년</b>은 ${head.from}–${head.to}주차(${head.n}주) 기준 주일 장년 평균 <b>${fmt(head.cur)}명</b>으로,
+       ${prev}년 같은 구간 ${fmt(head.prev)}명 대비 <b>${head.diff >= 0 ? '+' : ''}${fmt(head.diff)}명</b>입니다.
+       ${up.length ? `상승 ${up.join(' · ')}.` : ''} ${down.length ? `하락 ${down.join(' · ')}.` : ''}</div>`
+    : '';
+}
+
+/* ─── 연도 × 월 히트맵 ─── */
+function ycHeatStyle(pct) {
+  if (pct == null) return 'background:var(--color-bg-subtle);color:var(--color-text-tertiary)';
+  const a = Math.min(Math.abs(pct) / 15, 1);          // 15% 이상이면 최대 채도
+  if (Math.abs(pct) < 2) return 'background:var(--color-bg-subtle);color:var(--color-text-secondary)';
+  return pct > 0
+    ? `background:rgba(9,130,93,${0.10 + a * 0.32});color:#04442f`
+    : `background:rgba(192,18,60,${0.10 + a * 0.32});color:#6b0620`;
+}
+
+function renderYCHeat() {
+  const key = document.getElementById('yc-heat-metric')?.value || YC_METRIC;
+  const m = ycMetric(key);
+  const rows = [];
   const byYear = {};
-  YEARS.forEach(y => byYear[y] = []);
-  D.weeks.forEach(d => {
-    const y = parseInt(d.slice(0,4));
-    if (byYear[y]) byYear[y].push(d);
+  YC_YEARS.forEach(y => { byYear[y] = ycMonthArr(y, m.fn); });
+
+  YC_YEARS.forEach(y => {
+    const cells = byYear[y].map((val, i) => {
+      if (val == null) return '<span class="yc-cell" style="background:var(--color-bg-subtle);color:var(--color-text-disabled)">–</span>';
+      const p = byYear[y - 1]?.[i];
+      const pct = p ? (val - p) / p * 100 : null;
+      const delta = p ? `<span class="yc-d">${val - p >= 0 ? '+' : ''}${fmt(val - p)}</span>` : '';
+      return `<span class="yc-cell" style="${ycHeatStyle(pct)}">${fmt(val)}${delta}</span>`;
+    });
+    rows.push([`${y}년`, ...cells]);
+  });
+  mkTable('t-yc-heat', ['연도', ...MONTHS_KR], rows);
+  document.querySelectorAll('#t-yc-heat tbody tr').forEach(tr => tr.firstElementChild?.classList.add('yc-yr'));
+}
+
+/* ─── 추이 비교 ─── */
+function setYCMetric(key) {
+  YC_METRIC = key;
+  YC_METRICS.forEach(m => document.getElementById('yc-m-' + m.key)?.classList.toggle('on', m.key === key));
+  renderYCTrend();
+}
+function setYCGran(g) {
+  YC_GRAN = g;
+  document.getElementById('yc-gran-week')?.classList.toggle('on', g === 'week');
+  document.getElementById('yc-gran-month')?.classList.toggle('on', g === 'month');
+  document.getElementById('yc-smooth').disabled = g !== 'week';
+  renderYCTrend();
+}
+
+function renderYCTrend() {
+  const m = ycMetric(YC_METRIC);
+  const smooth = YC_GRAN === 'week' && document.getElementById('yc-smooth')?.checked;
+  const labels = YC_GRAN === 'week'
+    ? Array.from({ length: YC_MAX_WK }, (_, i) => `${i + 1}주`)
+    : MONTHS_KR;
+
+  const datasets = YC_YEARS.map(y => {
+    let data = YC_GRAN === 'week' ? ycWeekArr(y, m.fn) : ycMonthArr(y, m.fn);
+    if (smooth) data = movAvg(data, 4);
+    const color = YC_COLORS[y] || CA[y % CA.length];
+    const isCur = y === YC_YEARS[YC_YEARS.length - 1];
+    return {
+      label: `${y}년`, data, borderColor: color, backgroundColor: color + '18',
+      borderWidth: isCur ? 3 : 1.8, pointRadius: isCur ? 2 : 0, pointHoverRadius: 5,
+      tension: 0.3, spanGaps: true, borderDash: isCur ? [] : [5, 3],
+    };
   });
 
-  // week-of-year index (1-based, by sequential position in that year's weeks)
-  function weekIdx(dates, date) { return dates.indexOf(date); }
+  setText('yc-trend-title', `${m.label} — 연도별 ${YC_GRAN === 'week' ? '주차' : '월 평균'} 비교`);
+  setText('yc-trend-sub', `${m.sub}${smooth ? ' · 4주 이동평균' : ''} · 올해는 실선, 과거는 점선`);
+  mkChart('c-yc-main', 'line', labels, datasets, { legendTop: true });
 
-  // max weeks in any year
-  const maxWk = Math.max(...YEARS.map(y => byYear[y].length));
-  const wkLabels = Array.from({length: maxWk}, (_, i) => `${i+1}주`);
-
-  // extract per-year series (indexed 0..maxWk-1, null for missing)
-  function wkSeries(year, fn) {
-    const vals = new Array(maxWk).fill(null);
-    byYear[year].forEach((d, i) => { vals[i] = fn(d); });
-    return vals;
-  }
-
-  function adultVal(d) {
-    const s = D.sunday[d]; if (!s) return null;
-    const bu = s.bu || {};
-    let total = 0;
-    ['1부','2부','3부'].forEach(p => {
-      total += v(bu[p]?.['장년']) + v(bu[p]?.['송림']);
-    });
-    return total || null;
-  }
-  function youthVal(d) {
-    const yu = D.youth[d]; if (!yu) return null;
-    return (['1청년부','2청년부','3청년부','4청년부']
-      .reduce((a,p)=>a+v(yu[p]?.예배),0)) || null;
-  }
-  function schoolVal(d) { return schoolTot(d); }
-  function wedVal(d) { const w=D.weekday[d]; return w?v(w.wed_tot):null; }
-  function friVal(d) { const w=D.weekday[d]; return w?v(w.fri_tot):null; }
-
-  function ycDs(fn) {
-    return YEARS.map(y => ({
-      label: String(y)+'년',
-      data: wkSeries(y, fn),
-      borderColor: COLORS[y],
-      backgroundColor: COLORS[y]+'22',
-      borderWidth: 2,
-      pointRadius: 2,
-      tension: 0.3,
-      spanGaps: true,
-    }));
-  }
-
-  const ycOpts = {
-    responsive:true, maintainAspectRatio:true,
-    plugins:{legend:{position:'top'},tooltip:{mode:'index',intersect:false}},
-    scales:{
-      x:{ticks:{maxTicksLimit:26,font:{size:11}},grid:{color:'#f0f0f0'}},
-      y:{beginAtZero:false,ticks:{font:{size:11}},grid:{color:'#f0f0f0'}}
-    }
-  };
-
-  mkChart('c-yc-wk-adult',  'line', wkLabels, ycDs(adultVal),  ycOpts);
-  mkChart('c-yc-wk-school', 'line', wkLabels, ycDs(schoolVal), ycOpts);
-  mkChart('c-yc-wk-youth',  'line', wkLabels, ycDs(youthVal),  ycOpts);
-  mkChart('c-yc-wk-wed',    'line', wkLabels, ycDs(wedVal),    ycOpts);
-  mkChart('c-yc-wk-fri',    'line', wkLabels, ycDs(friVal),    ycOpts);
-
-  // ── 월별 평균 ──
-  const moLabels = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-
-  function moAvg(year, fn) {
-    const sums = new Array(12).fill(0), cnts = new Array(12).fill(0);
-    byYear[year].forEach(d => {
-      const mo = parseInt(d.slice(5,7)) - 1;
-      const val = fn(d);
-      if (val != null) { sums[mo] += val; cnts[mo]++; }
-    });
-    return sums.map((s,i) => cnts[i] ? Math.round(s / cnts[i]) : null);
-  }
-
-  function moDs(fn) {
-    return YEARS.map(y => ({
-      label: String(y)+'년',
-      data: moAvg(y, fn),
-      borderColor: COLORS[y],
-      backgroundColor: COLORS[y]+'22',
-      borderWidth: 2,
-      pointRadius: 3,
-      tension: 0.3,
-      spanGaps: true,
-    }));
-  }
-
-  mkChart('c-yc-mo-adult',  'line', moLabels, moDs(adultVal),  ycOpts);
-  mkChart('c-yc-mo-school', 'line', moLabels, moDs(schoolVal), ycOpts);
-  mkChart('c-yc-mo-youth',  'line', moLabels, moDs(youthVal),  ycOpts);
-  mkChart('c-yc-mo-wed',    'line', moLabels, moDs(wedVal),    ycOpts);
-  mkChart('c-yc-mo-fri',    'line', moLabels, moDs(friVal),    ycOpts);
-
-  // ── 특정날 비교 초기화 ──
-  window.YC_COLORS = COLORS;
-  window.YC_YEARS = YEARS;
-  window.YC_byYear = byYear;
-
-  function formatDateStr(dateStr) {
-    const [y, m, d] = dateStr.split('-');
-    return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`;
-  }
-
-  const dateSelect = document.getElementById('yc-point-date');
-  const deptSelect = document.getElementById('yc-point-dept');
-
-  // 날짜 선택지 생성
-  const sortedWeeks = D.weeks.slice().sort().reverse();
-  sortedWeeks.forEach(d => {
-    const opt = document.createElement('option');
-    opt.value = d;
-    opt.textContent = formatDateStr(d);
-    dateSelect.appendChild(opt);
+  // 연도별 요약표
+  const rows = YC_YEARS.map(y => {
+    const arr = ycWeekArr(y, m.fn).map((v2, i) => ({ v: v2, wk: i + 1 })).filter(x => x.v != null);
+    if (!arr.length) return [`${y}년`, '0주', '–', '–', '–', '–'];
+    const vals = arr.map(x => x.v);
+    const mean = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+    const hi = arr.reduce((a, b) => (b.v > a.v ? b : a));
+    const lo = arr.reduce((a, b) => (b.v < a.v ? b : a));
+    const c = ycCompare(m.fn, y, y - 1);
+    return [
+      `${y}년`, `${arr.length}주`, fmt(mean),
+      `${fmt(hi.v)} (${hi.wk}주)`, `${fmt(lo.v)} (${lo.wk}주)`,
+      c ? `${c.diff >= 0 ? '+' : ''}${fmt(c.diff)}${c.pct == null ? '' : ` (${c.diff >= 0 ? '+' : ''}${c.pct.toFixed(1)}%)`}` : '–',
+    ];
   });
-  if (sortedWeeks.length) dateSelect.value = sortedWeeks[0];
+  setText('yc-year-title', `${m.label} 연도별 요약`);
+  mkTable('t-yc-year', ['연도', '집계 주수', '평균', '최고', '최저', '전년 대비'], rows);
+}
 
-  // 부서 목록 추출 및 선택지 생성
-  const allDepts = new Set();
-  ['주일예배', '주일학교', '청년교구', '수요예배', '금요예배'];
-  const deptCategories = {
-    '주일예배': ['1부', '2부', '3부'],
-    '주일학교': Object.keys(D.school[sortedWeeks[0]] || {}),
-    '청년교구': Object.keys(D.youth[sortedWeeks[0]] || {}),
-    '수요예배': null,
-    '금요예배': null,
-  };
-
-  const allDeptList = [
-    {label: '주일예배 - 1부', value: 'sunday:1부'},
-    {label: '주일예배 - 2부', value: 'sunday:2부'},
-    {label: '주일예배 - 3부', value: 'sunday:3부'},
-  ];
-
-  if (D.school[sortedWeeks[0]]) {
-    Object.keys(D.school[sortedWeeks[0]]).forEach(dept => {
-      allDeptList.push({label: `주일학교 - ${dept}`, value: `school:${dept}`});
-    });
-  }
-
-  if (D.youth[sortedWeeks[0]]) {
-    Object.keys(D.youth[sortedWeeks[0]]).forEach(dept => {
-      allDeptList.push({label: `청년교구 - ${dept}`, value: `youth:${dept}`});
-    });
-  }
-
-  allDeptList.push({label: '수요예배', value: 'weekday:wed'});
-  allDeptList.push({label: '금요예배', value: 'weekday:fri'});
-
-  allDeptList.forEach(dept => {
-    const opt = document.createElement('option');
-    opt.value = dept.value;
-    opt.textContent = dept.label;
-    deptSelect.appendChild(opt);
+/* ─── 특정 주일 비교 ─── */
+function ycPointItems() {
+  const items = [];
+  ['1부','2부','3부'].forEach(p => {
+    items.push({ id:`sh:${p}`, label:`주일예배 · 서현 ${p}`, fn: w => nn(D.sunday[w]?.bu?.[p]?.['장년']) });
+    items.push({ id:`sr:${p}`, label:`주일예배 · 송림 ${p}`, fn: w => nn(D.sunday[w]?.bu?.[p]?.['송림']) });
   });
+  items.push({ id:'sun:all', label:'주일예배 · 장년 현장 합계', fn: ycAdult });
+  items.push({ id:'school:all', label:'주일학교 · 전체', fn: w => schoolTot(w) });
+  SCHOOL_DEPTS.forEach(d => items.push({ id:`school:${d}`, label:`주일학교 · ${d}`, fn: w => schoolDeptTotal(w, d) }));
+  YOUTH_DEPTS.forEach(d => items.push({ id:`youth:${d}`, label:`청년교구 · ${d}`, fn: w => nn(D.youth[w]?.[d]?.예배) }));
+  items.push({ id:'youth:all', label:'청년교구 · 합계', fn: ycYouth });
+  items.push({ id:'wd:wed', label:'수요예배 · 현장', fn: w => nn(D.weekday[w]?.wed_off) });
+  items.push({ id:'wd:fri', label:'금요기도회 · 현장', fn: w => nn(D.weekday[w]?.fri_off) });
+  items.push({ id:'wd:dawn', label:'새벽기도 · 주간 현장 합계', fn: ycDawnOff });
+  return items;
+}
+let YC_POINT_ITEMS = [];
 
-  window.updateYCPoint = updateYCPoint;
+function initYCPointControls() {
+  YC_POINT_ITEMS = ycPointItems();
+  const dateSel = document.getElementById('yc-point-date');
+  const deptSel = document.getElementById('yc-point-dept');
+  if (deptSel && !deptSel.options.length) {
+    deptSel.innerHTML = YC_POINT_ITEMS.map(it => `<option value="${it.id}">${it.label}</option>`).join('');
+  }
+  if (!dateSel) return;
+  const cur = YC_YEARS[YC_YEARS.length - 1];
+  const opts = (YC_BY_YEAR[cur] || []).slice().reverse();
+  const keep = dateSel.value;
+  dateSel.innerHTML = opts.map(d => `<option value="${d}">${d} (${ycWeekNo(d)}주차)</option>`).join('');
+  if (keep && opts.includes(keep)) dateSel.value = keep;
+  else {
+    // 기본값은 '주일예배가 입력된 마지막 주' — 최신 주는 아직 미입력이라 비교가 비어 보인다
+    const filled = opts.find(d => hasSundayData(d));
+    if (filled) dateSel.value = filled;
+  }
 }
 
 function updateYCPoint() {
-  const dateVal = document.getElementById('yc-point-date').value;
-  const deptVal = document.getElementById('yc-point-dept').value;
-  const modeVal = document.getElementById('yc-point-mode').value;
-  const content = document.getElementById('yc-point-content');
+  const base = document.getElementById('yc-point-date')?.value;
+  const id = document.getElementById('yc-point-dept')?.value;
+  const item = YC_POINT_ITEMS.find(i => i.id === id);
+  if (!base || !item) return;
 
-  if (!dateVal || !deptVal) return;
+  const wk = ycWeekNo(base);
+  const rows = YC_YEARS.map(y => {
+    const match = (YC_BY_YEAR[y] || []).find(d => ycWeekNo(d) === wk);
+    return { year: y, date: match || null, val: match ? item.fn(match) : null };
+  });
 
-  function formatDateStr(dateStr) {
-    const [y, m, d] = dateStr.split('-');
-    return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`;
+  setText('yc-point-title', `${item.label} — ${wk}주차 연도별 비교`);
+  const banner = document.getElementById('yc-point-banner');
+  const curRow = rows[rows.length - 1], prvRow = rows[rows.length - 2];
+  if (banner) {
+    banner.innerHTML = (curRow?.val != null && prvRow?.val != null)
+      ? `<div><b>${curRow.year}년 ${curRow.date}</b> ${fmt(curRow.val)}명 —
+         ${prvRow.year}년 같은 주차(${prvRow.date}) ${fmt(prvRow.val)}명 대비
+         <b>${curRow.val - prvRow.val >= 0 ? '+' : ''}${fmt(curRow.val - prvRow.val)}명</b></div>`
+      : '<div>선택한 주차에 비교할 전년 데이터가 없습니다.</div>';
   }
 
-  const dateMo = parseInt(dateVal.slice(5, 7));
-  const dateDa = parseInt(dateVal.slice(8, 10));
+  mkChart('c-yc-point', 'bar',
+    rows.map(r => `${r.year}년`),
+    [{ label: item.label, data: rows.map(r => r.val),
+       backgroundColor: rows.map(r => (YC_COLORS[r.year] || C.b) + 'cc'),
+       borderColor: rows.map(r => YC_COLORS[r.year] || C.b), borderWidth: 1, borderRadius: 6 }],
+    {});
 
-  const compareDates = [];
-  const baseYear = parseInt(dateVal.slice(0, 4));
-
-  for (let i = 0; i <= 2; i++) {
-    const y = baseYear - i;
-    const searchDate = `${y}-${String(dateMo).padStart(2, '0')}-${String(dateDa).padStart(2, '0')}`;
-    if (window.YC_byYear[y] && window.YC_byYear[y].includes(searchDate)) {
-      compareDates.push(searchDate);
-    } else {
-      compareDates.push(null);
-    }
-  }
-
-  const [dept, key] = deptVal.split(':');
-  const values = [];
-  const labels = [];
-
-  for (let i = 0; i < 3; i++) {
-    const d = compareDates[i];
-    const year = baseYear - i;
-    let val = null;
-
-    if (d) {
-      if (dept === 'sunday') {
-        const bu = D.sunday[d]?.bu || {};
-        const partData = bu[key];
-        val = partData ? v(partData['장년']) + v(partData['송림']) : null;
-      } else if (dept === 'school') {
-        val = schoolDeptTotal(d, key);
-      } else if (dept === 'youth') {
-        const youthData = D.youth[d];
-        val = youthData ? v(youthData[key]?.['예배']) : null;
-      } else if (dept === 'weekday') {
-        const wData = D.weekday[d];
-        val = wData ? (key === 'wed' ? v(wData.wed_tot) : v(wData.fri_tot)) : null;
-      }
-    }
-
-    values.push(val);
-    const displayMoDay = d ? formatDateStr(d).substring(5) : formatDateStr(dateVal).substring(5);
-    labels.push(`${year}년 ${displayMoDay}`);
-  }
-
-  content.innerHTML = '';
-
-  if (modeVal === 'table') {
-    const table = document.createElement('table');
-    table.style.cssText = 'width:100%; border-collapse:collapse; margin-top:var(--s3);';
-    const thead = table.createTHead();
-    const hRow = thead.insertRow();
-    hRow.style.backgroundColor = 'var(--color-bg-subtle)';
-    ['연도', '출석'].forEach(text => {
-      const th = document.createElement('th');
-      th.textContent = text;
-      th.style.cssText = 'padding:var(--s3); text-align:left; border:1px solid var(--color-border-default);';
-      hRow.appendChild(th);
-    });
-
-    const tbody = table.createTBody();
-    for (let i = 0; i < 3; i++) {
-      const row = tbody.insertRow();
-      const yearCell = row.insertCell();
-      const valCell = row.insertCell();
-      yearCell.textContent = String(baseYear - i) + '년';
-      valCell.textContent = values[i] !== null ? values[i].toLocaleString() : '–';
-      yearCell.style.cssText = 'padding:var(--s3); border:1px solid var(--color-border-default);';
-      valCell.style.cssText = 'padding:var(--s3); border:1px solid var(--color-border-default); text-align:right;';
-    }
-    content.appendChild(table);
-  } else {
-    const cId = 'c-yc-point-' + Date.now();
-    const canvas = document.createElement('canvas');
-    canvas.id = cId;
-    const wrapper = document.createElement('div');
-    wrapper.className = 'cc';
-    wrapper.style.cssText = 'grid-column:1/-1; margin-bottom:var(--s5);';
-    const header = document.createElement('div');
-    header.className = 'ch';
-    const deptDisplay = deptVal.split(':')[1];
-    header.innerHTML = `<div><div class="ct">${deptDisplay} - ${formatDateStr(dateVal).substring(5)} 비교</div></div>`;
-    wrapper.appendChild(header);
-    wrapper.appendChild(canvas);
-    content.appendChild(wrapper);
-
-    const datasets = modeVal === 'overlay'
-      ? [{ label: '출석', data: values, borderColor: '#635bff', backgroundColor: '#635bff22', borderWidth: 2, pointRadius: 4 }]
-      : window.YC_YEARS.map((y, i) => ({
-          label: String(y) + '년',
-          data: [values[i]],
-          borderColor: window.YC_COLORS[y],
-          backgroundColor: window.YC_COLORS[y] + '22',
-          borderWidth: 2,
-          pointRadius: 4,
-        }));
-
-    const chartLabels = modeVal === 'overlay' ? labels : [deptDisplay];
-
-    mkChart(cId, 'bar', chartLabels, datasets, {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: { legend: { position: 'top' } },
-      scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } } },
-    });
-  }
+  mkTable('t-yc-point', ['연도', '해당 주일', '출석', '전년 대비'],
+    rows.map((r, i) => {
+      const prv = rows[i - 1];
+      const d = (r.val != null && prv?.val != null) ? r.val - prv.val : null;
+      return [`${r.year}년`, r.date || '–', fmtOr(r.val),
+              d == null ? '–' : `${d >= 0 ? '+' : ''}${fmt(d)}`];
+    }));
 }
 
 // ── 특별예배 ──
@@ -3379,7 +3517,8 @@ function sw(name, opts){
   document.getElementById('s-'+name).classList.add('on');
   // 홈 탭: 전역 필터 바 숨기기 (각 차트에 개별 기간 버튼 있음)
   const fb = document.querySelector('.flt-bar');
-  if (fb) fb.style.display = name === 'home' ? 'none' : '';
+  // 홈·연도비교는 전역 기간 필터를 쓰지 않는다 (각각 주차 네비 / 연도 전체 기준)
+  if (fb) fb.style.display = (name === 'home' || name === 'yearcomp') ? 'none' : '';
   if(!DONE[name]){DONE[name]=true;setTimeout(()=>INITS[name](),60);}
   if(!opts?.silent) writeHash(name);
 }
@@ -3569,6 +3708,7 @@ function applyNewData(data) {
       D.youth[date] = D.youth[date] || {};
       Object.entries(youth).forEach(([sub, val]) => {
         if (!val || typeof val !== 'object') return;
+        if (RETIRED_YOUTH_DEPTS.some(r => sub.startsWith(r))) return;  // 폐지 조직
         // "1청년부" / "1청년부 (예배)" / "3청년부" 등 → 예배 + 3/4청년부 직접 필드
         const worshipM = sub.match(/^([1-4]청년부)\s*(?:\(예배\))?$/);
         if (worshipM) {
