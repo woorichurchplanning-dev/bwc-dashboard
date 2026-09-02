@@ -1,8 +1,9 @@
 // BWC 대시보드 서비스워커
 // - 동일 출처(index.html, data.json): 네트워크 우선 + 오프라인 시 캐시 폴백
 // - 교차 출처(chart.js CDN, 웹폰트): 캐시 우선 (버전 고정 자원)
-const CACHE = 'bwc-dash-v1';
-const SHELL = ['./', './index.html', './data.json'];
+const CACHE = 'bwc-dash-v2';
+const SHELL = ['./', './index.html', './data.json', './manifest.json',
+               './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon-32.png'];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
