@@ -3508,7 +3508,16 @@ const SPECIAL_META = {
                desc:'송구영신예배 — 부·장소·호실별 인원 (부 구성은 해마다 다름)' },
 };
 
-const SP_YEAR = {};   // 탭별로 선택된 연도
+const SP_YEAR = {};        // 탭별로 선택된 연도
+const SP_SPACEVIEW = {};  // 탭별 공간 보기 ('room' 호실별 / 'zone' 구역별)
+function setSpaceView(key, mode) { SP_SPACEVIEW[key] = mode; renderSpecial(key); }
+
+/* 장소 표기 통일 — 기록에는 '드림'(드림센터)으로 적히기도 하지만 서현 캠퍼스다 */
+const SP_PLACE_ALIAS = { '드림': '서현', '드림센터': '서현', '서현캠퍼스': '서현', '송림캠퍼스': '송림' };
+function normPlace(p2) {
+  const t = String(p2 || '').replace(/\s+/g, '');
+  return SP_PLACE_ALIAS[t] || t || '전체';
+}
 
 /* 호실명 정규화 — 시트에 '본당 4층' / '본당4층', '자 모 실' / '자모실'이 섞여 들어온다.
    공백을 모두 제거해 같은 방으로 합친다. */
@@ -3523,7 +3532,7 @@ function parseSpecialField(f) {
   if (raw.includes('|')) {
     const [day = '', part = '', place = '', room = ''] = raw.split('|').map(x => x.trim());
     return {
-      day, part: part || '1부', place: place || '전체', room: normRoom(room),
+      day, part: part || '1부', place: normPlace(place), room: normRoom(room),
     };
   }
   const out = { day: '', place: '', part: '', room: '' };
@@ -3534,7 +3543,7 @@ function parseSpecialField(f) {
     else rest.push(tok);
   });
   // 공백 형식에서는 첫 미인식 토큰을 장소, 나머지를 호실로 본다
-  out.place = rest.shift() || '전체';
+  out.place = normPlace(rest.shift());
   out.part = out.part || '1부';
   out.room = normRoom(rest.join(''));
   return out;
@@ -3545,6 +3554,21 @@ function splitRoom(room) {
   const m = String(room).match(/^(.*?)(\d+\s*[층호])$/);
   if (!m) return { zone: room, unit: '' };
   return { zone: m[1] || '', unit: m[2].replace(/\s+/g, '') };
+}
+
+/* 호실을 상위 구역으로 묶는다.
+   본당1층·본당2층·본당4층 → '본당' / 체육관1층·2층 → '체육관' / 자모실 → '자모실'
+   301호·302호 → '3층' (호실 번호 앞자리를 층으로) / 7층 → '7층'
+   해마다 여는 층이 달라져도 구역 단위로는 흔들리지 않게 하기 위한 축이다. */
+function zoneOf(room) {
+  const { zone, unit } = splitRoom(room);
+  if (zone) return zone;
+  const m = String(unit).match(/^(\d+)호$/);
+  if (m) {
+    const f = m[1].length > 2 ? m[1].slice(0, m[1].length - 2) : m[1].slice(0, 1);
+    return `${Number(f)}층`;
+  }
+  return unit || room;
 }
 
 /* 호실 자연 정렬 — 본당1층 < 본당2층 < 본당10층 */
@@ -3565,8 +3589,8 @@ function specialAgg(meta) {
       if (!meta.match.test(name)) return;
       const y = Number(weekKey.slice(0, 4));
       const rec = years[y] || (years[y] = {
-        total: 0, byDay: {}, byPart: {}, byRoom: {}, byPlace: {},
-        places: new Set(), rooms: new Set(), days: new Set(), dates: [], note: '',
+        total: 0, byDay: {}, byPart: {}, byRoom: {}, byZone: {}, byPlace: {},
+        places: new Set(), rooms: new Set(), zones: new Set(), days: new Set(), dates: [], note: '',
       });
       if (!rec.dates.includes(weekKey)) rec.dates.push(weekKey);
       if (fields._note && !rec.note) rec.note = fields._note;
@@ -3582,6 +3606,9 @@ function specialAgg(meta) {
         (rec.byDay[dayKey] = rec.byDay[dayKey] || {})[place] = (rec.byDay[dayKey][place] || 0) + val;
         (rec.byPart[part]  = rec.byPart[part]  || {})[place] = (rec.byPart[part][place]  || 0) + val;
         (rec.byRoom[room]  = rec.byRoom[room]  || {})[place] = (rec.byRoom[room][place]  || 0) + val;
+        const zn = zoneOf(room);
+        rec.zones.add(zn);
+        (rec.byZone[zn]    = rec.byZone[zn]    || {})[place] = (rec.byZone[zn][place]    || 0) + val;
       });
     });
   });
@@ -3649,6 +3676,9 @@ function renderSpecial(key) {
   const pct = prev != null && agg[prev].total ? (diff / agg[prev].total * 100) : null;
   const roomKeys = [...curRec.rooms].sort(roomSort);
   const hasRooms = roomKeys.length > 1 || roomKeys[0] !== '본당';
+  const spaceView = SP_SPACEVIEW[key] || 'room';
+  const spaceLabel = spaceView === 'zone' ? '구역별' : '호실별';
+  const spaceKeys = (spaceView === 'zone' ? [...curRec.zones] : roomKeys).sort(roomSort);
 
   el.innerHTML = `
     <div class="kg" id="kk-sp-${key}"></div>
@@ -3674,13 +3704,23 @@ function renderSpecial(key) {
         <div class="cs">${PL.join('·')} 누적 · ${curRec.dates.join(', ')}</div></div></div>
       <canvas id="c-sp-${key}-detail" style="max-height:320px"></canvas>
     </div>
-    ${hasRooms ? `<div class="cc">
-      <div class="ch"><div><div class="ct">${cur}년 호실별 수용 현황</div>
-        <div class="cs">어느 공간에 몇 명이 들어갔는지 — 합계는 자동 취합</div></div></div>
-      <canvas id="c-sp-${key}-room" style="max-height:${Math.max(260, roomKeys.length * 26)}px"></canvas>
+    ${hasRooms ? `
+    <div class="yc-ctl">
+      <span class="yc-ctl-lbl">공간 보기</span>
+      <div class="yc-seg-group">
+        <button class="yc-seg${spaceView === 'room' ? ' on' : ''}" onclick="setSpaceView('${key}','room')">호실별</button>
+        <button class="yc-seg${spaceView === 'zone' ? ' on' : ''}" onclick="setSpaceView('${key}','zone')">구역별</button>
+      </div>
+      <span class="yc-ctl-lbl" style="font-weight:500">구역 = 본당·체육관처럼 층을 묶은 단위 — 여는 층이 해마다 달라져도 비교가 흔들리지 않습니다</span>
     </div>
     <div class="cc">
-      <div class="ch"><div><div class="ct">${cur}년 호실별 상세</div></div></div>
+      <div class="ch"><div><div class="ct">${cur}년 ${spaceLabel} 수용 현황</div>
+        <div class="cs">어느 공간에 몇 명이 들어갔는지 — 합계는 자동 취합</div></div></div>
+      <canvas id="c-sp-${key}-room" style="max-height:${Math.max(260, spaceKeys.length * 28)}px"></canvas>
+    </div>
+    <div class="cc">
+      <div class="ch"><div><div class="ct">${spaceLabel} 연도 비교</div>
+        <div class="cs">그 해 열지 않은 공간은 <b>미개방</b>으로 구분됩니다 — 0명과 다릅니다</div></div></div>
       <div style="overflow-x:auto"><table id="t-sp-${key}-room"></table></div>
     </div>` : ''}
     <div class="cc">
@@ -3756,17 +3796,28 @@ function renderSpecial(key) {
       return [k2, ...PL.map(pl => fmtOr(row[pl] ?? null)), fmt(PL.reduce((a, pl) => a + (row[pl] || 0), 0))];
     }));
 
-  // ── 호실별 ──
+  // ── 공간(호실/구역)별 ──
   if (hasRooms) {
-    mkChart(`c-sp-${key}-room`, 'bar', roomKeys,
-      PL.map((pl, i) => bds(pl, roomKeys.map(r => curRec.byRoom[r]?.[pl] ?? null), placeColor(i))),
+    const srcOf = rec => (spaceView === 'zone' ? rec.byZone : rec.byRoom);
+    const curSrc = srcOf(curRec);
+
+    mkChart(`c-sp-${key}-room`, 'bar', spaceKeys,
+      PL.map((pl, i) => bds(pl, spaceKeys.map(r => curSrc[r]?.[pl] ?? null), placeColor(i))),
       { stack: true, horiz: true, total: true });
-    mkTable(`t-sp-${key}-room`, ['호실', ...PL, '합계', '비중'],
-      roomKeys.map(r => {
-        const row = curRec.byRoom[r] || {};
-        const tot = PL.reduce((a, pl) => a + (row[pl] || 0), 0);
-        return [r, ...PL.map(pl => fmtOr(row[pl] ?? null)), fmt(tot),
-                curRec.total ? `${(tot / curRec.total * 100).toFixed(1)}%` : '–'];
+
+    // 연도 매트릭스 — 해마다 여는 공간이 달라지는 게 바로 보이도록 '미개방'을 따로 표기
+    const allKeys = [...new Set(years.flatMap(y => Object.keys(srcOf(agg[y]))))].sort(roomSort);
+    mkTable(`t-sp-${key}-room`,
+      [spaceView === 'zone' ? '구역' : '호실', ...years.map(y => `${y}년`), `${cur}년 비중`],
+      allKeys.map(r => {
+        const cells = years.map(y => {
+          const row = srcOf(agg[y])[r];
+          if (!row) return '<span style="color:var(--color-text-disabled)">미개방</span>';
+          return fmt(Object.values(row).reduce((a, b2) => a + b2, 0));
+        });
+        const curRow = curSrc[r];
+        const curTot = curRow ? Object.values(curRow).reduce((a, b2) => a + b2, 0) : 0;
+        return [r, ...cells, curRec.total && curTot ? `${(curTot / curRec.total * 100).toFixed(1)}%` : '–'];
       }));
   }
 
