@@ -1,5 +1,5 @@
 import { verifySession, readCookie, SESSION_COOKIE, hashPassword } from '../lib/auth.js';
-import { ALL_TABS, TAB_DEFS, grantsOf } from '../lib/users.js';
+import { ALL_TABS, TAB_DEFS, grantsOf, ID_RE, normId, MIN_INITIAL_PASSWORD } from '../lib/users.js';
 import { loadStore, saveStore, canWrite } from '../lib/store.js';
 
 const SCHOOL_DEPTS = ['사랑부','영아부','유아부','유치부','송림유년','서현유년','송림초등',
@@ -17,6 +17,7 @@ const publicView = (u) => {
     effectiveTabs: g.tabs,
     schoolDepts: u.schoolDepts || [],
     updatedAt: u.updatedAt || null,
+    mustChangePassword: !!u.mustChangePassword,   // 초기 비밀번호 상태 표시
   };
 };
 
@@ -46,13 +47,13 @@ export default async function handler(req, res) {
   }
 
   const body = req.body || {};
-  const id = clean(body.id, 32).toLowerCase();
+  const id = normId(clean(body.id, 20));
   const i = users.findIndex(u => u.id === id);
 
   try {
     if (req.method === 'POST' || req.method === 'PUT') {
-      if (!/^[a-z0-9._-]{3,32}$/.test(id)) {
-        return res.status(400).json({ error: 'bad_id', message: '아이디는 영문 소문자·숫자·. _ - 3~32자입니다.' });
+      if (!ID_RE.test(id)) {
+        return res.status(400).json({ error: 'bad_id', message: '아이디는 한글 이름 또는 영문·숫자 2~20자입니다. (공백 불가)' });
       }
       const name = clean(body.name, 40);
       if (!name) return res.status(400).json({ error: 'bad_name', message: '이름을 입력하세요.' });
@@ -62,12 +63,14 @@ export default async function handler(req, res) {
         : (body.tabs === '*' ? '*' : pick(body.tabs, ALL_TABS));
       const schoolDepts = pick(body.schoolDepts, SCHOOL_DEPTS);
 
+      // 관리자가 넣는 값은 '초기 비밀번호'다. 전화번호 뒷자리처럼 짧아도 받되,
+      // 본인이 직접 바꾸기 전까지는 대시보드에 들어가지 못하게 표시한다.
       let cred = null;
       if (body.password) {
-        if (String(body.password).length < 8) {
-          return res.status(400).json({ error: 'weak_password', message: '비밀번호는 8자 이상이어야 합니다.' });
+        if (String(body.password).length < MIN_INITIAL_PASSWORD) {
+          return res.status(400).json({ error: 'weak_password', message: `초기 비밀번호는 ${MIN_INITIAL_PASSWORD}자 이상이어야 합니다.` });
         }
-        cred = await hashPassword(String(body.password));
+        cred = { ...(await hashPassword(String(body.password))), mustChangePassword: true };
       }
 
       if (i < 0) {

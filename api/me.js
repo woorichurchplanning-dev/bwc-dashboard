@@ -9,6 +9,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     id: s.u, name: s.n, admin: s.a === 1,
     tabs: s.t, schoolDepts: s.sd, youthDepts: s.yd,
+    mustChangePassword: s.mc === 1,
     expiresAt: s.exp,
   });
 }

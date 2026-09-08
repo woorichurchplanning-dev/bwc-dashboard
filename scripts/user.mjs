@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { Writable } from 'node:stream';
 import { hashPassword } from '../lib/auth.js';
-import { ALL_TABS, TAB_DEFS } from '../lib/users.js';
+import { ALL_TABS, TAB_DEFS, ID_RE, normId, MIN_INITIAL_PASSWORD } from '../lib/users.js';
 
 const FILE = new URL('../users.json', import.meta.url);
 const load = () => JSON.parse(readFileSync(FILE, 'utf8'));
@@ -24,8 +24,8 @@ function askHidden(q) {
 }
 
 async function readPassword() {
-  const p1 = await askHidden('새 비밀번호(8자 이상): ');
-  if (p1.length < 8) { console.error('8자 이상이어야 합니다.'); process.exit(1); }
+  const p1 = await askHidden(`초기 비밀번호(${MIN_INITIAL_PASSWORD}자 이상): `);
+  if (p1.length < MIN_INITIAL_PASSWORD) { console.error(`${MIN_INITIAL_PASSWORD}자 이상이어야 합니다.`); process.exit(1); }
   const p2 = await askHidden('한 번 더 입력:        ');
   if (p1 !== p2) { console.error('두 입력이 다릅니다.'); process.exit(1); }
   return p1;
@@ -33,7 +33,7 @@ async function readPassword() {
 
 const [, , cmd, ...args] = process.argv;
 const db = load();
-const idx = (id) => db.users.findIndex((u) => u.id === String(id || '').toLowerCase());
+const idx = (id) => db.users.findIndex((u) => u.id === normId(id));
 
 if (cmd === 'list') {
   if (!db.users.length) console.log('(계정 없음)');
@@ -47,18 +47,20 @@ if (cmd === 'list') {
 } else if (cmd === 'add') {
   const [id, name, role = 'staff', tabs = ''] = args;
   if (!id || !name) { console.error('사용법: add <아이디> "<이름>" <admin|staff> [탭,탭]'); process.exit(1); }
+  if (!ID_RE.test(normId(id))) { console.error('아이디는 한글 이름 또는 영문·숫자 2~20자입니다(공백 불가).'); process.exit(1); }
   if (idx(id) >= 0) { console.error('이미 있는 아이디입니다.'); process.exit(1); }
   const { salt, hash } = await hashPassword(await readPassword());
   const tabList = role === 'admin' ? '*'
     : (tabs ? tabs.split(',').map((s) => s.trim()).filter((t) => ALL_TABS.includes(t)) : ['home']);
-  db.users.push({ id: id.toLowerCase(), name, role, tabs: tabList, schoolDepts: [], youthDepts: [], salt, hash });
+  db.users.push({ id: normId(id), name, role, tabs: tabList, schoolDepts: [], youthDepts: [],
+                  salt, hash, mustChangePassword: true });
   save(db);
   console.log('추가됨: ' + name + '(' + id + ') · 권한 ' + (tabList === '*' ? '전체' : tabList.join(',')));
 } else if (cmd === 'passwd') {
   const i = idx(args[0]);
   if (i < 0) { console.error('없는 아이디'); process.exit(1); }
-  Object.assign(db.users[i], await hashPassword(await readPassword()));
-  save(db); console.log('비밀번호 변경됨');
+  Object.assign(db.users[i], await hashPassword(await readPassword()), { mustChangePassword: true });
+  save(db); console.log('초기 비밀번호로 재설정됨 — 본인이 첫 로그인에서 바꿔야 합니다');
 } else if (cmd === 'tabs') {
   const i = idx(args[0]);
   if (i < 0) { console.error('없는 아이디'); process.exit(1); }

@@ -35,6 +35,7 @@ tr:last-child td{border-bottom:0}
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
 .badge.admin{background:var(--accent-light);color:var(--accent)}
 .badge.staff{background:var(--subtle);color:var(--text2)}
+.badge.init{background:var(--warn-bg);color:var(--warn);margin-left:4px}
 .tabchips{display:flex;flex-wrap:wrap;gap:4px}
 .chip{background:var(--subtle);color:var(--text2);border-radius:6px;padding:2px 7px;font-size:11px}
 .chip.all{background:var(--pos-bg);color:var(--pos);font-weight:700}
@@ -79,7 +80,8 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 
   <div class="card">
     <h2>계정 목록</h2>
-    <div class="desc">교역자별로 볼 수 있는 탭을 지정합니다. 주간현황은 모두에게 공통으로 열립니다.</div>
+    <div class="desc">교역자별로 볼 수 있는 탭을 지정합니다. 주간현황은 모두에게 공통으로 열립니다.
+      <b>초기 비밀번호</b> 표시가 있는 계정은 아직 본인이 비밀번호를 바꾸지 않은 상태입니다.</div>
     <div style="overflow-x:auto"><table id="tbl">
       <thead><tr><th>아이디</th><th>이름</th><th>역할</th><th>권한 탭</th><th></th></tr></thead>
       <tbody id="rows"><tr><td colspan="5" style="color:var(--text3)">불러오는 중…</td></tr></tbody>
@@ -88,14 +90,14 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 
   <div class="card">
     <h2 id="form-title">계정 추가</h2>
-    <div class="desc" id="form-desc">비밀번호는 해시로만 저장되며 다시 볼 수 없습니다.</div>
+    <div class="desc" id="form-desc">아이디는 교역자 이름을 그대로 쓰면 됩니다. 비밀번호는 전화번호 뒷자리 같은 <b>초기 비밀번호</b>를 넣어 전달하세요 — 본인이 첫 로그인에서 반드시 바꾸게 됩니다.</div>
     <form id="form">
       <div class="grid">
-        <div><label for="f-id">아이디</label><input type="text" id="f-id" autocapitalize="off" spellcheck="false" placeholder="kim" required></div>
-        <div><label for="f-name">이름</label><input type="text" id="f-name" placeholder="김OO 목사" required></div>
+        <div><label for="f-id">아이디</label><input type="text" id="f-id" autocapitalize="off" spellcheck="false" placeholder="김철수" required></div>
+        <div><label for="f-name">이름</label><input type="text" id="f-name" placeholder="김철수 목사" required></div>
         <div><label for="f-role">역할</label>
           <select id="f-role"><option value="staff">담당 (staff)</option><option value="admin">관리자 (admin)</option></select></div>
-        <div><label for="f-pw">비밀번호</label><input type="password" id="f-pw" autocomplete="new-password" placeholder="8자 이상"></div>
+        <div><label for="f-pw">초기 비밀번호</label><input type="password" id="f-pw" autocomplete="new-password" placeholder="전화번호 뒷자리 등 4자 이상"></div>
       </div>
 
       <div id="perm-block">
@@ -152,7 +154,7 @@ function renderRows() {
   tb.innerHTML = STATE.users.map(u => `
     <tr>
       <td><code>${u.id}</code></td>
-      <td>${u.name}</td>
+      <td>${u.name}${u.mustChangePassword ? ' <span class="badge init">초기 비밀번호</span>' : ''}</td>
       <td><span class="badge ${u.role}">${u.role === 'admin' ? '관리자' : '담당'}</span></td>
       <td><div class="tabchips">${
         u.tabs === '*' ? '<span class="chip all">전체</span>'
@@ -170,7 +172,7 @@ function resetForm() {
   $('form').reset();
   $('f-id').disabled = false;
   $('form-title').textContent = '계정 추가';
-  $('form-desc').textContent = '비밀번호는 해시로만 저장되며 다시 볼 수 없습니다.';
+  $('form-desc').innerHTML = '아이디는 교역자 이름을 그대로 쓰면 됩니다. 비밀번호는 전화번호 뒷자리 같은 <b>초기 비밀번호</b>를 넣어 전달하세요 — 본인이 첫 로그인에서 반드시 바꾸게 됩니다.';
   $('f-submit').textContent = '추가';
   $('f-cancel').style.display = 'none';
   document.querySelectorAll('#f-tabs input, #f-school input').forEach(c => { if (!c.disabled) c.checked = false; });
@@ -189,7 +191,7 @@ function edit(id) {
   });
   document.querySelectorAll('#f-school input').forEach(c => { c.checked = (u.schoolDepts || []).includes(c.value); });
   $('form-title').textContent = `${u.name} (${u.id}) 수정`;
-  $('form-desc').textContent = '비밀번호 칸을 비워 두면 기존 비밀번호가 유지됩니다.';
+  $('form-desc').textContent = '비밀번호 칸을 비워 두면 기존 비밀번호가 유지됩니다. 값을 넣으면 초기 비밀번호로 재설정되고 본인이 다시 바꿔야 합니다.';
   $('f-submit').textContent = '저장';
   $('f-cancel').style.display = '';
   toggleRole();
