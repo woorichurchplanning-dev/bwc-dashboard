@@ -28,25 +28,15 @@ jobs:
       - name: Fetch latest data → data.json
         run: bash scripts/refresh-data.sh
 
-      - name: Commit if changed
-        id: commit
+      # data.json은 커밋하지 않는다. 레포가 public이라 커밋하면 출석 데이터가
+      # raw.githubusercontent.com 으로 그대로 공개된다. 대신 생성한 파일을
+      # 그대로 Vercel에 올려 로그인 뒤에서만 열리게 한다.
+      - name: Sanity check
         run: |
-          if git diff --quiet -- public/data.json; then
-            echo "변경 없음 — 커밋 생략"
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add public/data.json
-            git commit -m "data.json 자동 갱신 ($(date -u +%Y-%m-%dT%H:%MZ))"
-            git push
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
+          test -s public/data.json || { echo "data.json이 비어 있음 — 배포 중단"; exit 1; }
+          node -e "const d=require('./public/data.json'); if(!d.weekCount) throw new Error('weekCount 없음'); console.log('주차:', d.weekCount, d.weekRange.join(' ~ '))"
 
-      # Vercel GitHub 연동이 안 돼 있어(조직 접근 권한 필요) CLI로 직접 배포한다.
-      # 나중에 Vercel 대시보드에서 레포를 연결하면 이 단계는 지워도 된다.
       - name: Deploy to Vercel
-        if: steps.commit.outputs.changed == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}

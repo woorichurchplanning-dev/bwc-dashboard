@@ -1,0 +1,9 @@
+# Vercel은 .vercelignore가 없으면 .gitignore를 따른다.
+# data.json은 깃에서만 제외하고 배포에는 반드시 포함돼야 하므로 여기서 따로 정의한다.
+.git
+.github
+.DS_Store
+.vercel
+node_modules
+scripts
+index.html.backup
