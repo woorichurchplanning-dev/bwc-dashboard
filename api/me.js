@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   if (!s) return res.status(401).json({ error: 'unauthorized' });
   return res.status(200).json({
     id: s.u, name: s.n, admin: s.a === 1,
-    tabs: s.t, schoolDepts: s.sd, youthDepts: s.yd,
+    tabs: s.t, schoolDepts: s.sd, youthDepts: s.yd, youthTeams: s.yt, districts: s.di,
     mustChangePassword: s.mc === 1,
     expiresAt: s.exp,
   });

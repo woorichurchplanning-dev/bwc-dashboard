@@ -1,9 +1,7 @@
 import { verifySession, readCookie, SESSION_COOKIE, hashPassword } from '../lib/auth.js';
-import { ALL_TABS, TAB_DEFS, grantsOf, ID_RE, normId, MIN_INITIAL_PASSWORD } from '../lib/users.js';
+import { ALL_TABS, TAB_DEFS, grantsOf, ID_RE, normId, MIN_INITIAL_PASSWORD,
+         SCHOOL_DEPTS, YOUTH_DEPTS, YOUTH_TEAMS, DISTRICTS } from '../lib/users.js';
 import { loadStore, saveStore, canWrite } from '../lib/store.js';
-
-const SCHOOL_DEPTS = ['사랑부','영아부','유아부','유치부','송림유년','서현유년','송림초등',
-  '서현초등','송림소년','서현소년','송림청소년부','중등부','고등부'];
 
 const clean = (s, max = 40) => String(s ?? '').trim().slice(0, max);
 const pick = (arr, allowed) => (Array.isArray(arr) ? arr.map(x => clean(x)).filter(x => allowed.includes(x)) : []);
@@ -16,6 +14,9 @@ const publicView = (u) => {
     tabs: u.tabs === '*' ? '*' : (u.tabs || []),
     effectiveTabs: g.tabs,
     schoolDepts: u.schoolDepts || [],
+    youthDepts: u.youthDepts || [],
+    youthTeams: u.youthTeams || [],
+    districts: u.districts || [],
     updatedAt: u.updatedAt || null,
     mustChangePassword: !!u.mustChangePassword,   // 초기 비밀번호 상태 표시
   };
@@ -35,6 +36,9 @@ export default async function handler(req, res) {
       me: s.u,
       tabDefs: TAB_DEFS,
       schoolDepts: SCHOOL_DEPTS,
+      youthDepts: YOUTH_DEPTS,
+      youthTeams: YOUTH_TEAMS,
+      districts: DISTRICTS,
       users: users.map(publicView),
     });
   }
@@ -62,6 +66,9 @@ export default async function handler(req, res) {
       const tabs = role === 'admin' ? '*'
         : (body.tabs === '*' ? '*' : pick(body.tabs, ALL_TABS));
       const schoolDepts = pick(body.schoolDepts, SCHOOL_DEPTS);
+      const youthDepts  = pick(body.youthDepts, YOUTH_DEPTS);
+      const youthTeams  = pick(body.youthTeams, YOUTH_TEAMS);
+      const districts   = pick(body.districts, DISTRICTS);
 
       // 관리자가 넣는 값은 '초기 비밀번호'다. 전화번호 뒷자리처럼 짧아도 받되,
       // 본인이 직접 바꾸기 전까지는 대시보드에 들어가지 못하게 표시한다.
@@ -75,14 +82,16 @@ export default async function handler(req, res) {
 
       if (i < 0) {
         if (!cred) return res.status(400).json({ error: 'password_required', message: '새 계정은 비밀번호가 필요합니다.' });
-        users.push({ id, name, role, tabs, schoolDepts, youthDepts: [], ...cred, updatedAt: new Date().toISOString() });
+        users.push({ id, name, role, tabs, schoolDepts, youthDepts, youthTeams, districts,
+                     ...cred, updatedAt: new Date().toISOString() });
       } else {
         // 마지막 관리자의 권한을 내리지 못하게 막는다
         if (users[i].role === 'admin' && role !== 'admin'
             && users.filter(u => u.role === 'admin').length <= 1) {
           return res.status(400).json({ error: 'last_admin', message: '마지막 관리자의 역할은 바꿀 수 없습니다.' });
         }
-        Object.assign(users[i], { name, role, tabs, schoolDepts, updatedAt: new Date().toISOString() }, cred || {});
+        Object.assign(users[i], { name, role, tabs, schoolDepts, youthDepts, youthTeams, districts,
+                                  updatedAt: new Date().toISOString() }, cred || {});
       }
     } else if (req.method === 'DELETE') {
       if (i < 0) return res.status(404).json({ error: 'not_found' });

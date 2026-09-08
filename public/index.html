@@ -790,17 +790,9 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 <!-- ═══ YOUTH ═══ -->
 <section class="sec" id="s-youth">
   <div class="page-hdr">
-    <div class="page-hdr-title"><h2>청년교구</h2><p>1·2·3·4청년부 예배 및 팀별 부서모임·소그룹</p></div>
+    <div class="page-hdr-title"><h2>청년교구</h2><p>청년부별 예배 · 팀별 부서모임 · 소그룹</p></div>
   </div>
-  <div class="stabs">
-    <button class="stab on" onclick="ss2('youth','main')">전체 현황</button>
-    <button class="stab" onclick="ss2('youth','y1')">1청년부</button>
-    <button class="stab" onclick="ss2('youth','y1team')">1청년부 팀별</button>
-    <button class="stab" onclick="ss2('youth','y2')">2청년부</button>
-    <button class="stab" onclick="ss2('youth','y2team')">2청년부 팀별</button>
-    <button class="stab" onclick="ss2('youth','y34')">3·4청년부</button>
-  </div>
-
+  <div class="stabs" id="youth-tabs"></div>
   <div class="ss on" id="youth-main">
     <div class="kg" id="kk-youth"></div>
     <div class="cg">
@@ -808,48 +800,10 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-youth-pie">청년부별 비중</div></div></div><canvas id="c-youth-pie"></canvas></div>
     </div>
   </div>
-
-  <div class="ss" id="youth-y1">
-    <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">1청년부 예배 출석 추이</div></div></div><canvas id="c-y1-worship"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">1청년부 팀별 부서모임 · 소그룹</div><div class="cs">2·3·4팀 (소그룹 없는 주 = 소그룹 미진행)</div></div></div><canvas id="c-y1-cell"></canvas></div>
-    </div>
-    <div class="cc"><div class="ch"><div><div class="ct">1청년부 주별 상세</div></div></div>
-      <div style="overflow-x:auto"><table id="t-y1"></table></div>
-    </div>
-  </div>
-
-  <div class="ss" id="youth-y1team">
-    <div class="cg three">
-      <div class="cc"><div class="ch"><div><div class="ct">1청년부 2팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y1t2"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">1청년부 3팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y1t3"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">1청년부 4팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y1t4"></canvas></div>
-    </div>
-  </div>
-
-  <div class="ss" id="youth-y2">
-    <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">2청년부 예배 출석 추이</div></div></div><canvas id="c-y2-worship"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">2청년부 팀별 부서모임 · 소그룹</div><div class="cs">2~3팀</div></div></div><canvas id="c-y2-cell"></canvas></div>
-    </div>
-    <div class="cc"><div class="ch"><div><div class="ct">2청년부 주별 상세</div></div></div>
-      <div style="overflow-x:auto"><table id="t-y2"></table></div>
-    </div>
-  </div>
-
-  <div class="ss" id="youth-y2team">
-    <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">2청년부 2팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y2t2"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">2청년부 3팀</div><div class="cs">부서모임 · 소그룹</div></div></div><canvas id="c-y2t3"></canvas></div>
-    </div>
-  </div>
-
-  <div class="ss" id="youth-y34">
-    <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">3청년부 예배·부서모임·소그룹</div></div></div><canvas id="c-y3"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">4청년부 예배·부서모임·소그룹</div></div></div><canvas id="c-y4"></canvas></div>
-    </div>
-  </div>
+  <div class="ss" id="youth-y1"></div>
+  <div class="ss" id="youth-y2"></div>
+  <div class="ss" id="youth-y3"></div>
+  <div class="ss" id="youth-y4"></div>
 </section>
 
 <!-- ═══ SCHOOL ═══ -->
@@ -1474,12 +1428,18 @@ function exportCSV() {
     });
   } else if (tab === 'youth') {
     name = '청년교구';
-    rows.push(['날짜','1청년부','2청년부','3청년부','4청년부','합계']);
+    const YD = myYouthDepts();
+    const teamCols = YD.flatMap(d => myTeams(d).flatMap(t => [`${d} ${t} 모임`, `${d} ${t} 소그룹`]));
+    rows.push(['날짜', ...YD.map(d => `${d} 예배`), ...teamCols, '예배 합계']);
     fw.forEach(w => {
       const y = D.youth[w] || {};
-      const vals = YOUTH_DEPTS.map(d => { const x = y[d]?.예배; return (x===null||x===undefined) ? '' : x; });
+      const vals = YD.map(d => { const x = y[d]?.예배; return (x===null||x===undefined) ? '' : x; });
+      const teams = YD.flatMap(d => myTeams(d).flatMap(t => {
+        const o = y[d]?.팀?.[t] || {};
+        return [o.부서모임 ?? '', o.소그룹 ?? ''];
+      }));
       const sum = vals.filter(x=>x!=='').reduce((a,b)=>a+b,0);
-      rows.push([w, ...vals, sum]);
+      rows.push([w, ...vals, ...teams, sum]);
     });
   } else if (tab === 'school') {
     name = '주일학교';
@@ -2626,93 +2586,158 @@ function renderSunDrillChart(fw2) {
 }
 
 // ── YOUTH ──
+/* 데이터에 실제로 존재하는 팀 목록 (팀 구성이 해마다 바뀌므로 하드코딩하지 않는다.
+   예전에는 2·3·4팀만 고정으로 그려 1팀 자료가 화면에 아예 나오지 않았다) */
+function teamsOf(dept) {
+  const set = new Set();
+  Object.values(D.youth || {}).forEach(rec => {
+    Object.keys(rec?.[dept]?.팀 || {}).forEach(t => set.add(t));
+  });
+  return [...set].sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+}
+
+/* 로그인한 사용자가 볼 수 있는 청년부 / 팀 */
+function myYouthDepts() {
+  const allow = ME?.youthDepts;
+  if (!allow || !allow.length) return YOUTH_DEPTS;
+  return YOUTH_DEPTS.filter(d => allow.includes(d));
+}
+function myTeams(dept) {
+  const all = teamsOf(dept);
+  const allow = ME?.youthTeams;
+  if (!allow || !allow.length) return all;
+  return all.filter(t => allow.includes(`${dept} ${t}`));
+}
+
+const teamSeries = (dept, team, key, fw) =>
+  (fw || getFW()).map(w => nn(D.youth[w]?.[dept]?.팀?.[team]?.[key]));
+const deptSeries = (dept, key, fw) =>
+  (fw || getFW()).map(w => nn(D.youth[w]?.[dept]?.[key]));
+
 function initYouth() {
-  const fw=getFW(); const wl=getWL(fw); if(!fw.length) return;
-  const y1=youthSeries('1청년부',fw),y2=youthSeries('2청년부',fw),
-        y3=youthSeries('3청년부',fw),y4=youthSeries('4청년부',fw);
-  const last=arr=>arr.filter(x=>x>0).slice(-1)[0]||0;
-  const prev=arr=>arr.filter(x=>x>0).slice(-2)[0]||0;
-  const mkT=(arr)=>{const l=last(arr),p=prev(arr),d=l-p;return d!==0?{trend:`${d>=0?'▲':'▼'} 전주 ${d>=0?'+':''}${fmt(d)}`,td:d>=0?'up':'dn'}:{};};
+  const fw = getFW(); const wl = getWL(fw); if (!fw.length) return;
+  const DEPTS = myYouthDepts();
 
-  mkKPI('kk-youth',[
-    {label:'1청년부 (최근)',value:fmt(last(y1)),sub:`평균 ${fmt(avg(y1))}명`,color:'blue',...mkT(y1)},
-    {label:'2청년부 (최근)',value:fmt(last(y2)),sub:`평균 ${fmt(avg(y2))}명`,color:'purple',...mkT(y2)},
-    {label:'3청년부 (최근)',value:fmt(last(y3)),sub:`평균 ${fmt(avg(y3))}명`,color:'orange',...mkT(y3)},
-    {label:'4청년부 (최근)',value:fmt(last(y4)),sub:`평균 ${fmt(avg(y4))}명`,color:'green',...mkT(y4)},
-  ]);
+  // ── 하위탭: 볼 수 있는 청년부만 ──
+  const tabs = document.getElementById('youth-tabs');
+  if (tabs) {
+    tabs.innerHTML = `<button class="stab on" onclick="ss2('youth','main')">전체 현황</button>` +
+      DEPTS.map(d => `<button class="stab" onclick="ss2('youth','y${YOUTH_DEPTS.indexOf(d) + 1}')">${d}</button>`).join('');
+  }
+  YOUTH_DEPTS.forEach((d, i) => {
+    const sec = document.getElementById(`youth-y${i + 1}`);
+    if (sec) sec.hidden = !DEPTS.includes(d);
+  });
 
-  const renderYouthTrend = (fw2) => {
-    const y1b=youthSeries('1청년부',fw2),y2b=youthSeries('2청년부',fw2),y3b=youthSeries('3청년부',fw2),y4b=youthSeries('4청년부',fw2);
-    const yDs=[lds('1청년부',y1b,C.b),lds('2청년부',y2b,C.p),lds('3청년부',y3b,C.or),lds('4청년부',y4b,C.gr)];
-    yDs.forEach(d=>{ d.spanGaps=true; });
-    mkChart('c-youth-trend','line',getWL(fw2),yDs,{fw:fw2});
+  // ── 전체 현황 ──
+  const series = {}; DEPTS.forEach(d => series[d] = youthSeries(d, fw));
+  const last = arr => arr.filter(x => x != null).slice(-1)[0] ?? null;
+  const prev = arr => arr.filter(x => x != null).slice(-2)[0] ?? null;
+  const COLORS = { '1청년부': C.b, '2청년부': C.p, '3청년부': C.or, '4청년부': C.gr };
+
+  const kpiOf = (fw2) => {
+    const s2 = {}; DEPTS.forEach(d => s2[d] = youthSeries(d, fw2));
+    mkKPI('kk-youth', DEPTS.map(d => {
+      const l = last(s2[d]), p = prev(s2[d]);
+      const diff = l != null && p != null ? l - p : null;
+      return {
+        label: `${d} (최근)`, value: fmtOr(l), sub: `평균 ${fmt(avg(s2[d]))}명`,
+        color: { '1청년부':'blue','2청년부':'purple','3청년부':'orange','4청년부':'green' }[d],
+        ...(diff == null ? {} : { trend: `${diff >= 0 ? '▲' : '▼'} 직전 ${diff >= 0 ? '+' : ''}${fmt(diff)}`, td: diff >= 0 ? 'up' : 'dn' }),
+      };
+    }));
   };
-  const renderYouthKpi = (fw2) => {
-    const y1b=youthSeries('1청년부',fw2),y2b=youthSeries('2청년부',fw2),
-          y3b=youthSeries('3청년부',fw2),y4b=youthSeries('4청년부',fw2);
-    const last2=arr=>arr.filter(x=>x>0).slice(-1)[0]||0;
-    const prev2=arr=>arr.filter(x=>x>0).slice(-2)[0]||0;
-    const mkT2=(arr)=>{const l=last2(arr),p=prev2(arr),d=l-p;return d!==0?{trend:`${d>=0?'▲':'▼'} 전주 ${d>=0?'+':''}${fmt(d)}`,td:d>=0?'up':'dn'}:{};};
-    mkKPI('kk-youth',[
-      {label:'1청년부 (최근)',value:fmt(last2(y1b)),sub:`평균 ${fmt(avg(y1b))}명`,color:'blue',...mkT2(y1b)},
-      {label:'2청년부 (최근)',value:fmt(last2(y2b)),sub:`평균 ${fmt(avg(y2b))}명`,color:'purple',...mkT2(y2b)},
-      {label:'3청년부 (최근)',value:fmt(last2(y3b)),sub:`평균 ${fmt(avg(y3b))}명`,color:'orange',...mkT2(y3b)},
-      {label:'4청년부 (최근)',value:fmt(last2(y4b)),sub:`평균 ${fmt(avg(y4b))}명`,color:'green',...mkT2(y4b)},
+  kpiOf(fw);
+
+  const trendOf = (fw2) => {
+    const ds = DEPTS.map(d => { const x = lds(d, youthSeries(d, fw2), COLORS[d]); x.spanGaps = true; return x; });
+    mkChart('c-youth-trend', 'line', getWL(fw2), ds, { fw: fw2 });
+  };
+  trendOf(fw);
+  addCardPeriod('c-youth-trend', trendOf, kpiOf);
+
+  const sums = DEPTS.map(d => series[d].reduce((a, b) => a + (b || 0), 0));
+  setText('ct-youth-pie', `청년부별 비중 (${fw.length}주 누적)`);
+  mkChart('c-youth-pie', 'doughnut', DEPTS, dnut(DEPTS, sums, DEPTS.map(d => COLORS[d])), {});
+
+  // ── 청년부별 상세 (팀은 데이터에서 찾아 동적으로 그린다) ──
+  DEPTS.forEach(dept => {
+    const idx = YOUTH_DEPTS.indexOf(dept) + 1;
+    const sec = document.getElementById(`youth-y${idx}`);
+    if (!sec) return;
+    const teams = myTeams(dept);
+    const teamColors = [C.b, C.t, C.p, C.or, C.gr, C.pk];
+    const scoped = ME?.youthTeams?.length && teams.length < teamsOf(dept).length;
+
+    sec.innerHTML = `
+      <div class="kg" id="kk-y${idx}"></div>
+      ${scoped ? `<div class="yc-banner"><div>담당 팀(<b>${teams.join(' · ') || '없음'}</b>) 자료만 표시됩니다.</div></div>` : ''}
+      <div class="cg">
+        <div class="cc"><div class="ch"><div><div class="ct">${dept} 예배 출석 추이</div></div></div>
+          <canvas id="c-y${idx}-worship"></canvas></div>
+        <div class="cc"><div class="ch"><div><div class="ct">${dept} 팀별 부서모임 · 소그룹</div>
+          <div class="cs">${teams.length ? teams.join(' · ') : '팀 데이터 없음'}</div></div></div>
+          <canvas id="c-y${idx}-cell"></canvas></div>
+      </div>
+      ${teams.length ? `<div class="cg ${teams.length >= 3 ? 'three' : ''}">${teams.map(t => `
+        <div class="cc"><div class="ch"><div><div class="ct">${dept} ${t}</div>
+          <div class="cs">부서모임 · 소그룹</div></div></div>
+          <canvas id="c-y${idx}t-${parseInt(t) || t}"></canvas></div>`).join('')}</div>` : ''}
+      <div class="cc"><div class="ch"><div><div class="ct">${dept} 주별 상세</div></div></div>
+        <div style="overflow-x:auto"><table id="t-y${idx}"></table></div></div>`;
+
+    // 예배 추이
+    mkChart(`c-y${idx}-worship`, 'line', wl, [lds('예배 출석', youthSeries(dept, fw), COLORS[dept], true)], { fw });
+
+    // 팀 합산 차트
+    const ds = [];
+    teams.forEach((t, i) => {
+      ds.push(lds(`${t} 부서모임`, teamSeries(dept, t, '부서모임', fw), teamColors[i % teamColors.length]));
+      ds.push(ldsDash(`${t} 소그룹`, teamSeries(dept, t, '소그룹', fw), teamColors[i % teamColors.length]));
+    });
+    // 3·4청년부처럼 팀 구분 없이 부서 단위로만 들어오는 경우
+    if (!teams.length) {
+      ds.push(lds('부서모임', deptSeries(dept, '부서모임', fw), C.g));
+      ds.push(lds('소그룹', deptSeries(dept, '소그룹', fw), C.lm));
+    }
+    mkChart(`c-y${idx}-cell`, 'line', wl, ds, { fw });
+
+    // 팀별 개별 차트
+    teams.forEach((t, i) => {
+      mkChart(`c-y${idx}t-${parseInt(t) || t}`, 'line', wl, [
+        lds('부서모임', teamSeries(dept, t, '부서모임', fw), teamColors[i % teamColors.length]),
+        lds('소그룹', teamSeries(dept, t, '소그룹', fw), teamColors[(i + 3) % teamColors.length]),
+      ], { fw });
+    });
+
+    // KPI
+    const wor = youthSeries(dept, fw);
+    const lw = last(wor), pw2 = prev(wor);
+    const dw = lw != null && pw2 != null ? lw - pw2 : null;
+    mkKPI(`kk-y${idx}`, [
+      { label: `${dept} 예배 (최근)`, value: fmtOr(lw), sub: `평균 ${fmt(avg(wor))}명`, color: 'blue',
+        ...(dw == null ? {} : { trend: `${dw >= 0 ? '▲' : '▼'} 직전 ${dw >= 0 ? '+' : ''}${fmt(dw)}`, td: dw >= 0 ? 'up' : 'dn' }) },
+      ...(teams.length ? teams.slice(0, 3).map(t => {
+        const m = teamSeries(dept, t, '부서모임', fw), c = teamSeries(dept, t, '소그룹', fw);
+        return { label: `${t} (최근)`, value: fmtOr(last(m)),
+                 sub: `소그룹 ${fmtOr(last(c))} · 평균 ${fmt(avg(m))}명`, color: 'teal' };
+      }) : [
+        { label: '부서모임 (최근)', value: fmtOr(last(deptSeries(dept, '부서모임', fw))), sub: '', color: 'teal' },
+        { label: '소그룹 (최근)', value: fmtOr(last(deptSeries(dept, '소그룹', fw))), sub: '', color: 'gold' },
+      ]),
     ]);
-  };
-  renderYouthTrend(fw);
-  addCardPeriod('c-youth-trend', renderYouthTrend, renderYouthKpi);
-  const y1s=y1.reduce((a,b)=>a+b,0),y2s=y2.reduce((a,b)=>a+b,0),y3s=y3.reduce((a,b)=>a+b,0),y4s=y4.reduce((a,b)=>a+b,0);
-  const el_ypie=document.getElementById('ct-youth-pie');
-  if(el_ypie) el_ypie.textContent=`청년부별 비중 (${fw.length}주 누적)`;
-  mkChart('c-youth-pie','doughnut',['1청년부','2청년부','3청년부','4청년부'],dnut(['1청년부','2청년부','3청년부','4청년부'],[y1s,y2s,y3s,y4s],[C.b,C.p,C.or,C.gr]),{});
 
-  mkChart('c-y1-worship','line',wl,[lds('예배 출석',y1,C.b,true)]);
-  const t2m=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['2팀']?.부서모임));
-  const t3m=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['3팀']?.부서모임));
-  const t4m=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['4팀']?.부서모임));
-  const t2c=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['2팀']?.소그룹));
-  const t3c=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['3팀']?.소그룹));
-  const t4c=fw.map(w=>v(D.youth[w]?.['1청년부']?.팀?.['4팀']?.소그룹));
-  mkChart('c-y1-cell','line',wl,[
-    lds('2팀 부서모임',t2m,C.b),lds('3팀 부서모임',t3m,C.p),lds('4팀 부서모임',t4m,C.or),
-    lds('2팀 소그룹',t2c,C.t),lds('3팀 소그룹',t3c,C.pk),lds('4팀 소그룹',t4c,C.lm),
-  ]);
-  mkTable('t-y1',['날짜','예배','2팀모임','2팀소그룹','3팀모임','3팀소그룹','4팀모임','4팀소그룹'],
-    fw.map(w=>[w,fmt(v(D.youth[w]?.['1청년부']?.예배)),
-      fmt(v(D.youth[w]?.['1청년부']?.팀?.['2팀']?.부서모임)),fmt(v(D.youth[w]?.['1청년부']?.팀?.['2팀']?.소그룹)),
-      fmt(v(D.youth[w]?.['1청년부']?.팀?.['3팀']?.부서모임)),fmt(v(D.youth[w]?.['1청년부']?.팀?.['3팀']?.소그룹)),
-      fmt(v(D.youth[w]?.['1청년부']?.팀?.['4팀']?.부서모임)),fmt(v(D.youth[w]?.['1청년부']?.팀?.['4팀']?.소그룹))]));
-
-  // 1청년부 팀별 탭 차트
-  mkChart('c-y1t2','line',wl,[lds('부서모임',t2m,C.b),lds('소그룹',t2c,C.t)]);
-  mkChart('c-y1t3','line',wl,[lds('부서모임',t3m,C.p),lds('소그룹',t3c,C.pk)]);
-  mkChart('c-y1t4','line',wl,[lds('부서모임',t4m,C.or),lds('소그룹',t4c,C.lm)]);
-
-  mkChart('c-y2-worship','line',wl,[lds('예배 출석',y2,C.p,true)]);
-  const y2t1m=fw.map(w=>v(D.youth[w]?.['2청년부']?.팀?.['2팀']?.부서모임));
-  const y2t2m=fw.map(w=>v(D.youth[w]?.['2청년부']?.팀?.['3팀']?.부서모임));
-  const y2t1c=fw.map(w=>v(D.youth[w]?.['2청년부']?.팀?.['2팀']?.소그룹));
-  const y2t2c=fw.map(w=>v(D.youth[w]?.['2청년부']?.팀?.['3팀']?.소그룹));
-  mkChart('c-y2-cell','line',wl,[
-    lds('2팀 부서모임',y2t1m,C.p),lds('3팀 부서모임',y2t2m,C.pk),
-    lds('2팀 소그룹',y2t1c,C.id),lds('3팀 소그룹',y2t2c,C.lm),
-  ]);
-  // 2청년부 팀별 탭 차트
-  mkChart('c-y2t2','line',wl,[lds('부서모임',y2t1m,C.p),lds('소그룹',y2t1c,C.id)]);
-  mkChart('c-y2t3','line',wl,[lds('부서모임',y2t2m,C.pk),lds('소그룹',y2t2c,C.lm)]);
-  mkTable('t-y2',['날짜','예배','2팀모임','2팀소그룹','3팀모임','3팀소그룹'],
-    fw.map(w=>[w,fmt(v(D.youth[w]?.['2청년부']?.예배)),
-      fmt(v(D.youth[w]?.['2청년부']?.팀?.['2팀']?.부서모임)),fmt(v(D.youth[w]?.['2청년부']?.팀?.['2팀']?.소그룹)),
-      fmt(v(D.youth[w]?.['2청년부']?.팀?.['3팀']?.부서모임)),fmt(v(D.youth[w]?.['2청년부']?.팀?.['3팀']?.소그룹))]));
-
-  const y3m=fw.map(w=>v(D.youth[w]?.['3청년부']?.부서모임));
-  const y3c=fw.map(w=>v(D.youth[w]?.['3청년부']?.소그룹));
-  mkChart('c-y3','line',wl,[lds('예배',y3,C.or),lds('부서모임',y3m,C.g),lds('소그룹',y3c,C.lm)]);
-
-  const y4m=fw.map(w=>v(D.youth[w]?.['4청년부']?.부서모임));
-  const y4c=fw.map(w=>v(D.youth[w]?.['4청년부']?.소그룹));
-  mkChart('c-y4','line',wl,[lds('예배',y4,C.gr),lds('부서모임',y4m,C.t),lds('소그룹',y4c,C.id)]);
+    // 주별 상세표
+    const heads = ['날짜', '예배', ...(teams.length
+      ? teams.flatMap(t => [`${t} 모임`, `${t} 소그룹`])
+      : ['부서모임', '소그룹'])];
+    mkTable(`t-y${idx}`, heads, fw.map((w, i) => [
+      w, fmtOr(youthSeries(dept, fw)[i]),
+      ...(teams.length
+        ? teams.flatMap(t => [fmtOr(teamSeries(dept, t, '부서모임', fw)[i]), fmtOr(teamSeries(dept, t, '소그룹', fw)[i])])
+        : [fmtOr(deptSeries(dept, '부서모임', fw)[i]), fmtOr(deptSeries(dept, '소그룹', fw)[i])]),
+    ]));
+  });
 }
 
 // ── SCHOOL ──
@@ -3032,9 +3057,11 @@ function initCell() {
 
   const sel = document.getElementById('cell-dist-sel');
   if (sel && latest?.dists && sel.options.length <= 1) {
-    Object.keys(latest.dists).forEach(d => {
+    const mine = myDistricts(Object.keys(latest.dists));
+    mine.forEach(d => {
       const opt=document.createElement('option'); opt.value=d; opt.textContent=d; sel.appendChild(opt);
     });
+    if (ME?.districts?.length && mine.length === 1) { sel.value = mine[0]; sel.disabled = true; }
   }
   renderCellDist();
 }
@@ -3050,10 +3077,14 @@ function renderCellDist() {
   const cellFieldValue = (x, label) => Number(x?.breakdown?.[label]) || 0;
 
   if (!dist) {
-    if(titleEl) titleEl.textContent = '다락방 전체 적·출석 추이';
-    mkChart('c-cell-trend','line',dates,[lds('적',fd.map(r=>r.totalJuk),C.b),lds('출석',fd.map(r=>r.totalChul),C.gr)]);
+    const mineOnly = !!ME?.districts?.length;
+    if(titleEl) titleEl.textContent = mineOnly ? '담당 교구 합산 적·출석 추이' : '다락방 전체 적·출석 추이';
+    const sumOf = (r, key) => mineOnly
+      ? myDistricts(Object.keys(r.dists||{})).reduce((a,d)=>a+(r.dists[d]?.[key]||0),0)
+      : (key==='juk' ? r.totalJuk : r.totalChul);
+    mkChart('c-cell-trend','line',dates,[lds('적',fd.map(r=>sumOf(r,'juk')),C.b),lds('출석',fd.map(r=>sumOf(r,'chul')),C.gr)]);
     if (latest?.dists) {
-      const dn=Object.keys(latest.dists), dc=dn.map(d=>latest.dists[d].chul||0);
+      const dn=myDistricts(Object.keys(latest.dists)), dc=dn.map(d=>latest.dists[d].chul||0);
       mkChart('c-cell-dist','bar',dn,[bds('출석',dc,C.p)],{horiz:true});
       mkTable('t-cell',['교구',...cellFields,'출석','출석률','비고'],
         dn.map(d=>{
@@ -3449,7 +3480,7 @@ function ycPointItems() {
   items.push({ id:'sun:all', label:'주일예배 · 장년 현장 합계', fn: ycAdult });
   items.push({ id:'school:all', label:'주일학교 · 전체', fn: w => schoolTot(w) });
   myDepts().forEach(d => items.push({ id:`school:${d}`, label:`주일학교 · ${d}`, fn: w => schoolDeptTotal(w, d) }));
-  YOUTH_DEPTS.forEach(d => items.push({ id:`youth:${d}`, label:`청년교구 · ${d}`, fn: w => nn(D.youth[w]?.[d]?.예배) }));
+  myYouthDepts().forEach(d => items.push({ id:`youth:${d}`, label:`청년교구 · ${d}`, fn: w => nn(D.youth[w]?.[d]?.예배) }));
   items.push({ id:'youth:all', label:'청년교구 · 합계', fn: ycYouth });
   items.push({ id:'wd:wed', label:'수요예배 · 현장', fn: w => nn(D.weekday[w]?.wed_off) });
   items.push({ id:'wd:fri', label:'금요기도회 · 현장', fn: w => nn(D.weekday[w]?.fri_off) });

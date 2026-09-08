@@ -3,11 +3,13 @@
      1) vercel env pull .env.local --environment=production
      2) node scripts/bulk-users.mjs scripts/roster.csv           # 미리보기
      3) node scripts/bulk-users.mjs scripts/roster.csv --apply   # 실제 생성
-   CSV 열: 아이디,이름,역할,탭,주일학교부서,초기비밀번호
+   CSV 열: 아이디,이름,역할,탭,주일학교부서,청년부,담당팀,교구,초기비밀번호
+   (여러 값은 / 로 구분. 예: leader/cell, 중등부/고등부, 1청년부 2팀/1청년부 3팀)
    초기비밀번호가 빈 행은 건너뛴다. 기존 아이디는 권한만 갱신하고 비밀번호는 두지 않는다. */
 import { readFileSync } from 'node:fs';
 import { hashPassword } from '../lib/auth.js';
-import { ALL_TABS, ID_RE, normId, MIN_INITIAL_PASSWORD } from '../lib/users.js';
+import { ALL_TABS, ID_RE, normId, MIN_INITIAL_PASSWORD,
+         SCHOOL_DEPTS, YOUTH_DEPTS, YOUTH_TEAMS, DISTRICTS } from '../lib/users.js';
 
 const file = process.argv[2];
 const apply = process.argv.includes('--apply');
@@ -30,9 +32,6 @@ if (!canWrite()) {
   process.exit(1);
 }
 
-const SCHOOL_DEPTS = ['사랑부','영아부','유아부','유치부','송림유년','서현유년','송림초등',
-  '서현초등','송림소년','서현소년','송림청소년부','중등부','고등부'];
-
 const rows = readFileSync(file, 'utf8').split('\n')
   .map(l => l.trim()).filter(l => l && !l.startsWith('#'));
 const header = rows.shift();
@@ -43,7 +42,8 @@ const plan = [];
 const skipped = [];
 
 for (const line of rows) {
-  const [rawId, name, role = 'staff', tabsRaw = '', deptsRaw = '', pw = ''] =
+  const [rawId, name, role = 'staff', tabsRaw = '', deptsRaw = '',
+         youthRaw = '', teamRaw = '', distRaw = '', pw = ''] =
     line.split(',').map(s => (s || '').trim());
   const id = normId(rawId);
   if (!ID_RE.test(id)) { skipped.push(`${rawId}: 아이디 형식`); continue; }
@@ -55,16 +55,26 @@ for (const line of rows) {
 
   const tabs = role === 'admin' ? '*'
     : tabsRaw.split('/').map(s => s.trim()).filter(t => ALL_TABS.includes(t));
-  const schoolDepts = deptsRaw.split('/').map(s => s.trim()).filter(d => SCHOOL_DEPTS.includes(d));
-  plan.push({ id, name, role: role === 'admin' ? 'admin' : 'staff', tabs, schoolDepts, pw, exists });
+  const pickList = (raw, allowed) => raw.split('/').map(s => s.trim()).filter(x => allowed.includes(x));
+  const schoolDepts = pickList(deptsRaw, SCHOOL_DEPTS);
+  const youthDepts  = pickList(youthRaw, YOUTH_DEPTS);
+  const youthTeams  = pickList(teamRaw, YOUTH_TEAMS);
+  const districts   = pickList(distRaw, DISTRICTS);
+  plan.push({ id, name, role: role === 'admin' ? 'admin' : 'staff',
+              tabs, schoolDepts, youthDepts, youthTeams, districts, pw, exists });
 }
 
 console.log(`\n대상 ${plan.length}명 (건너뜀 ${skipped.length}건)\n`);
-console.log('아이디'.padEnd(10) + '이름'.padEnd(18) + '역할'.padEnd(7) + '탭'.padEnd(24) + '주일학교');
+console.log('아이디'.padEnd(10) + '이름'.padEnd(18) + '역할'.padEnd(7) + '탭'.padEnd(22) + '담당 범위');
 for (const p of plan) {
+  const scope = [
+    p.schoolDepts.length ? '주일학교 ' + p.schoolDepts.join('·') : '',
+    p.youthDepts.length ? '청년 ' + p.youthDepts.join('·') : '',
+    p.youthTeams.length ? p.youthTeams.join('·') : '',
+    p.districts.length ? '교구 ' + p.districts.join('·') : '',
+  ].filter(Boolean).join(' / ') || '-';
   console.log(p.id.padEnd(10) + p.name.padEnd(16) + p.role.padEnd(7) +
-    (p.tabs === '*' ? '전체' : p.tabs.join(',')).padEnd(24) +
-    (p.schoolDepts.join(',') || '-') + (p.exists >= 0 ? '   (기존 갱신)' : ''));
+    (p.tabs === '*' ? '전체' : p.tabs.join(',')).padEnd(22) + scope + (p.exists >= 0 ? '  (기존 갱신)' : ''));
 }
 if (skipped.length) { console.log('\n건너뛴 행:'); skipped.forEach(s => console.log('  - ' + s)); }
 
@@ -72,7 +82,9 @@ if (!apply) { console.log('\n미리보기입니다. 실제로 만들려면 --app
 
 for (const p of plan) {
   const rec = { id: p.id, name: p.name, role: p.role, tabs: p.tabs,
-                schoolDepts: p.schoolDepts, youthDepts: [], updatedAt: new Date().toISOString() };
+                schoolDepts: p.schoolDepts, youthDepts: p.youthDepts,
+                youthTeams: p.youthTeams, districts: p.districts,
+                updatedAt: new Date().toISOString() };
   if (p.pw) Object.assign(rec, await hashPassword(p.pw), { mustChangePassword: true });
   if (p.exists >= 0) Object.assign(users[p.exists], rec);
   else users.push(rec);

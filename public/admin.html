@@ -104,7 +104,16 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
         <label>권한 탭</label>
         <div class="checks" id="f-tabs" style="margin-bottom:16px"></div>
         <label>주일학교 담당 부서 <span style="font-weight:400;color:var(--text3)">— 선택하지 않으면 전체</span></label>
-        <div class="checks" id="f-school" style="margin-bottom:18px"></div>
+        <div class="checks" id="f-school" style="margin-bottom:16px"></div>
+
+        <label>청년교구 담당 부 <span style="font-weight:400;color:var(--text3)">— 선택하지 않으면 전체</span></label>
+        <div class="checks" id="f-youth" style="margin-bottom:16px"></div>
+
+        <label>담당 팀 <span style="font-weight:400;color:var(--text3)">— 선택하지 않으면 담당 부의 모든 팀</span></label>
+        <div class="checks" id="f-youthteams" style="margin-bottom:16px"></div>
+
+        <label>담당 교구 <span style="font-weight:400;color:var(--text3)">— 리더십·소그룹. 선택하지 않으면 전체</span></label>
+        <div class="checks" id="f-districts" style="margin-bottom:18px"></div>
       </div>
 
       <div style="display:flex;gap:8px">
@@ -142,6 +151,12 @@ function renderChecks() {
     `<label><input type="checkbox" name="tab" value="${t.key}"${t.key === 'home' ? ' checked disabled' : ''}> ${t.label}</label>`).join('');
   $('f-school').innerHTML = STATE.schoolDepts.map(d =>
     `<label><input type="checkbox" name="school" value="${d}"> ${d}</label>`).join('');
+  $('f-youth').innerHTML = (STATE.youthDepts || []).map(d =>
+    `<label><input type="checkbox" name="youth" value="${d}"> ${d}</label>`).join('');
+  $('f-youthteams').innerHTML = (STATE.youthTeams || []).map(t =>
+    `<label><input type="checkbox" name="yteam" value="${t}"> ${t}</label>`).join('');
+  $('f-districts').innerHTML = (STATE.districts || []).map(d =>
+    `<label><input type="checkbox" name="dist" value="${d}"> ${d}</label>`).join('');
 }
 
 function renderRows() {
@@ -159,7 +174,10 @@ function renderRows() {
       <td><div class="tabchips">${
         u.tabs === '*' ? '<span class="chip all">전체</span>'
           : u.effectiveTabs.map(k => `<span class="chip">${labelOf(k)}</span>`).join('')
-      }${(u.schoolDepts || []).length ? `<span class="chip">주일학교: ${u.schoolDepts.join('·')}</span>` : ''}</div></td>
+      }${(u.schoolDepts || []).length ? `<span class="chip">주일학교 ${u.schoolDepts.join('·')}</span>` : ''
+      }${(u.youthDepts || []).length ? `<span class="chip">청년 ${u.youthDepts.join('·')}</span>` : ''
+      }${(u.youthTeams || []).length ? `<span class="chip">${u.youthTeams.join('·')}</span>` : ''
+      }${(u.districts || []).length ? `<span class="chip">교구 ${u.districts.join('·')}</span>` : ''}</div></td>
       <td><div class="row-actions">
         <button onclick="edit('${u.id}')">수정</button>
         <button class="danger" onclick="remove('${u.id}')" ${u.id === STATE.me ? 'disabled' : ''}>삭제</button>
@@ -175,7 +193,8 @@ function resetForm() {
   $('form-desc').innerHTML = '아이디는 교역자 이름을 그대로 쓰면 됩니다. 비밀번호는 전화번호 뒷자리 같은 <b>초기 비밀번호</b>를 넣어 전달하세요 — 본인이 첫 로그인에서 반드시 바꾸게 됩니다.';
   $('f-submit').textContent = '추가';
   $('f-cancel').style.display = 'none';
-  document.querySelectorAll('#f-tabs input, #f-school input').forEach(c => { if (!c.disabled) c.checked = false; });
+  document.querySelectorAll('#f-tabs input, #f-school input, #f-youth input, #f-youthteams input, #f-districts input')
+    .forEach(c => { if (!c.disabled) c.checked = false; });
   toggleRole();
 }
 
@@ -190,6 +209,9 @@ function edit(id) {
     if (!c.disabled) c.checked = u.tabs === '*' || (u.tabs || []).includes(c.value);
   });
   document.querySelectorAll('#f-school input').forEach(c => { c.checked = (u.schoolDepts || []).includes(c.value); });
+  document.querySelectorAll('#f-youth input').forEach(c => { c.checked = (u.youthDepts || []).includes(c.value); });
+  document.querySelectorAll('#f-youthteams input').forEach(c => { c.checked = (u.youthTeams || []).includes(c.value); });
+  document.querySelectorAll('#f-districts input').forEach(c => { c.checked = (u.districts || []).includes(c.value); });
   $('form-title').textContent = `${u.name} (${u.id}) 수정`;
   $('form-desc').textContent = '비밀번호 칸을 비워 두면 기존 비밀번호가 유지됩니다. 값을 넣으면 초기 비밀번호로 재설정되고 본인이 다시 바꿔야 합니다.';
   $('f-submit').textContent = '저장';
@@ -208,9 +230,8 @@ async function remove(id) {
 function toggleRole() {
   const isAdmin = $('f-role').value === 'admin';
   $('perm-block').style.opacity = isAdmin ? .45 : 1;
-  document.querySelectorAll('#f-tabs input, #f-school input').forEach(c => {
-    if (c.value !== 'home') c.disabled = isAdmin;
-  });
+  document.querySelectorAll('#f-tabs input, #f-school input, #f-youth input, #f-youthteams input, #f-districts input')
+    .forEach(c => { if (c.value !== 'home') c.disabled = isAdmin; });
 }
 $('f-role').addEventListener('change', toggleRole);
 
@@ -223,6 +244,9 @@ $('form').addEventListener('submit', async (e) => {
     role,
     tabs: role === 'admin' ? '*' : [...document.querySelectorAll('#f-tabs input:checked')].map(c => c.value),
     schoolDepts: role === 'admin' ? [] : [...document.querySelectorAll('#f-school input:checked')].map(c => c.value),
+    youthDepts:  role === 'admin' ? [] : [...document.querySelectorAll('#f-youth input:checked')].map(c => c.value),
+    youthTeams:  role === 'admin' ? [] : [...document.querySelectorAll('#f-youthteams input:checked')].map(c => c.value),
+    districts:   role === 'admin' ? [] : [...document.querySelectorAll('#f-districts input:checked')].map(c => c.value),
   };
   const pw = $('f-pw').value;
   if (pw) payload.password = pw;
