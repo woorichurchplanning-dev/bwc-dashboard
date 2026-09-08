@@ -646,6 +646,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <button class="sync-btn" id="refresh-btn" onclick="fetchFromSheets(4)">새로고침</button>
     <button class="sync-btn secondary" id="full-refresh-btn" onclick="fetchFromSheets(104, true)">전체 재연동</button>
     <span class="user-chip" id="user-chip" hidden></span>
+    <button class="sync-btn secondary" id="admin-btn" onclick="location.href='/admin.html'" hidden>계정 관리</button>
     <button class="sync-btn secondary" id="logout-btn" onclick="logout()" hidden>로그아웃</button>
   </div>
 </header>
@@ -4426,6 +4427,12 @@ function applyPermissions(me) {
   }
   const lo = document.getElementById('logout-btn');
   if (lo) lo.hidden = false;
+
+  // 관리자에게만 계정 관리 진입점을 보여준다
+  if (me.admin) {
+    const adm = document.getElementById('admin-btn');
+    if (adm) adm.hidden = false;
+  }
 
   // 관리자가 아니면 시트 재연동 버튼을 감춘다 (전체 데이터를 끌어오는 동작이라)
   if (!me.admin) {

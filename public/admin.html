@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>계정 · 권한 관리 · 분당우리교회 대시보드</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--accent:#635bff;--accent-dark:#4f46e5;--accent-light:#f0efff;--bg:#f6f8fa;--surface:#fff;
+  --subtle:#f0f2f5;--text:#0a0e1a;--text2:#3c4257;--text3:#697386;--border:rgba(0,0,0,.08);
+  --pos:#09825d;--pos-bg:#edfaf4;--neg:#c0123c;--neg-bg:#fff0f3;--warn:#a16207;--warn-bg:#fefce8;
+  --font:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:var(--font);color:var(--text);font-size:14px}
+header{display:flex;align-items:center;gap:12px;padding:0 24px;height:60px;background:var(--surface);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.cross{width:30px;height:30px;background:var(--accent);border-radius:8px;position:relative;flex-shrink:0}
+.cross::before,.cross::after{content:'';position:absolute;background:#fff;border-radius:2px}
+.cross::before{width:3px;height:16px;left:13.5px;top:7px}
+.cross::after{width:12px;height:3px;left:9px;top:13.5px}
+h1{font-size:15px;font-weight:700;margin:0}
+header .sub{font-size:11px;color:var(--text3)}
+.spacer{flex:1}
+main{max-width:1080px;margin:0 auto;padding:24px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:18px}
+.card h2{font-size:15px;margin:0 0 4px}
+.card .desc{font-size:12px;color:var(--text3);margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;
+  padding:8px 10px;border-bottom:1px solid var(--border)}
+td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.badge.admin{background:var(--accent-light);color:var(--accent)}
+.badge.staff{background:var(--subtle);color:var(--text2)}
+.tabchips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{background:var(--subtle);color:var(--text2);border-radius:6px;padding:2px 7px;font-size:11px}
+.chip.all{background:var(--pos-bg);color:var(--pos);font-weight:700}
+button{font-family:inherit;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;
+  padding:7px 13px;border:1px solid var(--border);background:var(--surface);color:var(--text2);
+  transition:background .15s,border-color .15s}
+button:hover:not(:disabled){background:var(--subtle)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover:not(:disabled){background:var(--accent-dark)}
+button.danger{color:var(--neg);border-color:rgba(192,18,60,.25)}
+button.danger:hover:not(:disabled){background:var(--neg-bg)}
+button:disabled{opacity:.5;cursor:not-allowed}
+label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin:0 0 6px}
+input[type=text],input[type=password],select{width:100%;padding:9px 11px;font-size:13px;font-family:inherit;
+  border:1px solid rgba(0,0,0,.14);border-radius:8px;background:var(--surface);color:var(--text)}
+input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,91,255,.12)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;
+  background:var(--subtle);padding:6px 11px;border-radius:8px;cursor:pointer;margin:0}
+.checks input{margin:0}
+.msg{padding:11px 14px;border-radius:9px;font-size:13px;line-height:1.6;margin-bottom:16px;display:none}
+.msg.on{display:block}
+.msg.ok{background:var(--pos-bg);color:var(--pos)}
+.msg.err{background:var(--neg-bg);color:var(--neg)}
+.msg.warn{background:var(--warn-bg);color:var(--warn)}
+.row-actions{display:flex;gap:6px;justify-content:flex-end}
+@media (max-width:720px){main{padding:14px}.card{padding:16px}th:nth-child(4),td:nth-child(4){display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="cross"></div>
+  <div><h1>계정 · 권한 관리</h1><div class="sub">분당우리교회 사역 데이터 대시보드</div></div>
+  <div class="spacer"></div>
+  <button onclick="location.href='/index.html'">← 대시보드</button>
+  <button onclick="logout()">로그아웃</button>
+</header>
+
+<main>
+  <div class="msg" id="msg"></div>
+
+  <div class="card">
+    <h2>계정 목록</h2>
+    <div class="desc">교역자별로 볼 수 있는 탭을 지정합니다. 주간현황은 모두에게 공통으로 열립니다.</div>
+    <div style="overflow-x:auto"><table id="tbl">
+      <thead><tr><th>아이디</th><th>이름</th><th>역할</th><th>권한 탭</th><th></th></tr></thead>
+      <tbody id="rows"><tr><td colspan="5" style="color:var(--text3)">불러오는 중…</td></tr></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h2 id="form-title">계정 추가</h2>
+    <div class="desc" id="form-desc">비밀번호는 해시로만 저장되며 다시 볼 수 없습니다.</div>
+    <form id="form">
+      <div class="grid">
+        <div><label for="f-id">아이디</label><input type="text" id="f-id" autocapitalize="off" spellcheck="false" placeholder="kim" required></div>
+        <div><label for="f-name">이름</label><input type="text" id="f-name" placeholder="김OO 목사" required></div>
+        <div><label for="f-role">역할</label>
+          <select id="f-role"><option value="staff">담당 (staff)</option><option value="admin">관리자 (admin)</option></select></div>
+        <div><label for="f-pw">비밀번호</label><input type="password" id="f-pw" autocomplete="new-password" placeholder="8자 이상"></div>
+      </div>
+
+      <div id="perm-block">
+        <label>권한 탭</label>
+        <div class="checks" id="f-tabs" style="margin-bottom:16px"></div>
+        <label>주일학교 담당 부서 <span style="font-weight:400;color:var(--text3)">— 선택하지 않으면 전체</span></label>
+        <div class="checks" id="f-school" style="margin-bottom:18px"></div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button type="submit" class="primary" id="f-submit">추가</button>
+        <button type="button" id="f-cancel" style="display:none" onclick="resetForm()">취소</button>
+      </div>
+    </form>
+  </div>
+</main>
+
+<script>
+let STATE = { users: [], tabDefs: [], schoolDepts: [], readOnly: false, me: '', editing: null };
+const $ = (id) => document.getElementById(id);
+
+function show(kind, text) {
+  const m = $('msg'); m.className = 'msg on ' + kind; m.textContent = text;
+  if (kind === 'ok') setTimeout(() => m.classList.remove('on'), 4000);
+}
+
+async function api(method, body) {
+  const res = await fetch('/api/users', {
+    method,
+    headers: body ? { 'content-type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+    cache: 'no-store',
+  });
+  if (res.status === 401) { location.replace('/login.html'); throw new Error('unauthorized'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+function renderChecks() {
+  $('f-tabs').innerHTML = STATE.tabDefs.map(t =>
+    `<label><input type="checkbox" name="tab" value="${t.key}"${t.key === 'home' ? ' checked disabled' : ''}> ${t.label}</label>`).join('');
+  $('f-school').innerHTML = STATE.schoolDepts.map(d =>
+    `<label><input type="checkbox" name="school" value="${d}"> ${d}</label>`).join('');
+}
+
+function renderRows() {
+  const tb = $('rows');
+  if (!STATE.users.length) {
+    tb.innerHTML = '<tr><td colspan="5" style="color:var(--text3)">계정이 없습니다. 아래에서 추가하세요.</td></tr>';
+    return;
+  }
+  const labelOf = (k) => (STATE.tabDefs.find(t => t.key === k) || {}).label || k;
+  tb.innerHTML = STATE.users.map(u => `
+    <tr>
+      <td><code>${u.id}</code></td>
+      <td>${u.name}</td>
+      <td><span class="badge ${u.role}">${u.role === 'admin' ? '관리자' : '담당'}</span></td>
+      <td><div class="tabchips">${
+        u.tabs === '*' ? '<span class="chip all">전체</span>'
+          : u.effectiveTabs.map(k => `<span class="chip">${labelOf(k)}</span>`).join('')
+      }${(u.schoolDepts || []).length ? `<span class="chip">주일학교: ${u.schoolDepts.join('·')}</span>` : ''}</div></td>
+      <td><div class="row-actions">
+        <button onclick="edit('${u.id}')">수정</button>
+        <button class="danger" onclick="remove('${u.id}')" ${u.id === STATE.me ? 'disabled' : ''}>삭제</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function resetForm() {
+  STATE.editing = null;
+  $('form').reset();
+  $('f-id').disabled = false;
+  $('f-title').textContent = '계정 추가';
+  $('form-title').textContent = '계정 추가';
+  $('form-desc').textContent = '비밀번호는 해시로만 저장되며 다시 볼 수 없습니다.';
+  $('f-submit').textContent = '추가';
+  $('f-cancel').style.display = 'none';
+  document.querySelectorAll('#f-tabs input, #f-school input').forEach(c => { if (!c.disabled) c.checked = false; });
+  toggleRole();
+}
+
+function edit(id) {
+  const u = STATE.users.find(x => x.id === id); if (!u) return;
+  STATE.editing = id;
+  $('f-id').value = u.id; $('f-id').disabled = true;
+  $('f-name').value = u.name;
+  $('f-role').value = u.role;
+  $('f-pw').value = '';
+  document.querySelectorAll('#f-tabs input').forEach(c => {
+    if (!c.disabled) c.checked = u.tabs === '*' || (u.tabs || []).includes(c.value);
+  });
+  document.querySelectorAll('#f-school input').forEach(c => { c.checked = (u.schoolDepts || []).includes(c.value); });
+  $('form-title').textContent = `${u.name} (${u.id}) 수정`;
+  $('form-desc').textContent = '비밀번호 칸을 비워 두면 기존 비밀번호가 유지됩니다.';
+  $('f-submit').textContent = '저장';
+  $('f-cancel').style.display = '';
+  toggleRole();
+  $('form-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function remove(id) {
+  const u = STATE.users.find(x => x.id === id); if (!u) return;
+  if (!confirm(`${u.name}(${id}) 계정을 삭제할까요?`)) return;
+  try { const r = await api('DELETE', { id }); STATE.users = r.users; renderRows(); show('ok', '삭제되었습니다.'); }
+  catch (e) { show('err', e.message); }
+}
+
+function toggleRole() {
+  const isAdmin = $('f-role').value === 'admin';
+  $('perm-block').style.opacity = isAdmin ? .45 : 1;
+  document.querySelectorAll('#f-tabs input, #f-school input').forEach(c => {
+    if (c.value !== 'home') c.disabled = isAdmin;
+  });
+}
+$('f-role').addEventListener('change', toggleRole);
+
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const role = $('f-role').value;
+  const payload = {
+    id: $('f-id').value.trim().toLowerCase(),
+    name: $('f-name').value.trim(),
+    role,
+    tabs: role === 'admin' ? '*' : [...document.querySelectorAll('#f-tabs input:checked')].map(c => c.value),
+    schoolDepts: role === 'admin' ? [] : [...document.querySelectorAll('#f-school input:checked')].map(c => c.value),
+  };
+  const pw = $('f-pw').value;
+  if (pw) payload.password = pw;
+  $('f-submit').disabled = true;
+  try {
+    const r = await api(STATE.editing ? 'PUT' : 'POST', payload);
+    STATE.users = r.users; renderRows(); resetForm();
+    show('ok', '저장되었습니다. 변경된 권한은 해당 사용자가 다시 로그인하면 적용됩니다.');
+  } catch (e) { show('err', e.message); }
+  finally { $('f-submit').disabled = false; }
+});
+
+async function logout() {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch {}
+  try { if (window.caches) for (const k of await caches.keys()) await caches.delete(k); } catch {}
+  location.replace('/login.html');
+}
+
+(async () => {
+  try {
+    const d = await api('GET');
+    Object.assign(STATE, d);
+    renderChecks(); renderRows(); toggleRole();
+    if (d.readOnly) {
+      show('warn', '읽기 전용 모드입니다. GITHUB_TOKEN 환경변수가 없어 화면에서 계정을 저장할 수 없습니다. scripts/user.mjs 로 관리하세요.');
+      $('f-submit').disabled = true;
+    }
+  } catch (e) { show('err', '불러오지 못했습니다: ' + e.message); }
+})();
+</script>
+</body>
+</html>

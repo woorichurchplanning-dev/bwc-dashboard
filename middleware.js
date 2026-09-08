@@ -2,7 +2,7 @@ import { verifySession, readCookie, SESSION_COOKIE } from './lib/auth.js';
 
 export const config = {
   // 로그인 화면·인증 API·아이콘류만 열어 두고 나머지는 전부 막는다.
-  matcher: ['/((?!login\\.html|api/login|api/logout|manifest\\.json|icon-|apple-touch-icon|favicon|sw\\.js|_vercel).*)'],
+  matcher: ['/((?!login\\.html|setup\\.html|api/login|api/logout|api/bootstrap|manifest\\.json|icon-|apple-touch-icon|favicon|sw\\.js|_vercel).*)'],
 };
 
 export default async function middleware(request) {

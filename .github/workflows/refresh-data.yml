@@ -29,13 +29,26 @@ jobs:
         run: bash scripts/refresh-data.sh
 
       - name: Commit if changed
+        id: commit
         run: |
           if git diff --quiet -- public/data.json; then
             echo "변경 없음 — 커밋 생략"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add public/data.json
             git commit -m "data.json 자동 갱신 ($(date -u +%Y-%m-%dT%H:%MZ))"
             git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # Vercel GitHub 연동이 안 돼 있어(조직 접근 권한 필요) CLI로 직접 배포한다.
+      # 나중에 Vercel 대시보드에서 레포를 연결하면 이 단계는 지워도 된다.
+      - name: Deploy to Vercel
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx --yes vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"

@@ -1,5 +1,6 @@
 import { verifyPassword, signSession, cookieHeader, SESSION_MAX_AGE } from '../lib/auth.js';
 import { findUser, sessionPayload } from '../lib/users.js';
+import { loadStore } from '../lib/store.js';
 
 /* 무차별 대입 완화 — 인스턴스 메모리 기준의 가벼운 제한 */
 const attempts = new Map();
@@ -22,7 +23,8 @@ export default async function handler(req, res) {
   const { id, password } = req.body || {};
   if (tooMany(ip)) return res.status(429).json({ error: 'too_many_attempts' });
 
-  const user = findUser(id);
+  const { data: store } = await loadStore();
+  const user = findUser(store, id);
   // 아이디가 없어도 같은 시간을 쓰도록 더미 해시를 검증한다 (계정 존재 여부 노출 방지)
   const ok = user
     ? await verifyPassword(String(password || ''), user.salt, user.hash)
