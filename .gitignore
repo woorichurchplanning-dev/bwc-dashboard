@@ -5,3 +5,5 @@ node_modules
 # 출석 데이터는 공개 레포에 커밋하지 않는다.
 # GitHub Action이 매번 새로 만들어 Vercel로 바로 배포한다(레포에는 남지 않음).
 public/data.json
+.env*
+.env.local
