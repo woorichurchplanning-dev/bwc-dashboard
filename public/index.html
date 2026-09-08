@@ -1483,9 +1483,10 @@ function exportCSV() {
     });
   } else if (tab === 'school') {
     name = '주일학교';
-    rows.push(['날짜', ...SCHOOL_DEPTS, '합계']);
+    const DS = myDepts();
+    rows.push(['날짜', ...DS, '합계']);
     fw.forEach(w => {
-      const vals = SCHOOL_DEPTS.map(d => schoolDeptValue(w, d));
+      const vals = DS.map(d => schoolDeptValue(w, d));
       rows.push([w, ...vals, vals.reduce((a, b) => a + b, 0)]);
     });
   } else if (tab === 'wd') {
@@ -1596,6 +1597,14 @@ const WEEK_NOTES = {
 // ── 상수 ──
 const MONTHS_KR = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 const SCHOOL_DEPTS = ['사랑부','영아부','유아부','유치부','송림유년','서현유년','송림초등','서현초등','송림소년','서현소년','송림청소년부','중등부','고등부'];
+/* 로그인한 사용자가 볼 수 있는 주일학교 부서.
+   담당 부서가 지정돼 있으면 선택지뿐 아니라 차트·표·합계까지 그 부서로만 좁힌다.
+   (드롭다운만 막고 그래프에 전체 부서를 그리면 제한한 의미가 없다) */
+function myDepts() {
+  const allow = ME?.schoolDepts;
+  if (!allow || !allow.length) return SCHOOL_DEPTS;
+  return SCHOOL_DEPTS.filter(d => allow.includes(d));
+}
 const SCHOOL_GROUPS = {
   infant: { label:'영유아부', depts:['사랑부','영아부','유아부','유치부'], color:'blue' },
   child:  { label:'아동부',   depts:['송림유년','서현유년','송림초등','서현초등','송림소년','서현소년','송림청소년부'], color:'teal' },
@@ -1972,7 +1981,7 @@ function schoolDeptValue(w, dept) { return v(schoolDeptTotal(w, dept)); }
    0으로 채우면 '출석 0명'으로 오독되고 추이선이 바닥까지 떨어진다. */
 function schoolGroupTotal(w, depts) {
   let sum = 0, has = false;
-  (depts || SCHOOL_DEPTS).forEach(d => {
+  (depts || myDepts()).forEach(d => {
     const x = schoolDeptTotal(w, d);
     if (x != null) { sum += x; has = true; }
   });
@@ -1992,7 +2001,7 @@ function schoolSeries(dept, fw)  { return (fw||getFW()).map(w => nn(schoolDeptTo
 function schoolTot(w) {
   if (!D.school[w]) return null;
   if (D.school[w]._total != null) return D.school[w]._total;
-  return SCHOOL_DEPTS.reduce((a, d) => a + schoolDeptValue(w, d), 0) || null;
+  return myDepts().reduce((a, d) => a + schoolDeptValue(w, d), 0) || null;
 }
 function dawnOnline(fw)  {
   return (fw||getFW()).map(w => {
@@ -2717,17 +2726,21 @@ function initSchool() {
   renderSchoolKpiAll(fw);
   renderSchoolTrend(fw);
   addCardPeriod('c-school-trend', renderSchoolTrend, renderSchoolKpiAll);
-  const deptSums = SCHOOL_DEPTS.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
-  mkChart('c-school-pie','doughnut',SCHOOL_DEPTS,dnut(SCHOOL_DEPTS,deptSums,SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length])),{});
-  const avgs4 = SCHOOL_DEPTS.map(d=>last4avg(fw.map(w=>schoolDeptValue(w,d))));
-  mkChart('c-school-bar','bar',SCHOOL_DEPTS,[{data:avgs4,backgroundColor:SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
-  mkTable('t-school',['날짜',...SCHOOL_DEPTS,'합계'],
-    fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmtOr(schoolDeptTotal(w,d))),
+  const DS = myDepts();
+  const deptSums = DS.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
+  mkChart('c-school-pie','doughnut',DS,dnut(DS,deptSums,DS.map((_,i)=>CA[i%CA.length])),{});
+  const avgs4 = DS.map(d=>last4avg(fw.map(w=>schoolDeptValue(w,d))));
+  mkChart('c-school-bar','bar',DS,[{data:avgs4,backgroundColor:DS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
+  mkTable('t-school',['날짜',...DS,'합계'],
+    fw.map(w=>[w,...DS.map(d=>fmtOr(schoolDeptTotal(w,d))),
       fmtOr(schoolGroupTotal(w))]));
 
   // 그룹별 서브탭
   Object.entries(SCHOOL_GROUPS).forEach(([key, grp]) => {
-    const depts = grp.depts;
+    const depts = grp.depts.filter(d => myDepts().includes(d));
+    const tabBtn = document.querySelector(`#s-school .stab[onclick*="'${key}'"]`);
+    if (tabBtn) tabBtn.hidden = depts.length === 0;   // 담당 부서가 없는 그룹 탭은 감춘다
+    if (!depts.length) return;
     const colors = depts.map((_,i)=>CA[i%CA.length]);
     const groupTotals = fw.map(w=>schoolGroupTotal(w, depts));
     const gi = lastFilledIdx(groupTotals), gp = lastFilledIdx(groupTotals, gi);
@@ -2805,12 +2818,13 @@ function renderSchoolDept() {
     setText('ct-school-table', '부서별 주별 출석 상세');
     const tots = fw.map(w => schoolGroupTotal(w));
     mkChart('c-school-trend','line',wl,[lds('주일학교 합계',tots,C.b,true)],{fw});
-    const deptSums = SCHOOL_DEPTS.map(d => fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
-    mkChart('c-school-pie','doughnut',SCHOOL_DEPTS,dnut(SCHOOL_DEPTS,deptSums,SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length])),{});
-    const avgs4 = SCHOOL_DEPTS.map(d => last4avg(fw.map(w=>schoolDeptValue(w,d))));
-    mkChart('c-school-bar','bar',SCHOOL_DEPTS,[{data:avgs4,backgroundColor:SCHOOL_DEPTS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
-    mkTable('t-school',['날짜',...SCHOOL_DEPTS,'합계'],
-      fw.map(w=>[w,...SCHOOL_DEPTS.map(d=>fmtOr(schoolDeptTotal(w,d))), fmtOr(schoolGroupTotal(w))]));
+    const DS = myDepts();
+    const deptSums = DS.map(d => fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
+    mkChart('c-school-pie','doughnut',DS,dnut(DS,deptSums,DS.map((_,i)=>CA[i%CA.length])),{});
+    const avgs4 = DS.map(d => last4avg(fw.map(w=>schoolDeptValue(w,d))));
+    mkChart('c-school-bar','bar',DS,[{data:avgs4,backgroundColor:DS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
+    mkTable('t-school',['날짜',...DS,'합계'],
+      fw.map(w=>[w,...DS.map(d=>fmtOr(schoolDeptTotal(w,d))), fmtOr(schoolGroupTotal(w))]));
     renderSchoolKpiAll(fw);
     return;
   }
@@ -3434,7 +3448,7 @@ function ycPointItems() {
   });
   items.push({ id:'sun:all', label:'주일예배 · 장년 현장 합계', fn: ycAdult });
   items.push({ id:'school:all', label:'주일학교 · 전체', fn: w => schoolTot(w) });
-  SCHOOL_DEPTS.forEach(d => items.push({ id:`school:${d}`, label:`주일학교 · ${d}`, fn: w => schoolDeptTotal(w, d) }));
+  myDepts().forEach(d => items.push({ id:`school:${d}`, label:`주일학교 · ${d}`, fn: w => schoolDeptTotal(w, d) }));
   YOUTH_DEPTS.forEach(d => items.push({ id:`youth:${d}`, label:`청년교구 · ${d}`, fn: w => nn(D.youth[w]?.[d]?.예배) }));
   items.push({ id:'youth:all', label:'청년교구 · 합계', fn: ycYouth });
   items.push({ id:'wd:wed', label:'수요예배 · 현장', fn: w => nn(D.weekday[w]?.wed_off) });
