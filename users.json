@@ -1,0 +1,4 @@
+{
+  "_comment": "대시보드 사용자. 비밀번호는 PBKDF2 해시로만 저장된다. 추가/변경은 `node scripts/user.mjs` 또는 관리자 화면에서.",
+  "users": []
+}

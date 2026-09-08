@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>분당우리교회 사역 데이터 대시보드 · 로그인</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#635bff">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --accent:#635bff; --accent-dark:#4f46e5;
+  --bg:#f6f8fa; --surface:#fff;
+  --text:#0a0e1a; --text2:#3c4257; --text3:#697386;
+  --border:rgba(0,0,0,.08); --neg:#c0123c; --neg-bg:#fff0f3;
+  --font:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:var(--bg);font-family:var(--font);color:var(--text);padding:24px}
+.card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:36px 32px;box-shadow:0 1px 3px rgba(0,0,0,.04),0 12px 32px rgba(0,0,0,.06)}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.cross{width:34px;height:34px;background:var(--accent);border-radius:9px;position:relative;flex-shrink:0}
+.cross::before,.cross::after{content:'';position:absolute;background:#fff;border-radius:2px}
+.cross::before{width:3px;height:18px;left:15.5px;top:8px}
+.cross::after{width:14px;height:3px;left:10px;top:15.5px}
+h1{font-size:16px;font-weight:700;margin:0;letter-spacing:-.3px}
+.sub{font-size:11px;color:var(--text3);margin-top:2px}
+label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px}
+input{width:100%;padding:11px 13px;font-size:14px;font-family:inherit;color:var(--text);
+  background:var(--surface);border:1px solid rgba(0,0,0,.14);border-radius:9px;margin-bottom:16px;
+  transition:border-color .15s,box-shadow .15s}
+input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,91,255,.12)}
+button{width:100%;padding:12px;font-size:14px;font-weight:700;font-family:inherit;color:#fff;
+  background:var(--accent);border:0;border-radius:9px;cursor:pointer;transition:background .15s}
+button:hover:not(:disabled){background:var(--accent-dark)}
+button:disabled{opacity:.6;cursor:not-allowed}
+.err{display:none;background:var(--neg-bg);color:var(--neg);font-size:12.5px;line-height:1.5;
+  padding:10px 12px;border-radius:8px;margin-bottom:16px}
+.err.on{display:block}
+.foot{margin-top:22px;padding-top:18px;border-top:1px solid var(--border);
+  font-size:11.5px;color:var(--text3);line-height:1.6}
+</style>
+</head>
+<body>
+<form class="card" id="form" autocomplete="on">
+  <div class="brand">
+    <div class="cross"></div>
+    <div>
+      <h1>분당우리교회</h1>
+      <div class="sub">Ministry Data Dashboard</div>
+    </div>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <label for="id">아이디</label>
+  <input id="id" name="username" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+
+  <label for="pw">비밀번호</label>
+  <input id="pw" name="password" type="password" autocomplete="current-password" required>
+
+  <button type="submit" id="btn">로그인</button>
+
+  <div class="foot">계정은 관리자에게 문의하세요. 이 대시보드의 자료는 교회 내부용입니다.</div>
+</form>
+
+<script>
+const form = document.getElementById('form');
+const err  = document.getElementById('err');
+const btn  = document.getElementById('btn');
+
+function fail(msg) { err.textContent = msg; err.classList.add('on'); }
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  err.classList.remove('on');
+  btn.disabled = true; btn.textContent = '확인 중…';
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: document.getElementById('id').value, password: document.getElementById('pw').value }),
+    });
+    if (res.ok) {
+      // 이전 세션의 캐시가 남지 않도록 서비스워커 캐시를 비운다
+      if (window.caches) { for (const k of await caches.keys()) await caches.delete(k); }
+      const next = new URLSearchParams(location.search).get('next');
+      location.replace(next && next.startsWith('/') ? next : '/index.html');
+      return;
+    }
+    const body = await res.json().catch(() => ({}));
+    fail(body.error === 'too_many_attempts'
+      ? '시도가 너무 많습니다. 10분 후 다시 해주세요.'
+      : body.error === 'server_misconfigured'
+        ? '서버 설정이 완료되지 않았습니다. 관리자에게 문의하세요.'
+        : '아이디 또는 비밀번호가 올바르지 않습니다.');
+  } catch {
+    fail('연결에 실패했습니다. 네트워크를 확인해주세요.');
+  } finally {
+    btn.disabled = false; btn.textContent = '로그인';
+  }
+});
+</script>
+</body>
+</html>

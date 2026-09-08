@@ -30,12 +30,12 @@ jobs:
 
       - name: Commit if changed
         run: |
-          if git diff --quiet -- data.json; then
+          if git diff --quiet -- public/data.json; then
             echo "변경 없음 — 커밋 생략"
           else
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add data.json
+            git add public/data.json
             git commit -m "data.json 자동 갱신 ($(date -u +%Y-%m-%dT%H:%MZ))"
             git push
           fi

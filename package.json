@@ -1,0 +1,6 @@
+{
+  "name": "bwc-dashboard",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" }
+}

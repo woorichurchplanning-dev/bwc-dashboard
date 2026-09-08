@@ -43,6 +43,6 @@ for (const f of fs.readdirSync(dir).filter((f) => /^b\d+\.json$/.test(f))) {
 const keys = Object.keys(data).sort();
 if (!keys.length) { console.error("no data fetched; aborting (data.json 유지)"); process.exit(1); }
 const out = { generatedAt: new Date().toISOString(), weekRange: [keys[0], keys[keys.length - 1]], weekCount: keys.length, data };
-fs.writeFileSync("data.json", JSON.stringify(out));
+fs.writeFileSync("public/data.json", JSON.stringify(out));
 console.error("wrote data.json: " + keys.length + " weeks, " + keys[0] + " -> " + keys[keys.length - 1]);
 ' "$TMP"

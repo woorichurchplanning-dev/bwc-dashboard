@@ -464,6 +464,16 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   .tgl-btn { padding:0 10px; font-size:11px; }
 }
 
+.user-chip{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 11px; border-radius:20px; white-space:nowrap;
+  background:var(--color-accent-light); color:var(--color-accent);
+  border:1px solid rgba(99,91,255,.2); font-size:11.5px; font-weight:700;
+}
+.user-chip .role{ font-weight:500; opacity:.75; }
+.nt[hidden]{ display:none !important; }
+@media (max-width:768px){ .user-chip{ display:none; } }
+
 /* ── 연도별 비교 ── */
 .yc-ctl {
   display:flex; align-items:center; gap:var(--s3); flex-wrap:wrap;
@@ -635,6 +645,8 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <span class="sync-status" id="sync-status">구글 시트 연동 대기 중</span>
     <button class="sync-btn" id="refresh-btn" onclick="fetchFromSheets(4)">새로고침</button>
     <button class="sync-btn secondary" id="full-refresh-btn" onclick="fetchFromSheets(104, true)">전체 재연동</button>
+    <span class="user-chip" id="user-chip" hidden></span>
+    <button class="sync-btn secondary" id="logout-btn" onclick="logout()" hidden>로그아웃</button>
   </div>
 </header>
 
@@ -3854,6 +3866,7 @@ function currentTab(){
 
 function sw(name, opts){
   if(!TABS.includes(name)) return;
+  if(!canSee(name)) return;   // 권한 없는 탭 (서버에서도 데이터가 차단된다)
   document.querySelectorAll('.nt').forEach((el,i)=>el.classList.toggle('on',TABS[i]===name));
   document.querySelectorAll('.sec').forEach(el=>el.classList.remove('on'));
   document.getElementById('s-'+name).classList.add('on');
@@ -4374,7 +4387,74 @@ async function fetchFromSheets(weeksBack = 4, fullRefresh = false) {
   }
 }
 
+/* ══════════════════════════════════════════════════
+   로그인 세션 · 권한
+   실제 차단은 서버(미들웨어)가 한다. 여기서는 권한 없는 탭을
+   화면에서 감춰 혼선을 줄인다.
+   ══════════════════════════════════════════════════ */
+let ME = null;
+
+async function loadSession() {
+  try {
+    const res = await fetch('/api/me', { cache: 'no-store' });
+    if (res.status === 401) { location.replace('/login.html'); return null; }
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+async function logout() {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch {}
+  // 캐시에 데이터가 남지 않게 서비스워커 캐시까지 비운다
+  try {
+    if (window.caches) for (const k of await caches.keys()) await caches.delete(k);
+    const regs = navigator.serviceWorker ? await navigator.serviceWorker.getRegistrations() : [];
+    await Promise.all(regs.map(r => r.unregister()));
+  } catch {}
+  try { localStorage.removeItem(SHEET_CACHE_KEY); } catch {}
+  location.replace('/login.html');
+}
+
+function applyPermissions(me) {
+  ME = me;
+  if (!me) return;
+
+  const chip = document.getElementById('user-chip');
+  if (chip) {
+    chip.innerHTML = `${me.name} <span class="role">${me.admin ? '관리자' : '담당'}</span>`;
+    chip.hidden = false;
+  }
+  const lo = document.getElementById('logout-btn');
+  if (lo) lo.hidden = false;
+
+  // 관리자가 아니면 시트 재연동 버튼을 감춘다 (전체 데이터를 끌어오는 동작이라)
+  if (!me.admin) {
+    ['refresh-btn', 'full-refresh-btn'].forEach(id => {
+      const b = document.getElementById(id); if (b) b.hidden = true;
+    });
+  }
+
+  // 권한 없는 탭 감추기
+  const allowed = new Set(me.tabs && me.tabs.length ? me.tabs : ALL_TABS_FALLBACK);
+  document.querySelectorAll('.nt').forEach((el, i) => { el.hidden = !allowed.has(TABS[i]); });
+
+  // 주일학교 담당 부서 제한
+  if (me.schoolDepts && me.schoolDepts.length) {
+    const sel = document.getElementById('school-dept-sel');
+    if (sel) {
+      [...sel.options].forEach(o => { if (o.value && !me.schoolDepts.includes(o.value)) o.remove(); });
+      // 담당 부서가 하나면 그것으로 고정
+      if (me.schoolDepts.length === 1) { sel.value = me.schoolDepts[0]; sel.disabled = true; }
+    }
+  }
+}
+
+const ALL_TABS_FALLBACK = ['home'];
+function canSee(tab) { return !ME || !ME.tabs || ME.tabs.includes(tab); }
+
 async function boot() {
+  const me = await loadSession();
+  applyPermissions(me);
   updatePeriodLabel(getFW());
 
   // ① 정적 스냅샷(data.json)을 먼저 로드 — GitHub Pages CDN에서 즉시 응답 (기존 36초 Apps Script 호출 대체)
@@ -4401,6 +4481,12 @@ async function boot() {
   const fb = document.querySelector('.flt-bar');
   if (fb) fb.style.display = 'none';
   initHome();
+
+  // 주간현황 권한이 없으면 볼 수 있는 첫 탭으로 이동
+  if (ME && ME.tabs && !ME.tabs.includes('home')) {
+    const first = TABS.find(t => ME.tabs.includes(t));
+    if (first) sw(first);
+  }
 
   // 테이블 카드 접기 — 테이블을 포함한 .cc에 적용
   setTimeout(() => {
