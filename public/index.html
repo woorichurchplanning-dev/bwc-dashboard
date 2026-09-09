@@ -474,6 +474,8 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 .nt[hidden]{ display:none !important; }
 @media (max-width:768px){ .user-chip{ display:none; } }
 
+.wk-card.dist::before{background:linear-gradient(90deg,#7c3aed,#a855f7)}
+
 /* ── 연도별 비교 ── */
 .yc-ctl {
   display:flex; align-items:center; gap:var(--s3); flex-wrap:wrap;
@@ -658,8 +660,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="nt" onclick="sw('youth')">청년교구</div>
   <div class="nt" onclick="sw('school')">주일학교</div>
   <div class="nt" onclick="sw('wd')">주중·새벽</div>
-  <div class="nt" onclick="sw('leader')">리더십</div>
-  <div class="nt" onclick="sw('cell')">소그룹</div>
+  <div class="nt" onclick="sw('district')">교구</div>
   <div class="nt" onclick="sw('newfam')">새가족</div>
   <button class="nt" onclick="sw('special')"><span class="nt-icon">✦</span><span>&nbsp;특별예배</span></button>
   <div class="nt" onclick="sw('yearcomp')">연도 비교</div>
@@ -883,44 +884,56 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 </section>
 
 <!-- ═══ LEADER ═══ -->
-<section class="sec" id="s-leader">
+<section class="sec" id="s-district">
   <div class="page-hdr">
-    <div class="page-hdr-title"><h2>리더십 (<span data-tip="소그룹(다락방)의 목자·리더들이 함께 모이는 리더십 훈련 모임">순장반</span>)</h2><p><span data-tip="교회 행정 구역 단위. 예: 1교구, 2교구">교구</span>별 순장반 <span data-tip="적임자 수: 해당 모임에 등록된 전체 인원">적</span>·출석 현황</p></div>
+    <div class="page-hdr-title"><h2>교구</h2>
+      <p><span data-tip="가정에서 드리는 소그룹 예배 모임">다락방</span> ·
+         <span data-tip="다락방 목자·리더들이 함께 모이는 훈련 모임">순장반</span> 출석 현황</p></div>
   </div>
-  <div class="kg" id="kk-leader"></div>
-  <div class="dist-row">
-    <label>교구 선택</label>
-    <select class="dist-sel" id="leader-dist-sel" onchange="renderLeaderDist()">
-      <option value="">전체 교구 합산</option>
-    </select>
+  <div class="stabs">
+    <button class="stab on" onclick="ss2('district','all')">전체 현황</button>
+    <button class="stab" onclick="ss2('district','cell')">다락방</button>
+    <button class="stab" onclick="ss2('district','leader')">순장반</button>
   </div>
-  <div class="cg">
-    <div class="cc"><div class="ch"><div><div class="ct" id="leader-trend-title">순장반 전체 적·출석 추이</div><div class="cs">주별 합계</div></div></div><canvas id="c-leader-trend"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct">교구별 출석 현황</div><div class="cs">최근 주 기준</div></div></div><canvas id="c-leader-dist"></canvas></div>
-  </div>
-  <div class="cc"><div class="ch"><div><div class="ct">교구별 순장반 상세 (최근 주)</div></div></div>
-    <div style="overflow-x:auto"><table id="t-leader"></table></div>
-  </div>
-</section>
 
-<!-- ═══ CELL ═══ -->
-<section class="sec" id="s-cell">
-  <div class="page-hdr">
-    <div class="page-hdr-title"><h2>소그룹 (<span data-tip="가정에서 드리는 소그룹 예배 모임. 목자(리더) 1명이 5~10명을 인도">다락방</span>)</h2><p><span data-tip="교회 행정 구역 단위. 예: 1교구, 2교구">교구</span>별 다락방 <span data-tip="적임자 수: 해당 모임에 등록된 전체 인원">적</span>·출석 현황</p></div>
-  </div>
-  <div class="kg" id="kk-cell"></div>
   <div class="dist-row">
     <label>교구 선택</label>
-    <select class="dist-sel" id="cell-dist-sel" onchange="renderCellDist()">
+    <select class="dist-sel" id="district-sel" onchange="renderDistrict()">
       <option value="">전체 교구 합산</option>
     </select>
   </div>
-  <div class="cg">
-    <div class="cc"><div class="ch"><div><div class="ct" id="cell-trend-title">다락방 전체 적·출석 추이</div><div class="cs">주별 합계</div></div></div><canvas id="c-cell-trend"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct">교구별 출석 현황</div><div class="cs">최근 주 기준</div></div></div><canvas id="c-cell-dist"></canvas></div>
+
+  <div class="ss on" id="district-all">
+    <div class="kg" id="kk-district"></div>
+    <div class="cg">
+      <div class="cc"><div class="ch"><div><div class="ct" id="ct-dist-trend">다락방 · 순장반 출석 추이</div><div class="cs">주별 합계</div></div></div><canvas id="c-dist-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">교구별 출석 현황</div><div class="cs">최근 주 · 다락방+순장반</div></div></div><canvas id="c-dist-bar"></canvas></div>
+    </div>
+    <div class="cc"><div class="ch"><div><div class="ct" id="ct-dist-table">교구별 상세 (최근 주)</div></div></div>
+      <div style="overflow-x:auto"><table id="t-district"></table></div>
+    </div>
   </div>
-  <div class="cc"><div class="ch"><div><div class="ct">교구별 다락방 상세 (최근 주)</div></div></div>
-    <div style="overflow-x:auto"><table id="t-cell"></table></div>
+
+  <div class="ss" id="district-cell">
+    <div class="kg" id="kk-dist-cell"></div>
+    <div class="cg">
+      <div class="cc"><div class="ch"><div><div class="ct" id="ct-cell-trend">다락방 출석 추이</div><div class="cs">주별 합계</div></div></div><canvas id="c-cell-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct" id="ct-cell-mix">구분별 비중</div><div class="cs">최근 주</div></div></div><canvas id="c-cell-mix"></canvas></div>
+    </div>
+    <div class="cc"><div class="ch"><div><div class="ct" id="ct-cell-table">교구별 다락방 상세</div></div></div>
+      <div style="overflow-x:auto"><table id="t-cell"></table></div>
+    </div>
+  </div>
+
+  <div class="ss" id="district-leader">
+    <div class="kg" id="kk-dist-leader"></div>
+    <div class="cg">
+      <div class="cc"><div class="ch"><div><div class="ct" id="ct-leader-trend">순장반 출석 추이</div><div class="cs">화요 · 직장 구분</div></div></div><canvas id="c-leader-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">교구별 순장반</div><div class="cs">최근 주</div></div></div><canvas id="c-leader-bar"></canvas></div>
+    </div>
+    <div class="cc"><div class="ch"><div><div class="ct" id="ct-leader-table">교구별 순장반 상세</div></div></div>
+      <div style="overflow-x:auto"><table id="t-leader"></table></div>
+    </div>
   </div>
 </section>
 
@@ -2142,6 +2155,25 @@ function initHome() {
             ${sunSongrim  ? `<div class="wk-loc"><div class="wk-loc-name">송림</div><div class="wk-loc-num">${fmt(sunSongrim)}</div></div>`  : ''}
           </div>` : '',
       },
+      { cls:'dist', label:'교구', dateStr:'다락방 · 순장반',
+        mainNum: (() => { const c = D.cell.find(r => r.date === lW); return c ? fmt(c.totalChul) : '–'; })(),
+        unit: '명 · 다락방',
+        d1: (() => {
+          const c = D.cell.find(r => r.date === lW), p = D.cell.find(r => r.date === pW);
+          return c && p ? inlineDelta(c.totalChul, p.totalChul, '전주') : '';
+        })(),
+        d2: '',
+        extraHtml: (() => {
+          const l = D.leader.find(r => r.date === lW);
+          if (!l) return '';
+          const tue = Object.values(l.dists || {}).reduce((a, d) => a + (d.tue || 0), 0);
+          const job = Object.values(l.dists || {}).reduce((a, d) => a + (d.job || 0), 0);
+          return `<div class="wk-locs">
+            <div class="wk-loc"><div class="wk-loc-name">화요순장반</div><div class="wk-loc-num">${fmt(tue)}</div></div>
+            <div class="wk-loc"><div class="wk-loc-name">직장순장반</div><div class="wk-loc-num">${fmt(job)}</div></div>
+          </div>`;
+        })(),
+      },
       { cls:'yu', label:'청년교구', dateStr:`${fmtDate(lDt)} (${fmtDay(lDt)})`,
         mainNum: sunYouth ? fmt(sunYouth) : '–',
         unit: '명 · 현장',
@@ -2971,171 +3003,171 @@ function initWD() {
   mkChart('c-dawn-day','line',wl,days.map((d,i)=>lds(d,fw.map(w=>nn(D.dawn[w]?.online?.[d])),dayColors[i])));
 }
 
-// ── LEADER ──
-function initLeader() {
-  const _sec = document.getElementById('s-leader');
-  if (_sec) _sec.classList.toggle('data-empty', !D.leader || D.leader.length === 0);
-  if (!D.leader || D.leader.length === 0) {
-    document.getElementById('kk-leader').innerHTML = `<div class="kc bl" style="grid-column:1/-1;animation-delay:0s">
-      <div class="kc-accent-bar"></div><div class="kl">데이터 연동 필요</div>
-      <div class="kv" style="font-size:18px;color:var(--text2)">순장반 데이터 없음</div>
-      <div class="ks" style="margin-top:8px;line-height:1.6">
-        구글 시트 <b>순장반</b> 탭에 데이터를 입력한 후<br>
-        상단 <b>새로고침</b> 버튼을 누르면 자동으로 표시됩니다.
-      </div></div>`;
+/* ══════════════════════════════════════════════════
+   교구 — 다락방 · 순장반
+   예전에는 '리더십'과 '소그룹' 두 탭으로 나뉘어 있었는데, 같은 교구 단위 자료라
+   한 탭에서 교구·기간을 골라 함께 보는 편이 맞다.
+   기간은 상단 전역 필터를, 교구는 이 화면의 선택을 따른다.
+   ══════════════════════════════════════════════════ */
+const CELL_KINDS = ['여다락방', '여직장다락방', '남다락방', '부부다락방', '시니어'];
+
+/* 두 자료를 주차 기준으로 묶는다. 다락방·순장반은 모이는 요일이 달라
+   같은 주에 한쪽만 있는 경우가 흔하다. */
+function districtWeeks() {
+  const cell = filterByMode(D.cell || []);
+  const lead = filterByMode(D.leader || []);
+  const byDate = {};
+  cell.forEach(r => { (byDate[r.date] = byDate[r.date] || {}).cell = r; });
+  lead.forEach(r => { (byDate[r.date] = byDate[r.date] || {}).leader = r; });
+  return Object.keys(byDate).sort().map(date => ({ date, ...byDate[date] }));
+}
+
+/* 화면에 쓸 교구 목록 — 권한이 걸려 있으면 담당 교구만 */
+function districtNames() {
+  const set = new Set();
+  [...(D.cell || []), ...(D.leader || [])].forEach(r =>
+    Object.keys(r.dists || {}).forEach(d => set.add(d)));
+  const all = [...set].sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+  return myDistricts(all);
+}
+
+const distSel = () => document.getElementById('district-sel')?.value || '';
+
+/* 한 주 기록에서 선택한 교구(또는 전체)의 값을 뽑는다 */
+function distValue(rec, key) {
+  if (!rec) return null;
+  const pick = distSel();
+  const names = pick ? [pick] : districtNames();
+  let sum = 0, has = false;
+  names.forEach(n => {
+    const v = rec.dists?.[n]?.[key];
+    if (v != null) { sum += Number(v) || 0; has = true; }
+  });
+  return has ? sum : null;
+}
+function distBreakdown(rec, kind) {
+  if (!rec) return 0;
+  const pick = distSel();
+  const names = pick ? [pick] : districtNames();
+  return names.reduce((a, n) => a + (Number(rec.dists?.[n]?.breakdown?.[kind]) || 0), 0);
+}
+
+function initDistrict() {
+  const sec = document.getElementById('s-district');
+  const rows = districtWeeks();
+  const hasAny = rows.length > 0;
+  if (sec) sec.classList.toggle('data-empty', !hasAny);
+  if (!hasAny) {
+    mkKPI('kk-district', [{
+      label: '데이터 연동 필요',
+      value: '<span style="font-size:18px;color:var(--text2)">교구 자료 없음</span>',
+      sub: '「교구 출석 현황표」 시트에 입력하면 자동으로 표시됩니다.', color: 'blue',
+    }]);
     return;
   }
-  const fd = filterByMode(D.leader);
-  const latest = fd[fd.length - 1];
-  const dates = fd.map(r => { const d=new Date(r.date); return `${d.getMonth()+1}/${d.getDate()}`; });
-  const jukSeries = fd.map(r => r.totalJuk);
-  const chulSeries = fd.map(r => r.totalChul);
-  const rate = latest && latest.totalJuk > 0 ? Math.round(latest.totalChul / latest.totalJuk * 100) : 0;
-  const prev = fd[fd.length-2], dChul = latest && prev ? latest.totalChul-prev.totalChul : 0;
 
-  mkKPI('kk-leader', [
-    {label:'총 출석 (최근)', value:fmt(latest?.totalChul||0), sub:'순장반 전체', color:'green',
-      trend:`${dChul>=0?'▲':'▼'} 전주 ${dChul>=0?'+':''}${fmt(dChul)}`, td:dChul>=0?'up':'dn'},
-    // 시트에 '적(정원)'이 없으면 0으로 보여주지 않고 출석률 카드도 감춘다
-    ...(latest?.totalJuk > 0 ? [
-      {label:'총 <span data-tip="적임자 수: 등록된 전체 인원">적</span> (최근)', value:fmt(latest.totalJuk), sub:'순장반 전체', color:'blue'},
-      {label:'출석률', value:rate+'%', sub:'출석 ÷ 적', color:'gold'},
-    ] : []),
-    {label:'집계 기간', value:fd.length+'주', sub:'필터 적용 기간', color:'teal'},
+  // 교구 선택지 채우기
+  const sel = document.getElementById('district-sel');
+  if (sel && sel.options.length <= 1) {
+    districtNames().forEach(d => {
+      const o = document.createElement('option'); o.value = d; o.textContent = d; sel.appendChild(o);
+    });
+    const mine = ME?.districts;
+    if (mine?.length && districtNames().length === 1) { sel.value = districtNames()[0]; sel.disabled = true; }
+  }
+  renderDistrict();
+}
+
+function renderDistrict() {
+  const rows = districtWeeks();
+  if (!rows.length) return;
+  const pick = distSel();
+  const scope = pick || (ME?.districts?.length ? '담당 교구' : '전체 교구');
+  const labels = rows.map(r => { const d = parseWeekDate(r.date); return `${d.getMonth()+1}/${d.getDate()}`; });
+
+  const cellSeries = rows.map(r => distValue(r.cell, 'chul'));
+  const tueSeries  = rows.map(r => distValue(r.leader, 'tue'));
+  const jobSeries  = rows.map(r => distValue(r.leader, 'job'));
+  const leadSeries = rows.map(r => distValue(r.leader, 'chul'));
+
+  const last = arr => { for (let i = arr.length - 1; i >= 0; i--) if (arr[i] != null) return arr[i]; return null; };
+  const prev = arr => { let seen = 0; for (let i = arr.length - 1; i >= 0; i--) if (arr[i] != null && ++seen === 2) return arr[i]; return null; };
+  const delta = arr => { const l = last(arr), p = prev(arr); return l != null && p != null ? l - p : null; };
+  const trendOf = arr => { const d = delta(arr); return d == null ? {} :
+    { trend: `${d >= 0 ? '▲' : '▼'} 직전 ${d >= 0 ? '+' : ''}${fmt(d)}`, td: d >= 0 ? 'up' : 'dn' }; };
+
+  // ── 전체 현황 ──
+  mkKPI('kk-district', [
+    { label: `다락방 (${scope})`, value: fmtOr(last(cellSeries)), sub: `평균 ${fmt(avg(cellSeries))}명`, color: 'blue', ...trendOf(cellSeries) },
+    { label: `순장반 (${scope})`, value: fmtOr(last(leadSeries)), sub: `화요 ${fmtOr(last(tueSeries))} · 직장 ${fmtOr(last(jobSeries))}`, color: 'purple', ...trendOf(leadSeries) },
+    { label: '집계 주차', value: rows.length + '주', sub: '필터 적용 기간', color: 'teal' },
+    { label: '교구 수', value: (pick ? 1 : districtNames().length) + '개', sub: pick || '합산', color: 'gold' },
   ]);
 
-  // 교구 select 채우기
-  const sel = document.getElementById('leader-dist-sel');
-  if (sel && latest?.dists && sel.options.length <= 1) {
-    Object.keys(latest.dists).forEach(d => {
-      const opt = document.createElement('option'); opt.value=d; opt.textContent=d; sel.appendChild(opt);
-    });
-  }
-  renderLeaderDist();
-}
+  setText('ct-dist-trend', `${scope} 다락방 · 순장반 출석 추이`);
+  mkChart('c-dist-trend', 'line', labels, [
+    lds('다락방', cellSeries, C.b, true),
+    lds('순장반', leadSeries, C.p),
+  ], { fw: rows.map(r => r.date) });
 
-function renderLeaderDist() {
-  const fd = filterByMode(D.leader); if(!fd.length) return;
-  const sel = document.getElementById('leader-dist-sel');
-  const dist = sel?.value || '';
-  const dates = fd.map(r => { const d=new Date(r.date); return `${d.getMonth()+1}/${d.getDate()}`; });
-  const latest = fd[fd.length-1];
-  const titleEl = document.getElementById('leader-trend-title');
+  // 교구별 막대 (최근 주 기준)
+  const names = pick ? [pick] : districtNames();
+  const lastCell = [...rows].reverse().find(r => r.cell)?.cell;
+  const lastLead = [...rows].reverse().find(r => r.leader)?.leader;
+  mkChart('c-dist-bar', 'bar', names, [
+    bds('다락방', names.map(n => lastCell?.dists?.[n]?.chul ?? null), C.b),
+    bds('순장반', names.map(n => lastLead?.dists?.[n]?.chul ?? null), C.p),
+  ], { horiz: true, stack: true, total: true });
 
-  if (!dist) {
-    // 전체
-    if(titleEl) titleEl.textContent = '순장반 전체 적·출석 추이';
-    mkChart('c-leader-trend','line',dates,[lds('적',fd.map(r=>r.totalJuk),C.b),lds('출석',fd.map(r=>r.totalChul),C.gr)]);
-    if (latest?.dists) {
-      const dn=Object.keys(latest.dists), dc=dn.map(d=>latest.dists[d].chul||0);
-      mkChart('c-leader-dist','bar',dn,[bds('출석',dc,C.b)],{horiz:true});
-      mkTable('t-leader',['교구','적','출석','출석률'],
-        dn.map(d=>{const x=latest.dists[d],r=x.juk>0?Math.round(x.chul/x.juk*100):0; return[d,fmt(x.juk||0),fmt(x.chul||0),r+'%'];}));
-    }
-  } else {
-    // 특정 교구
-    if(titleEl) titleEl.textContent = `${dist} 순장반 적·출석 추이`;
-    const juk=fd.map(r=>r.dists?.[dist]?.juk||0), chul=fd.map(r=>r.dists?.[dist]?.chul||0);
-    mkChart('c-leader-trend','line',dates,[lds('적',juk,C.b),lds('출석',chul,C.gr)]);
-    // 교구 내 남/여 비중 (최근 주)
-    if (latest?.dists?.[dist]) {
-      const x=latest.dists[dist];
-      const gLabels=['여성 적','여성 출석','남성 적','남성 출석'];
-      const gData=[x.fJuk||0,x.fChul||0,x.mJuk||0,x.mChul||0];
-      mkChart('c-leader-dist','bar',gLabels,[{data:gData,backgroundColor:[C.pk+'cc',C.pk,C.b+'cc',C.b],borderRadius:4,borderWidth:0}],{});
-      mkTable('t-leader',['구분','적','출석','출석률'],[
-        ['여성',fmt(x.fJuk||0),fmt(x.fChul||0),(x.fJuk>0?Math.round(x.fChul/x.fJuk*100):0)+'%'],
-        ['남성',fmt(x.mJuk||0),fmt(x.mChul||0),(x.mJuk>0?Math.round(x.mChul/x.mJuk*100):0)+'%'],
-        ['합계',fmt((x.fJuk||0)+(x.mJuk||0)),fmt((x.fChul||0)+(x.mChul||0)),
-          ((x.fJuk||0)+(x.mJuk||0)>0?Math.round(((x.fChul||0)+(x.mChul||0))/((x.fJuk||0)+(x.mJuk||0))*100):0)+'%'],
-      ]);
-    }
-  }
-}
+  setText('ct-dist-table', `교구별 상세 (다락방 ${lastCell?.date || '–'} · 순장반 ${lastLead?.date || '–'})`);
+  mkTable('t-district', ['교구', ...CELL_KINDS, '다락방 계', '화요순장반', '직장순장반', '순장반 계'],
+    names.map(n => {
+      const c = lastCell?.dists?.[n], l = lastLead?.dists?.[n];
+      return [n, ...CELL_KINDS.map(k => fmtOr(c?.breakdown?.[k] ?? null)), fmtOr(c?.chul ?? null),
+              fmtOr(l?.tue ?? null), fmtOr(l?.job ?? null), fmtOr(l?.chul ?? null)];
+    }));
 
-// ── CELL ──
-function initCell() {
-  const _sec = document.getElementById('s-cell');
-  if (_sec) _sec.classList.toggle('data-empty', !D.cell || D.cell.length === 0);
-  if (!D.cell || D.cell.length === 0) {
-    document.getElementById('kk-cell').innerHTML = `<div class="kc bl" style="grid-column:1/-1;animation-delay:0s">
-      <div class="kc-accent-bar"></div><div class="kl">데이터 연동 필요</div>
-      <div class="kv" style="font-size:18px;color:var(--text2)">다락방 데이터 없음</div>
-      <div class="ks" style="margin-top:8px;line-height:1.6">
-        구글 시트 <b>다락방</b> 탭에 데이터를 입력한 후<br>
-        상단 <b>새로고침</b> 버튼을 누르면 자동으로 표시됩니다.
-      </div></div>`;
-    return;
-  }
-  const fd = filterByMode(D.cell);
-  const latest = fd[fd.length - 1];
-  const rate = latest && latest.totalJuk > 0 ? Math.round(latest.totalChul / latest.totalJuk * 100) : 0;
-  const prev = fd[fd.length-2], dChul = latest && prev ? latest.totalChul-prev.totalChul : 0;
-
-  mkKPI('kk-cell', [
-    {label:'총 출석 (최근)', value:fmt(latest?.totalChul||0), sub:'다락방 전체', color:'green',
-      trend:`${dChul>=0?'▲':'▼'} 전주 ${dChul>=0?'+':''}${fmt(dChul)}`, td:dChul>=0?'up':'dn'},
-    // 시트에 '적(정원)'이 없으면 0으로 보여주지 않고 출석률 카드도 감춘다
-    ...(latest?.totalJuk > 0 ? [
-      {label:'총 <span data-tip="적임자 수: 등록된 전체 인원">적</span> (최근)', value:fmt(latest.totalJuk), sub:'다락방 전체', color:'blue'},
-      {label:'출석률', value:rate+'%', sub:'출석 ÷ 적', color:'gold'},
-    ] : []),
-    {label:'집계 기간', value:fd.length+'주', sub:'필터 적용 기간', color:'teal'},
+  // ── 다락방 ──
+  mkKPI('kk-dist-cell', [
+    { label: `다락방 출석 (${scope})`, value: fmtOr(last(cellSeries)), sub: `평균 ${fmt(avg(cellSeries))}명`, color: 'blue', ...trendOf(cellSeries) },
+    ...CELL_KINDS.slice(0, 3).map((k, i) => ({
+      label: k, value: fmt(distBreakdown(lastCell, k)), sub: '최근 주', color: ['teal', 'green', 'gold'][i] })),
   ]);
+  setText('ct-cell-trend', `${scope} 다락방 출석 추이`);
+  mkChart('c-cell-trend', 'line', labels, CELL_KINDS.map((k, i) =>
+    lds(k, rows.map(r => r.cell ? distBreakdown(r.cell, k) || null : null), [C.b, C.t, C.p, C.or, C.gr][i])),
+    { fw: rows.map(r => r.date), total: true });
+  mkChart('c-cell-mix', 'doughnut', CELL_KINDS,
+    dnut(CELL_KINDS, CELL_KINDS.map(k => distBreakdown(lastCell, k)), [C.b, C.t, C.p, C.or, C.gr]), {});
+  setText('ct-cell-table', `교구별 다락방 상세 (${lastCell?.date || '–'})`);
+  mkTable('t-cell', ['교구', ...CELL_KINDS, '계'],
+    names.map(n => {
+      const c = lastCell?.dists?.[n];
+      return [n, ...CELL_KINDS.map(k => fmtOr(c?.breakdown?.[k] ?? null)), fmtOr(c?.chul ?? null)];
+    }));
 
-  const sel = document.getElementById('cell-dist-sel');
-  if (sel && latest?.dists && sel.options.length <= 1) {
-    const mine = myDistricts(Object.keys(latest.dists));
-    mine.forEach(d => {
-      const opt=document.createElement('option'); opt.value=d; opt.textContent=d; sel.appendChild(opt);
-    });
-    if (ME?.districts?.length && mine.length === 1) { sel.value = mine[0]; sel.disabled = true; }
-  }
-  renderCellDist();
-}
-
-function renderCellDist() {
-  const fd = filterByMode(D.cell); if(!fd.length) return;
-  const sel = document.getElementById('cell-dist-sel');
-  const dist = sel?.value || '';
-  const dates = fd.map(r => { const d=new Date(r.date); return `${d.getMonth()+1}/${d.getDate()}`; });
-  const latest = fd[fd.length-1];
-  const titleEl = document.getElementById('cell-trend-title');
-  const cellFields = ['여다락방','여직장다락방','남다락방','부부다락방','시니어'];
-  const cellFieldValue = (x, label) => Number(x?.breakdown?.[label]) || 0;
-
-  if (!dist) {
-    const mineOnly = !!ME?.districts?.length;
-    if(titleEl) titleEl.textContent = mineOnly ? '담당 교구 합산 적·출석 추이' : '다락방 전체 적·출석 추이';
-    const sumOf = (r, key) => mineOnly
-      ? myDistricts(Object.keys(r.dists||{})).reduce((a,d)=>a+(r.dists[d]?.[key]||0),0)
-      : (key==='juk' ? r.totalJuk : r.totalChul);
-    mkChart('c-cell-trend','line',dates,[lds('적',fd.map(r=>sumOf(r,'juk')),C.b),lds('출석',fd.map(r=>sumOf(r,'chul')),C.gr)]);
-    if (latest?.dists) {
-      const dn=myDistricts(Object.keys(latest.dists)), dc=dn.map(d=>latest.dists[d].chul||0);
-      mkChart('c-cell-dist','bar',dn,[bds('출석',dc,C.p)],{horiz:true});
-      mkTable('t-cell',['교구',...cellFields,'출석','출석률','비고'],
-        dn.map(d=>{
-          const x=latest.dists[d], r=x.juk>0?Math.round(x.chul/x.juk*100):0;
-          return [d,...cellFields.map(label=>fmt(cellFieldValue(x,label))),fmt(x.chul||0),r+'%',x.note||''];
-        }));
-    }
-  } else {
-    if(titleEl) titleEl.textContent = `${dist} 다락방 적·출석 추이`;
-    const juk=fd.map(r=>r.dists?.[dist]?.juk||0), chul=fd.map(r=>r.dists?.[dist]?.chul||0);
-    mkChart('c-cell-trend','line',dates,[lds('적',juk,C.b),lds('출석',chul,C.gr)]);
-    const lDist=latest?.dists?.[dist];
-    if(lDist) {
-      const breakdownData = cellFields.map(label => cellFieldValue(lDist, label));
-      mkChart('c-cell-dist','bar',cellFields,[{data:breakdownData,backgroundColor:[C.pk,C.b,C.teal,C.gold,C.gr,C.p].map(c=>c+'cc'),borderRadius:4,borderWidth:0}],{});
-      mkTable('t-cell',['항목','수치'],[
-        ...cellFields.map(label => [label, fmt(cellFieldValue(lDist, label))]),
-        ['출석',fmt(lDist.chul||0)],
-        ['출석률',(lDist.juk>0?Math.round(lDist.chul/lDist.juk*100):0)+'%'],
-        ['비고',lDist.note||'']
-      ]);
-    }
-  }
+  // ── 순장반 ──
+  mkKPI('kk-dist-leader', [
+    { label: `순장반 출석 (${scope})`, value: fmtOr(last(leadSeries)), sub: `평균 ${fmt(avg(leadSeries))}명`, color: 'purple', ...trendOf(leadSeries) },
+    { label: '화요순장반', value: fmtOr(last(tueSeries)), sub: '매주 화요일', color: 'blue', ...trendOf(tueSeries) },
+    { label: '직장순장반', value: fmtOr(last(jobSeries)), sub: '격주 토요일', color: 'teal', ...trendOf(jobSeries) },
+    { label: '집계 주차', value: rows.filter(r => r.leader).length + '주', sub: '순장반 자료', color: 'gold' },
+  ]);
+  setText('ct-leader-trend', `${scope} 순장반 출석 추이`);
+  mkChart('c-leader-trend', 'line', labels, [
+    lds('화요순장반', tueSeries, C.b),
+    lds('직장순장반', jobSeries, C.t),
+  ], { fw: rows.map(r => r.date), total: true });
+  mkChart('c-leader-bar', 'bar', names, [
+    bds('화요', names.map(n => lastLead?.dists?.[n]?.tue ?? null), C.b),
+    bds('직장', names.map(n => lastLead?.dists?.[n]?.job ?? null), C.t),
+  ], { horiz: true, stack: true, total: true });
+  setText('ct-leader-table', `교구별 순장반 상세 (${lastLead?.date || '–'})`);
+  mkTable('t-leader', ['교구', '화요순장반', '직장순장반', '계'],
+    names.map(n => {
+      const l = lastLead?.dists?.[n];
+      return [n, fmtOr(l?.tue ?? null), fmtOr(l?.job ?? null), fmtOr(l?.chul ?? null)];
+    }));
 }
 
 // ── NEWFAM ──
@@ -3928,8 +3960,8 @@ function renderSpecial(key) {
 }
 
 // ── 탭 내비게이션 ──
-const TABS=['home','sunday','youth','school','wd','leader','cell','newfam','special','yearcomp'];
-const INITS={home:initHome,sunday:initSunday,youth:initYouth,school:initSchool,wd:initWD,leader:initLeader,cell:initCell,newfam:initNewFam,special:initSpecial,yearcomp:initYearComp};
+const TABS=['home','sunday','youth','school','wd','district','newfam','special','yearcomp'];
+const INITS={home:initHome,sunday:initSunday,youth:initYouth,school:initSchool,wd:initWD,district:initDistrict,newfam:initNewFam,special:initSpecial,yearcomp:initYearComp};
 const DONE={};
 
 function currentTab(){
@@ -4534,6 +4566,7 @@ function applyPermissions(me) {
 
   // 권한 없는 탭 감추기
   const allowed = new Set(me.tabs && me.tabs.length ? me.tabs : ALL_TABS_FALLBACK);
+  if (allowed.has('leader') || allowed.has('cell')) allowed.add('district');   // 예전 권한 호환
   document.querySelectorAll('.nt').forEach((el, i) => { el.hidden = !allowed.has(TABS[i]); });
 
   // 주일학교 담당 부서 제한
@@ -4548,7 +4581,13 @@ function applyPermissions(me) {
 }
 
 const ALL_TABS_FALLBACK = ['home'];
-function canSee(tab) { return !ME || !ME.tabs || ME.tabs.includes(tab); }
+function canSee(tab) {
+  if (!ME || !ME.tabs) return true;
+  if (ME.tabs.includes(tab)) return true;
+  // 예전에 leader/cell 로 부여된 계정도 통합된 '교구' 탭을 볼 수 있게 한다
+  if (tab === 'district') return ME.tabs.includes('leader') || ME.tabs.includes('cell');
+  return false;
+}
 
 async function boot() {
   const me = await loadSession();
