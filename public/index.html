@@ -1087,6 +1087,21 @@ function mergeHist() {
     RETIRED_YOUTH_DEPTS.forEach(d => { delete rec[d]; });
   });
 
+  // HIST(과거 XLS 파싱본)도 같은 이유로 두 캠퍼스가 바뀌어 있다.
+  // 원본 표는 '장년' 아래 송림·드림 두 컬럼인데, 파싱 때 '장년'이 송림 컬럼 이름이 됐다.
+  // 즉 HIST의 장년 = 송림, HIST의 송림 = 서현(드림). 한 번만 바로잡는다.
+  if (!HIST._campusFixed) {
+    Object.values(HIST.sunday || {}).forEach(r => {
+      if (!r) return;
+      const t = r.jangnyeon; r.jangnyeon = r.songrim; r.songrim = t;
+      Object.values(r.bu || {}).forEach(b => {
+        if (!b) return;
+        const x = b['장년']; b['장년'] = b['송림']; b['송림'] = x;
+      });
+    });
+    HIST._campusFixed = true;
+  }
+
   const live = new Set(D.weeks);
   HIST.weeks.forEach(date => {
     if (!live.has(date)) D.weeks.push(date);
@@ -4046,9 +4061,11 @@ function applyNewData(data) {
 
     // ── 주일예배 ──
     const sun = rec['주일예배'] || {};
-    // GAS "송림" = 실제 서현(장년) 데이터, GAS "서현" = 실제 송림 데이터 (컬럼명 반전)
-    const sh = sun['송림'] || sun['송림교회'] || {};
-    const sr = sun['서현'] || sun['서현교회'] || {};
+    // 공식 주간예배 통계(2026-08-30)로 확인: 송림 4,439 · 드림(서현) 3,431.
+    // 구글시트의 '서현'/'송림' 컬럼은 그대로가 맞다. 예전에는 여기서 좌우를 바꿔
+    // 서현과 송림 숫자가 뒤바뀐 채 표시됐다.
+    const sh = sun['서현'] || sun['서현교회'] || sun['드림'] || {};   // 서현(드림센터)
+    const sr = sun['송림'] || sun['송림교회'] || {};                  // 송림
     if (Object.keys(sh).length || Object.keys(sr).length) {
       const shTotal = sh['총계'] != null ? sh['총계'] : ((sh['1부']||0)+(sh['2부']||0)+(sh['3부']||0)) || null;
       const srTotal = sr['총계'] != null ? sr['총계'] : ((sr['1부']||0)+(sr['2부']||0)+(sr['3부']||0)) || null;
