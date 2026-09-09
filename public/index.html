@@ -3088,7 +3088,7 @@ function renderCellDist() {
   const dates = fd.map(r => { const d=new Date(r.date); return `${d.getMonth()+1}/${d.getDate()}`; });
   const latest = fd[fd.length-1];
   const titleEl = document.getElementById('cell-trend-title');
-  const cellFields = ['여성','직장(남)','직장(여)','부부(신혼)','시니어(여)','시니어(남)'];
+  const cellFields = ['여다락방','여직장다락방','남다락방','부부다락방','시니어'];
   const cellFieldValue = (x, label) => Number(x?.breakdown?.[label]) || 0;
 
   if (!dist) {
@@ -4217,14 +4217,17 @@ function applyNewData(data) {
     if (Object.keys(dalak).length > 0) {
       const dists = {};
       let totalChul = 0;
-      const cellLabels = ['여성','직장(남)','직장(여)','부부(신혼)','시니어(여)','시니어(남)'];
+      // 「교구 출석 현황표」 시트 구분과 1:1. 시니어는 남/여를 합쳐 하나로 받는다.
+      const cellLabels = ['여다락방','여직장다락방','남다락방','부부다락방','시니어'];
       Object.entries(dalak).forEach(([교구, val]) => {
         if (!val || typeof val !== 'object') return;
         const breakdown = {};
         cellLabels.forEach(label => { breakdown[label] = Number(val[label]) || 0; });
         const newChul = cellLabels.reduce((sum, label) => sum + breakdown[label], 0);
-        const legacyChul = (Number(val['여성'])||0) + (Number(val['남성'])||0)
-                         + (Number(val['직장인'])||0) + (Number(val['부부'])||0);
+        // 예전 이름으로 들어온 자료도 받아 준다
+        const legacyChul = (Number(val['여성'])||0) + (Number(val['직장(남)'])||0)
+                         + (Number(val['직장(여)'])||0) + (Number(val['부부(신혼)'])||0)
+                         + (Number(val['시니어(여)'])||0) + (Number(val['시니어(남)'])||0);
         const chul = newChul || legacyChul;
         dists[교구] = { juk: 0, chul, breakdown, note: val['비고'] || '' };
         totalChul += chul;
@@ -4234,16 +4237,26 @@ function applyNewData(data) {
       if (ci >= 0) D.cell[ci] = cellRec; else D.cell.push(cellRec);
     }
 
-    // ── 교구 순장반 → D.leader ──
-    const sunjang = rec['교구 순장반'] || {};
-    if (Object.keys(sunjang).length > 0) {
+    // ── 순장반 → D.leader ──
+    // 화요순장반(매주 화)과 직장순장반(격주 토)은 주기가 달라 시트에서도 따로 관리한다.
+    // 대시보드에서는 교구별로 합산해 하나의 순장반 지표로 본다.
+    const tue = rec['화요순장반'] || {};
+    const job = rec['직장순장반'] || {};
+    const sunjang = rec['교구 순장반'] || {};   // 예전 형식 호환
+    if (Object.keys(tue).length || Object.keys(job).length || Object.keys(sunjang).length) {
       const dists = {};
       let totalChul = 0;
+      const bump = (교구, n, key) => {
+        if (!dists[교구]) dists[교구] = { juk: 0, chul: 0, tue: 0, job: 0, fJuk: 0, fChul: 0, mJuk: 0, mChul: 0 };
+        dists[교구].chul += n; dists[교구][key] += n; totalChul += n;
+      };
+      const pick = (val) => Number(val?.['인원'] ?? val?.['count'] ?? 0) || 0;
+      Object.entries(tue).forEach(([교구, val]) => { if (val && typeof val === 'object') bump(교구, pick(val), 'tue'); });
+      Object.entries(job).forEach(([교구, val]) => { if (val && typeof val === 'object') bump(교구, pick(val), 'job'); });
       Object.entries(sunjang).forEach(([교구, val]) => {
         if (!val || typeof val !== 'object') return;
-        const chul = (Number(val['화요순장반'])||0) + (Number(val['직장인순장반'])||0);
-        dists[교구] = { juk: 0, chul, fJuk: 0, fChul: 0, mJuk: 0, mChul: 0 };
-        totalChul += chul;
+        bump(교구, Number(val['화요순장반'])||0, 'tue');
+        bump(교구, Number(val['직장순장반'] ?? val['직장인순장반'])||0, 'job');
       });
       const leaderRec = { date, totalJuk: 0, totalChul, dists };
       const li = D.leader.findIndex(r => r.date === date);
