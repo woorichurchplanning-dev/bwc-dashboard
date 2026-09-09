@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       # 어떤 일정으로 깨어났는지에 따라 하는 일이 다르다.
       # 전체 재수집은 Apps Script 실행시간을 8분쯤 쓰므로 하루 한 번만 한다.
