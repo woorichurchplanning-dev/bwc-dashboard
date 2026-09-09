@@ -16,13 +16,19 @@ from openpyxl.utils import get_column_letter
 # 대시보드를 직접 굴리는 사람 — 처음 한 명은 관리자로 두어야 나머지에게 권한을 줄 수 있다
 ADMINS = {'김영환'}
 
+# 주소록에 없거나 틀린 연락처를 여기서 메운다
+PHONE_FIXES = {'신용헌': '010-2857-9658'}
+
+# 주소록 라벨만으로는 담당을 알 수 없는 사람
+EXTRA_TABS = {'이동선': ['sunday','wd','special','yearcomp']}   # 예배담당
+
 TABS = [('sunday','주일예배'), ('youth','청년교구'), ('school','주일학교'),
         ('wd','주중·새벽'), ('district','교구'), ('newfam','새가족'),
         ('special','특별예배'), ('yearcomp','연도비교')]
 
 # 주소록 라벨 → 기본으로 열어 줄 탭
 BY_GROUP = {
-    '교구사역자': ['sunday','district','wd','newfam'],
+    '교구사역자': ['district'],
     '주일학교':   ['school'],
     '교육전도사': ['school'],
     '청년교구':   ['youth','sunday','newfam'],
@@ -40,15 +46,17 @@ def main(src, dst):
         note = (re.search(r'\((.+?)\)', r['Name'] or '') or [None, ''])[1]
         groups = {t.strip() for t in (r['Group Membership'] or '').split(':::')}
         groups = {g for g in groups if g and not g.startswith('*')}
-        phone = re.sub(r'\D', '', r['Phone 1 - Value'] or '')
+        raw_phone = PHONE_FIXES.get(name) or r['Phone 1 - Value'] or ''
+        phone = re.sub(r'\D', '', raw_phone)
         tabs = set()
         for g in groups:
             tabs.update(BY_GROUP.get(g, []))
+        tabs.update(EXTRA_TABS.get(name, []))
         people.append({
             'id': name + (note or ''),
             'name': name,
             'title': r['Name Suffix'] or '',
-            'phone': r['Phone 1 - Value'] or '',
+            'phone': raw_phone,
             'pw': phone[-4:] if len(phone) >= 4 else '',
             'groups': sorted(groups - {'전체교역자','하프사역자이상','남자전임',
                                        '교구남자전임','교구여자전임'}),
