@@ -2611,6 +2611,13 @@ function teamsOf(dept) {
   return [...set].sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
 }
 
+/* 로그인한 사용자가 볼 수 있는 교구 (리더십·소그룹) */
+function myDistricts(all) {
+  const allow = ME?.districts;
+  if (!allow || !allow.length) return all;
+  return all.filter(d => allow.includes(d));
+}
+
 /* 로그인한 사용자가 볼 수 있는 청년부 / 팀 */
 function myYouthDepts() {
   const allow = ME?.youthDepts;
@@ -2987,10 +2994,13 @@ function initLeader() {
   const prev = fd[fd.length-2], dChul = latest && prev ? latest.totalChul-prev.totalChul : 0;
 
   mkKPI('kk-leader', [
-    {label:'총 <span data-tip="적임자 수: 등록된 전체 인원">적</span> (최근)', value:fmt(latest?.totalJuk||0), sub:'순장반 전체', color:'blue'},
     {label:'총 출석 (최근)', value:fmt(latest?.totalChul||0), sub:'순장반 전체', color:'green',
       trend:`${dChul>=0?'▲':'▼'} 전주 ${dChul>=0?'+':''}${fmt(dChul)}`, td:dChul>=0?'up':'dn'},
-    {label:'출석률', value:rate+'%', sub:'출석 ÷ 적', color:'gold'},
+    // 시트에 '적(정원)'이 없으면 0으로 보여주지 않고 출석률 카드도 감춘다
+    ...(latest?.totalJuk > 0 ? [
+      {label:'총 <span data-tip="적임자 수: 등록된 전체 인원">적</span> (최근)', value:fmt(latest.totalJuk), sub:'순장반 전체', color:'blue'},
+      {label:'출석률', value:rate+'%', sub:'출석 ÷ 적', color:'gold'},
+    ] : []),
     {label:'집계 기간', value:fd.length+'주', sub:'필터 적용 기간', color:'teal'},
   ]);
 
@@ -3063,10 +3073,13 @@ function initCell() {
   const prev = fd[fd.length-2], dChul = latest && prev ? latest.totalChul-prev.totalChul : 0;
 
   mkKPI('kk-cell', [
-    {label:'총 <span data-tip="적임자 수: 등록된 전체 인원">적</span> (최근)', value:fmt(latest?.totalJuk||0), sub:'다락방 전체', color:'blue'},
     {label:'총 출석 (최근)', value:fmt(latest?.totalChul||0), sub:'다락방 전체', color:'green',
       trend:`${dChul>=0?'▲':'▼'} 전주 ${dChul>=0?'+':''}${fmt(dChul)}`, td:dChul>=0?'up':'dn'},
-    {label:'출석률', value:rate+'%', sub:'출석 ÷ 적', color:'gold'},
+    // 시트에 '적(정원)'이 없으면 0으로 보여주지 않고 출석률 카드도 감춘다
+    ...(latest?.totalJuk > 0 ? [
+      {label:'총 <span data-tip="적임자 수: 등록된 전체 인원">적</span> (최근)', value:fmt(latest.totalJuk), sub:'다락방 전체', color:'blue'},
+      {label:'출석률', value:rate+'%', sub:'출석 ÷ 적', color:'gold'},
+    ] : []),
     {label:'집계 기간', value:fd.length+'주', sub:'필터 적용 기간', color:'teal'},
   ]);
 

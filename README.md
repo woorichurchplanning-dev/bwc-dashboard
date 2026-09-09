@@ -87,8 +87,12 @@ Blob 저장소에 있고 관리자 화면이 그것을 수정한다.
 ## 배포
 
 ```bash
-vercel deploy --prod --yes      # 로컬에서 수동 배포
+bash scripts/deploy.sh          # 로컬에서 수동 배포 (데이터 먼저 갱신)
 ```
+
+> `vercel deploy` 를 직접 쓰지 말 것. data.json 은 깃에 없어서 내 작업 폴더의
+> 사본이 오래된 상태이고, 그대로 올리면 서버의 최신 데이터를 덮어쓴다.
+> `scripts/deploy.sh` 는 배포 전에 시트에서 데이터를 다시 받아 온다.
 
 Vercel ↔ GitHub 자동 연동은 **안 되어 있다.** Vercel 앱이
 `woorichurchplanning-dev` 조직에 설치되어 있지 않아서다. 대신 GitHub Action이
