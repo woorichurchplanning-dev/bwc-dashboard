@@ -474,7 +474,21 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 .nt[hidden]{ display:none !important; }
 @media (max-width:768px){ .user-chip{ display:none; } }
 
-.wk-card.dist::before{background:linear-gradient(90deg,#7c3aed,#a855f7)}
+/* 주간현황 카드 안의 보조 지표 (교구 순장반, 주중 금요·새벽) */
+.wk-sub { margin-top:10px; padding-top:10px; border-top:1px solid var(--color-border-default); }
+.wk-sub-hdr { display:flex; align-items:baseline; gap:8px; margin-bottom:8px; }
+.wk-sub-row { display:grid; grid-template-columns:1fr auto auto; align-items:baseline;
+  gap:8px; padding:3px 0; }
+.wk-sub-row + .wk-sub-row { border-top:1px solid var(--color-border-default); }
+.wk-sub-name { font-size:11.5px; font-weight:600; color:var(--text3); }
+.wk-sub-total { font-family:var(--font-mono); font-size:17px; font-weight:700;
+  color:var(--text); letter-spacing:-0.02em; }
+.wk-sub-unit { font-size:10.5px; font-weight:500; color:var(--text3); margin-left:2px; }
+.wk-sub-delta { font-size:10.5px; font-weight:700; white-space:nowrap; }
+.wk-sub-delta.up { color:var(--color-positive); }
+.wk-sub-delta.dn { color:var(--color-negative); }
+.wk-sub-online { grid-column:1/-1; font-size:10.5px; color:var(--text3); }
+.wk-sub-row .wk-sub-online:empty { display:none; }
 
 /* ── 연도별 비교 ── */
 .yc-ctl {
@@ -555,18 +569,21 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 .wk-card.wed  .wk-card-top  { background:var(--color-positive); }
 .wk-card.fri  .wk-card-top  { background:#ea580c; }
 .wk-card.dawn .wk-card-top  { background:var(--chart-5); }
+.wk-card.dist .wk-card-top  { background:#0891b2; }
 .wk-card.sun  .wk-card-label { background:var(--color-accent-light); color:var(--color-accent); }
 .wk-card.yu   .wk-card-label { background:#f5f3ff; color:#7c3aed; }
 .wk-card.sc   .wk-card-label { background:#fffbeb; color:#e5a823; }
 .wk-card.wed  .wk-card-label { background:var(--color-positive-bg); color:var(--color-positive); }
 .wk-card.fri  .wk-card-label { background:#fff4ee; color:#ea580c; }
 .wk-card.dawn .wk-card-label { background:#ecfeff; color:var(--chart-5); }
+.wk-card.dist .wk-card-label { background:#ecfeff; color:#0891b2; }
 .wk-card.sun  .wk-card-num { color:var(--color-accent); }
 .wk-card.yu   .wk-card-num { color:#7c3aed; }
 .wk-card.sc   .wk-card-num { color:#e5a823; }
 .wk-card.wed  .wk-card-num { color:var(--color-positive); }
 .wk-card.fri  .wk-card-num { color:#ea580c; }
 .wk-card.dawn .wk-card-num { color:var(--chart-5); }
+.wk-card.dist .wk-card-num { color:#0891b2; }
 
 /* Card internals */
 .wk-card-meta { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
@@ -2163,14 +2180,24 @@ function initHome() {
           return c && p ? inlineDelta(c.totalChul, p.totalChul, '전주') : '';
         })(),
         d2: '',
+        // 다락방과 순장반은 성격이 달라 합치지 않는다. 순장반은 자기 총계와
+        // 화요·직장 내역을 따로 보여 준다.
         extraHtml: (() => {
           const l = D.leader.find(r => r.date === lW);
           if (!l) return '';
-          const tue = Object.values(l.dists || {}).reduce((a, d) => a + (d.tue || 0), 0);
-          const job = Object.values(l.dists || {}).reduce((a, d) => a + (d.job || 0), 0);
-          return `<div class="wk-locs">
-            <div class="wk-loc"><div class="wk-loc-name">화요순장반</div><div class="wk-loc-num">${fmt(tue)}</div></div>
-            <div class="wk-loc"><div class="wk-loc-name">직장순장반</div><div class="wk-loc-num">${fmt(job)}</div></div>
+          const pl = D.leader.find(r => r.date === pW);
+          const sum = k => Object.values(l.dists || {}).reduce((a, d) => a + (d[k] || 0), 0);
+          const d = pl ? l.totalChul - pl.totalChul : null;
+          return `<div class="wk-sub">
+            <div class="wk-sub-hdr">
+              <span class="wk-sub-name">순장반</span>
+              <span class="wk-sub-total">${fmt(l.totalChul)}<span class="wk-sub-unit">명</span></span>
+              ${d == null ? '' : `<span class="wk-sub-delta ${d >= 0 ? 'up' : 'dn'}">${d >= 0 ? '▲ +' : '▼ '}${fmt(d)}</span>`}
+            </div>
+            <div class="wk-locs">
+              <div class="wk-loc"><div class="wk-loc-name">화요</div><div class="wk-loc-num">${fmt(sum('tue'))}</div></div>
+              <div class="wk-loc"><div class="wk-loc-name">직장</div><div class="wk-loc-num">${fmt(sum('job'))}</div></div>
+            </div>
           </div>`;
         })(),
       },
@@ -2207,27 +2234,28 @@ function initHome() {
         })(),
       },
       // Row 2: 수요, 금요, 새벽
-      { cls:'wed', label:'수요예배', dateStr:`${fmtDate(wedDt)} (${fmtDay(wedDt)})`,
+      { cls:'wed', label:'주중예배', dateStr:'수요 · 금요 · 새벽',
         mainNum: wedOff ? fmt(wedOff) : '–',
-        unit: '명 · 현장',
+        unit: '명 · 수요 현장',
         d1: inlineDelta(wedOff||null, pWedOff, '전주'),
         d2: inlineDelta(wedOff||null, yWedOff, '전년'),
-        extraHtml: wedOn ? `<div class="wk-card-online">온라인&nbsp; <span class="sub-num">${fmt(wedOn)}</span>명</div>` : '',
-      },
-      { cls:'fri', label:'금요기도회', dateStr:`${fmtDate(friDt)} (${fmtDay(friDt)})`,
-        mainNum: friOff ? fmt(friOff) : '–',
-        unit: '명 · 현장',
-        d1: inlineDelta(friOff||null, pFriOff, '전주'),
-        d2: inlineDelta(friOff||null, yFriOff, '전년'),
-        extraHtml: friOn ? `<div class="wk-card-online">온라인&nbsp; <span class="sub-num">${fmt(friOn)}</span>명</div>` : '',
-      },
-      { cls:'dawn', label:'새벽기도', dateStr:`${fmtDate(monDt)} – ${fmtDate(satDt)}`,
-        mainNum: dawnOff != null ? fmt(dawnOff) : '–',
-        unit: '명 · 일 평균 현장',
-        d1: inlineDelta(dawnOff, pDawnOff, '전주'),
-        d2: inlineDelta(dawnOff, yDawnOff, '전년'),
-        extraHtml: dawnOn != null ? `
-          <div class="wk-card-online">온라인 평균&nbsp; <span class="sub-num">${fmt(dawnOn)}</span>명</div>` : '',
+        // 세 예배를 한 장에 모은다. 각각 카드를 두면 자리를 많이 차지하고
+        // 서로 성격이 가까워 함께 보는 편이 읽기 쉽다.
+        extraHtml: (() => {
+          const row = (name, off, on, dPrev, unit) => off == null && on == null ? '' : `
+            <div class="wk-sub-row">
+              <span class="wk-sub-name">${name}</span>
+              <span class="wk-sub-total">${off != null ? fmt(off) : '–'}<span class="wk-sub-unit">${unit || '명'}</span></span>
+              ${dPrev == null ? '<span></span>' : `<span class="wk-sub-delta ${dPrev >= 0 ? 'up' : 'dn'}">${dPrev >= 0 ? '▲ +' : '▼ '}${fmt(dPrev)}</span>`}
+              <span class="wk-sub-online">${on ? `온라인 ${fmt(on)}` : ''}</span>
+            </div>`;
+          const dFri = friOff && pFriOff ? friOff - pFriOff : null;
+          const dDawn = dawnOff != null && pDawnOff != null ? dawnOff - pDawnOff : null;
+          return `<div class="wk-sub">
+            ${row('금요기도회', friOff || null, friOn, dFri)}
+            ${row('새벽기도', dawnOff, dawnOn, dDawn, '명/일')}
+          </div>`;
+        })(),
       },
     ];
 
