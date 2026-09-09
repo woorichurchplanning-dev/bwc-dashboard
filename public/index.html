@@ -475,20 +475,36 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 @media (max-width:768px){ .user-chip{ display:none; } }
 
 /* 주간현황 카드 안의 보조 지표 (교구 순장반, 주중 금요·새벽) */
-.wk-sub { margin-top:10px; padding-top:10px; border-top:1px solid var(--color-border-default); }
-.wk-sub-hdr { display:flex; align-items:baseline; gap:8px; margin-bottom:8px; }
-.wk-sub-row { display:grid; grid-template-columns:1fr auto auto; align-items:baseline;
-  gap:8px; padding:3px 0; }
-.wk-sub-row + .wk-sub-row { border-top:1px solid var(--color-border-default); }
+.wk-sub { margin-top:10px; padding-top:10px; border-top:1px solid var(--color-border-default);
+  display:flex; align-items:flex-end; justify-content:space-between; gap:10px; }
+.wk-sub-kvs { text-align:right; }
+.wk-sub-kv { display:flex; align-items:baseline; justify-content:flex-end; gap:6px; line-height:1.5; }
+.wk-sub-kv span { font-size:10.5px; color:var(--text3); }
+.wk-sub-kv b { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text2); }
 .wk-sub-name { font-size:11.5px; font-weight:600; color:var(--text3); }
 .wk-sub-total { font-family:var(--font-mono); font-size:17px; font-weight:700;
   color:var(--text); letter-spacing:-0.02em; }
 .wk-sub-unit { font-size:10.5px; font-weight:500; color:var(--text3); margin-left:2px; }
-.wk-sub-delta { font-size:10.5px; font-weight:700; white-space:nowrap; }
+.wk-sub-delta { font-size:10.5px; font-weight:700; white-space:nowrap; margin-top:2px; }
 .wk-sub-delta.up { color:var(--color-positive); }
 .wk-sub-delta.dn { color:var(--color-negative); }
-.wk-sub-online { grid-column:1/-1; font-size:10.5px; color:var(--text3); }
-.wk-sub-row .wk-sub-online:empty { display:none; }
+
+/* 주중예배는 세 예배를 나란히 두려고 두 칸을 쓴다 */
+.wk-card.span2 { grid-column:span 2; }
+.wk-tri { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.wk-tri-cell + .wk-tri-cell { border-left:1px solid var(--color-border-default); padding-left:12px; }
+.wk-tri-name { font-size:11.5px; font-weight:600; color:var(--text3); margin-bottom:4px; }
+.wk-tri-num { font-family:var(--font-mono); font-size:26px; font-weight:700;
+  letter-spacing:-0.02em; line-height:1.05; }
+.wk-tri-unit { font-size:10.5px; font-weight:500; color:var(--text3); margin-left:2px; }
+.wk-tri-delta { font-size:10.5px; font-weight:700; margin-top:4px; }
+.wk-tri-delta.up { color:var(--color-positive); }
+.wk-tri-delta.dn { color:var(--color-negative); }
+.wk-tri-online { font-size:10.5px; color:var(--text3); margin-top:2px; min-height:14px; }
+.wk-tri-cell.wed  .wk-tri-num { color:var(--color-positive); }
+.wk-tri-cell.fri  .wk-tri-num { color:#ea580c; }
+.wk-tri-cell.dawn .wk-tri-num { color:var(--chart-5); }
+
 
 /* ── 연도별 비교 ── */
 .yc-ctl {
@@ -642,6 +658,10 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 }
 @media (max-width:480px) {
   .wk-grid { grid-template-columns:1fr; }
+  .wk-card.span2 { grid-column:span 1; }
+  .wk-tri { grid-template-columns:1fr; gap:0; }
+  .wk-tri-cell + .wk-tri-cell { border-left:0; padding-left:0;
+    border-top:1px solid var(--color-border-default); margin-top:8px; padding-top:8px; }
 }
 @media print {
   .wk-grid { grid-template-columns:repeat(6,1fr) !important; }
@@ -736,10 +756,10 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   </div>
   <div class="cg">
     <div class="cc"><div class="ch"><div><div class="ct">청년교구 예배 추이</div><div class="cs">전체 합계</div></div><div class="cpf"><button class="cpb" onclick="sw('youth')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-youth',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-youth">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-youth',1)">▲</button></div></div></div><canvas id="c-hm-youth"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct">주중예배 추이</div><div class="cs">수요·금요 현장 출석</div></div><div class="cpf"><button class="cpb" onclick="sw('wd')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-wd',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-wd">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-wd',1)">▲</button></div></div></div><canvas id="c-hm-wd"></canvas></div>
+    <div class="cc"><div class="ch"><div><div class="ct">주중예배 추이</div><div class="cs">수요·금요·새벽 현장 출석</div></div><div class="cpf"><button class="cpb" onclick="sw('wd')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-wd',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-wd">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-wd',1)">▲</button></div></div></div><canvas id="c-hm-wd"></canvas></div>
   </div>
   <div class="cg">
-    <div class="cc"><div class="ch"><div><div class="ct">새벽기도 추이</div><div class="cs">일 평균 현장 인원</div></div><div class="cpf"><button class="cpb" onclick="sw('wd')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-dawn',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-dawn">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-dawn',1)">▲</button></div></div></div><canvas id="c-hm-dawn"></canvas></div>
+    <div class="cc"><div class="ch"><div><div class="ct">교구 추이</div><div class="cs">다락방·순장반 출석</div></div><div class="cpf"><button class="cpb" onclick="sw('district')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-dist',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-dist">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-dist',1)">▲</button></div></div></div><canvas id="c-hm-dist"></canvas></div>
     <div class="cc"><div class="ch"><div><div class="ct">새가족 현황</div><div class="cs">등록요청자·등록가능자</div></div><div class="cpf"><button class="cpb" onclick="sw('newfam')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-newfam',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-newfam">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-newfam',1)">▲</button></div></div></div><canvas id="c-hm-newfam"></canvas></div>
   </div>
 </section>
@@ -1927,7 +1947,13 @@ function mkChart(id, type, labels, datasets, opts={}) {
             callback: function(value){
               if (isH) return this.getLabelForValue(value);   // 가로 막대: 범주 라벨 그대로
               return isPct ? value + '%' : fmt(value);
-            } } }
+            } } },
+      // 규모가 크게 다른 계열을 한 차트에 함께 그릴 때만 오른쪽 축을 연다.
+      // 같은 축에 두면 작은 쪽이 바닥에 붙어 변화가 보이지 않는다.
+      ...(opts.y2 ? { y2:{ position:'right', grace:'25%',
+          grid:{ drawOnChartArea:false },
+          ticks:{ font:{size:10}, color:'#94a3b8', callback:val => fmt(val) },
+          title:{ display:true, text:opts.y2, font:{size:9}, color:'#94a3b8' } } } : {})
     }
   }});
   if (onDrill) ctx.style.cursor = 'pointer';
@@ -2172,31 +2198,31 @@ function initHome() {
             ${sunSongrim  ? `<div class="wk-loc"><div class="wk-loc-name">송림</div><div class="wk-loc-num">${fmt(sunSongrim)}</div></div>`  : ''}
           </div>` : '',
       },
-      { cls:'dist', label:'교구', dateStr:'다락방 · 순장반',
+      { cls:'dist', label:'다락방', dateStr:'교구 소그룹',
         mainNum: (() => { const c = D.cell.find(r => r.date === lW); return c ? fmt(c.totalChul) : '–'; })(),
-        unit: '명 · 다락방',
+        unit: '명 · 현장',
         d1: (() => {
           const c = D.cell.find(r => r.date === lW), p = D.cell.find(r => r.date === pW);
           return c && p ? inlineDelta(c.totalChul, p.totalChul, '전주') : '';
         })(),
         d2: '',
-        // 다락방과 순장반은 성격이 달라 합치지 않는다. 순장반은 자기 총계와
-        // 화요·직장 내역을 따로 보여 준다.
+        // 다락방과 순장반은 성격이 다른 모임이라 합계를 하나로 묶지 않는다.
+        // 순장반은 선 아래에 따로 세우고, 화요·직장 내역은 오른쪽에 붙인다.
         extraHtml: (() => {
           const l = D.leader.find(r => r.date === lW);
           if (!l) return '';
           const pl = D.leader.find(r => r.date === pW);
-          const sum = k => Object.values(l.dists || {}).reduce((a, d) => a + (d[k] || 0), 0);
+          const sum = k => Object.values(l.dists || {}).reduce((a, x) => a + (x[k] || 0), 0);
           const d = pl ? l.totalChul - pl.totalChul : null;
           return `<div class="wk-sub">
-            <div class="wk-sub-hdr">
-              <span class="wk-sub-name">순장반</span>
-              <span class="wk-sub-total">${fmt(l.totalChul)}<span class="wk-sub-unit">명</span></span>
-              ${d == null ? '' : `<span class="wk-sub-delta ${d >= 0 ? 'up' : 'dn'}">${d >= 0 ? '▲ +' : '▼ '}${fmt(d)}</span>`}
+            <div>
+              <div class="wk-sub-name">순장반</div>
+              <div><span class="wk-sub-total">${fmt(l.totalChul)}</span><span class="wk-sub-unit">명</span></div>
+              ${d == null ? '' : `<div class="wk-sub-delta ${d >= 0 ? 'up' : 'dn'}">${d >= 0 ? '▲ +' : '▼ '}${fmt(d)} 전주</div>`}
             </div>
-            <div class="wk-locs">
-              <div class="wk-loc"><div class="wk-loc-name">화요</div><div class="wk-loc-num">${fmt(sum('tue'))}</div></div>
-              <div class="wk-loc"><div class="wk-loc-name">직장</div><div class="wk-loc-num">${fmt(sum('job'))}</div></div>
+            <div class="wk-sub-kvs">
+              <div class="wk-sub-kv"><span>화요</span><b>${fmt(sum('tue'))}</b></div>
+              <div class="wk-sub-kv"><span>직장</span><b>${fmt(sum('job'))}</b></div>
             </div>
           </div>`;
         })(),
@@ -2233,27 +2259,25 @@ function initHome() {
           return items ? `<div class="wk-breakdown">${items}</div>` : '';
         })(),
       },
-      // Row 2: 수요, 금요, 새벽
-      { cls:'wed', label:'주중예배', dateStr:'수요 · 금요 · 새벽',
-        mainNum: wedOff ? fmt(wedOff) : '–',
-        unit: '명 · 수요 현장',
-        d1: inlineDelta(wedOff||null, pWedOff, '전주'),
-        d2: inlineDelta(wedOff||null, yWedOff, '전년'),
-        // 세 예배를 한 장에 모은다. 각각 카드를 두면 자리를 많이 차지하고
-        // 서로 성격이 가까워 함께 보는 편이 읽기 쉽다.
-        extraHtml: (() => {
-          const row = (name, off, on, dPrev, unit) => off == null && on == null ? '' : `
-            <div class="wk-sub-row">
-              <span class="wk-sub-name">${name}</span>
-              <span class="wk-sub-total">${off != null ? fmt(off) : '–'}<span class="wk-sub-unit">${unit || '명'}</span></span>
-              ${dPrev == null ? '<span></span>' : `<span class="wk-sub-delta ${dPrev >= 0 ? 'up' : 'dn'}">${dPrev >= 0 ? '▲ +' : '▼ '}${fmt(dPrev)}</span>`}
-              <span class="wk-sub-online">${on ? `온라인 ${fmt(on)}` : ''}</span>
+      // Row 2: 주중예배 (수요·금요·새벽)
+      { cls:'wed', label:'주중예배', dateStr:'수요 · 금요 · 새벽', span2:true,
+        // 세 예배를 한 장에 모으되 두 칸 너비를 쓴다. 한 칸에 넣으면 수요만
+        // 크게 나오고 금요·새벽은 곁가지처럼 보여 서로 비교가 안 된다.
+        bodyHtml: (() => {
+          const cell = (kind, name, off, on, dPrev, unit) => `
+            <div class="wk-tri-cell ${kind}">
+              <div class="wk-tri-name">${name}</div>
+              <div><span class="wk-tri-num">${off != null ? fmt(off) : '–'}</span><span class="wk-tri-unit">${unit || '명'}</span></div>
+              ${dPrev == null ? '<div class="wk-tri-delta"></div>' : `<div class="wk-tri-delta ${dPrev >= 0 ? 'up' : 'dn'}">${dPrev >= 0 ? '▲ +' : '▼ '}${fmt(dPrev)} 전주</div>`}
+              <div class="wk-tri-online">${on ? `온라인 ${fmt(on)}` : ''}</div>
             </div>`;
-          const dFri = friOff && pFriOff ? friOff - pFriOff : null;
+          const dWed  = wedOff  != null && pWedOff  != null ? wedOff - pWedOff : null;
+          const dFri  = friOff  && pFriOff  ? friOff - pFriOff : null;
           const dDawn = dawnOff != null && pDawnOff != null ? dawnOff - pDawnOff : null;
-          return `<div class="wk-sub">
-            ${row('금요기도회', friOff || null, friOn, dFri)}
-            ${row('새벽기도', dawnOff, dawnOn, dDawn, '명/일')}
+          return `<div class="wk-tri">
+            ${cell('wed',  '수요예배',   wedOff || null, wedOn,  dWed)}
+            ${cell('fri',  '금요기도회', friOff || null, friOn,  dFri)}
+            ${cell('dawn', '새벽기도',   dawnOff,        dawnOn, dDawn, '명/일')}
           </div>`;
         })(),
       },
@@ -2262,13 +2286,14 @@ function initHome() {
     reportEl.innerHTML = `
       <div class="wk-grid">
         ${cards.map(c => `
-          <div class="wk-card ${c.cls}">
+          <div class="wk-card ${c.cls}${c.span2 ? ' span2' : ''}">
             <div class="wk-card-top"></div>
             <div class="wk-card-body">
               <div class="wk-card-meta">
                 <span class="wk-card-label">${c.label}</span>
                 <span class="wk-card-date">${c.dateStr}</span>
               </div>
+              ${c.bodyHtml != null ? c.bodyHtml : `
               <div class="wk-num-row">
                 <div>
                   <div class="wk-card-num">${c.mainNum}</div>
@@ -2276,7 +2301,7 @@ function initHome() {
                 </div>
                 <div class="wk-inline-deltas">${c.d1}${c.d2}</div>
               </div>
-              ${c.extraHtml}
+              ${c.extraHtml}`}
             </div>
           </div>`).join('')}
       </div>
@@ -2284,7 +2309,7 @@ function initHome() {
   }
 
   // ── 추이 차트 (기본 8주) ────────────────────────────────────────────────
-  const IDS8 = ['c-hm-adult','c-hm-school','c-hm-youth','c-hm-wd','c-hm-dawn','c-hm-newfam'];
+  const IDS8 = ['c-hm-adult','c-hm-school','c-hm-youth','c-hm-wd','c-hm-dist','c-hm-newfam'];
   IDS8.forEach(id => { if (HOME_PERIODS[id] == null) HOME_PERIODS[id] = 8; });
   const fw8 = getHomeChartWeeks(8);
   const wl8 = getWL(fw8);
@@ -2299,16 +2324,21 @@ function initHome() {
   // 3. 청년교구 추이 (합계 기본)
   mkChart('c-hm-youth', 'line', wl8, [lds('청년 합계', fw8.map(youthTotal), C.p, true)], homeChartOpts(fw8));
 
-  // 4. 주중예배 추이 (수요/금요 현장)
-  mkChart('c-hm-wd', 'line', wl8, [
-    lds('수요 현장', fw8.map(w => v(D.weekday[w]?.wed_off) || null), C.b),
-    lds('금요 현장', fw8.map(w => v(D.weekday[w]?.fri_off) || null), C.or),
-  ], homeChartOpts(fw8));
+  // 4. 주중예배 추이 (수요·금요·새벽 현장)
+  //    새벽은 일평균이라 자릿수가 달라 오른쪽 축에 따로 그린다.
+  const wdSets = fw2 => [
+    lds('수요 현장', fw2.map(w => v(D.weekday[w]?.wed_off) || null), C.b),
+    lds('금요 현장', fw2.map(w => v(D.weekday[w]?.fri_off) || null), C.or),
+    { ...ldsDash('새벽 일평균', fw2.map(w => dawnAvg(w, 'off')), C.id), yAxisID:'y2', pointRadius:2 },
+  ];
+  mkChart('c-hm-wd', 'line', wl8, wdSets(fw8), homeChartOpts(fw8, {y2:'새벽 일평균'}));
 
-  // 5. 새벽기도 추이 (현장 일평균)
-  mkChart('c-hm-dawn', 'line', wl8, [
-    lds('현장 일평균', fw8.map(w => dawnAvg(w, 'off')), C.id, true),
-  ], homeChartOpts(fw8));
+  // 5. 교구 추이 (다락방·순장반)
+  const distSets = fw2 => [
+    lds('다락방', fw2.map(w => { const r = D.cell.find(x => x.date === w);   return r ? r.totalChul : null; }), C.t, true),
+    lds('순장반', fw2.map(w => { const r = D.leader.find(x => x.date === w); return r ? r.totalChul : null; }), C.p),
+  ];
+  mkChart('c-hm-dist', 'line', wl8, distSets(fw8), homeChartOpts(fw8));
 
   // 5. 새가족 추이
   if (D.newFamily && D.newFamily.length > 0) {
@@ -2335,13 +2365,10 @@ function initHome() {
     mkChart('c-hm-youth', 'line', getWL(fw2), [lds('청년 합계', fw2.map(youthTotal), C.p, true)], homeChartOpts(fw2));
   };
   HOME_RENDERERS['c-hm-wd'] = fw2 => {
-    mkChart('c-hm-wd', 'line', getWL(fw2), [
-      lds('수요 현장', fw2.map(w => v(D.weekday[w]?.wed_off) || null), C.b),
-      lds('금요 현장', fw2.map(w => v(D.weekday[w]?.fri_off) || null), C.or),
-    ], homeChartOpts(fw2));
+    mkChart('c-hm-wd', 'line', getWL(fw2), wdSets(fw2), homeChartOpts(fw2, {y2:'새벽 일평균'}));
   };
-  HOME_RENDERERS['c-hm-dawn'] = fw2 => {
-    mkChart('c-hm-dawn', 'line', getWL(fw2), [lds('현장 일평균', fw2.map(w => dawnAvg(w, 'off')), C.id, true)], homeChartOpts(fw2));
+  HOME_RENDERERS['c-hm-dist'] = fw2 => {
+    mkChart('c-hm-dist', 'line', getWL(fw2), distSets(fw2), homeChartOpts(fw2));
   };
   HOME_RENDERERS['c-hm-newfam'] = fw2 => {
     if (!D.newFamily?.length) return;
