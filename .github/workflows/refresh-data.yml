@@ -6,8 +6,9 @@ on:
   repository_dispatch:
     types: [sheet-updated]
   schedule:
-    # 두 시간마다 '최근 4주만' 받아 얹는다 (Apps Script 실행시간이 짧다)
-    - cron: '0 */2 * * *'
+    # 15분마다 '최근 3주만' 받아 얹는다. 이게 평소의 반영 통로다.
+    # (Apps Script 는 한 주에 10초쯤 걸려 3주면 30초 안팎이다.)
+    - cron: '*/15 * * * *'
     # 하루 한 번 전체를 다시 만든다 — UTC 19:30 = KST 04:30
     - cron: '30 19 * * *'
   workflow_dispatch:       # 수동 실행 버튼
@@ -32,10 +33,10 @@ jobs:
       # 어떤 일정으로 깨어났는지에 따라 하는 일이 다르다.
       # 전체 재수집은 Apps Script 실행시간을 8분쯤 쓰므로 하루 한 번만 한다.
       - name: 최근 주차만 반영
-        if: github.event_name != 'schedule' || github.event.schedule == '0 */2 * * *'
+        if: github.event_name != 'schedule' || github.event.schedule == '*/15 * * * *'
         env:
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
-        run: node scripts/refresh-recent.mjs 4
+        run: node scripts/refresh-recent.mjs 3
 
       - name: 전체 다시 수집
         if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
