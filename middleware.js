@@ -2,7 +2,8 @@ import { verifySession, readCookie, SESSION_COOKIE } from './lib/auth.js';
 
 export const config = {
   // 로그인 화면·인증 API·아이콘류만 열어 두고 나머지는 전부 막는다.
-  matcher: ['/((?!login\\.html|setup\\.html|password\\.html|api/login|api/logout|api/bootstrap|api/password|manifest\\.json|icon-|apple-touch-icon|favicon|sw\\.js|_vercel).*)'],
+  // api/ingest 는 사람이 아니라 Apps Script가 부르므로 쿠키가 없다 — 자체 비밀키로 막는다.
+  matcher: ['/((?!login\\.html|setup\\.html|password\\.html|api/login|api/logout|api/bootstrap|api/password|api/ingest|manifest\\.json|icon-|apple-touch-icon|favicon|sw\\.js|_vercel).*)'],
 };
 
 export default async function middleware(request) {

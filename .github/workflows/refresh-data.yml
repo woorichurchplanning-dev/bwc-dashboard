@@ -1,11 +1,15 @@
 name: Refresh dashboard data
 
 on:
-  repository_dispatch:     # 시트 수정 시 Apps Script가 즉시 트리거 (event_type: sheet-updated)
+  # 남겨는 두지만 지금 이걸 쏘는 곳은 없다. 즉시 반영은 Apps Script가
+  # /api/ingest 로 직접 밀어 넣는 쪽(DashboardPush.js)이 맡는다.
+  repository_dispatch:
     types: [sheet-updated]
   schedule:
-    - cron: '0 20 * * *'   # 매일 UTC 20:00 = KST 05:00 (백스톱)
-    - cron: '0 4 * * 1'    # 월 UTC 04:00 = KST 13:00 (주말 집계 반영)
+    # 두 시간마다 '최근 4주만' 받아 얹는다 (Apps Script 실행시간이 짧다)
+    - cron: '0 */2 * * *'
+    # 하루 한 번 전체를 다시 만든다 — UTC 19:30 = KST 04:30
+    - cron: '30 19 * * *'
   workflow_dispatch:       # 수동 실행 버튼
 
 permissions:
@@ -25,21 +29,26 @@ jobs:
         with:
           node-version: 20
 
-      - name: Fetch latest data → data.json
+      # 어떤 일정으로 깨어났는지에 따라 하는 일이 다르다.
+      # 전체 재수집은 Apps Script 실행시간을 8분쯤 쓰므로 하루 한 번만 한다.
+      - name: 최근 주차만 반영
+        if: github.event_name != 'schedule' || github.event.schedule == '0 */2 * * *'
+        env:
+          INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
+        run: node scripts/refresh-recent.mjs 4
+
+      - name: 전체 다시 수집
+        if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
         run: bash scripts/refresh-data.sh
 
-      # data.json은 커밋하지 않는다. 레포가 public이라 커밋하면 출석 데이터가
-      # raw.githubusercontent.com 으로 그대로 공개된다. 대신 생성한 파일을
-      # 그대로 Vercel에 올려 로그인 뒤에서만 열리게 한다.
-      - name: Sanity check
+      - name: 형식 확인
+        if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
         run: |
-          test -s public/data.json || { echo "data.json이 비어 있음 — 배포 중단"; exit 1; }
+          test -s public/data.json || { echo "data.json이 비어 있음 — 중단"; exit 1; }
           node -e "const d=require('./public/data.json'); if(!d.weekCount) throw new Error('weekCount 없음'); console.log('주차:', d.weekCount, d.weekRange.join(' ~ '))"
 
-      # 예전에는 vercel deploy 로 파일을 올렸는데, 배포 토큰이 회전하거나
-      # scope가 어긋나면 데이터 갱신이 통째로 멈췄다. 이제 Blob에만 쓴다.
-      # 이 토큰은 Blob 스토어 하나에만 쓰이고 회전하지 않는다.
-      - name: Publish data
+      - name: 전체 스냅샷 올리기
+        if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
         env:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
           STORE_KEY: ${{ secrets.STORE_KEY }}

@@ -1315,20 +1315,30 @@ function hasAnyDashboardData(weekKey) {
   );
 }
 
+/* 시트에 방금 넣은 값이 바로 보이도록, 최근 몇 주는 스냅샷에 이미 값이 있어도
+   시트에서 다시 받아 온다. 예전에는 '아무 값도 없는 주'만 받아 왔다. 그래서
+   주일예배가 이미 들어온 주에 청년교구를 새로 넣으면, 다음 스냅샷이 만들어질
+   때까지(하루 뒤) 화면에 나오지 않았다.
+   Apps Script 는 한 주에 10초쯤 걸리므로 주 수를 늘리면 그만큼 오래 기다린다.
+   더 지난 주차는 두 시간마다 도는 서버 쪽 갱신이 맡는다. */
+const LIVE_REFRESH_WEEKS = 2;
+
 function getHomeAutoFetchWeeks() {
   const periods = Object.values(HOME_PERIODS).filter(v => v !== undefined);
   const wantedWeeks = periods.length
     ? Math.min(13, Math.max(...periods.map(v => v === 0 ? 13 : v)))
     : 8;
-  return getHomeChartWeeks(wantedWeeks).filter(weekKey =>
-    !hasAnyDashboardData(weekKey) && !HOME_AUTO_FETCHED_WEEKS.has(weekKey)
-  );
+  const charted = getHomeChartWeeks(wantedWeeks).filter(w => !hasAnyDashboardData(w));
+  const recent  = getHomeChartWeeks(LIVE_REFRESH_WEEKS);
+  return [...new Set([...recent, ...charted])]
+    .filter(w => !HOME_AUTO_FETCHED_WEEKS.has(w))
+    .sort();
 }
+
+let LAST_LIVE_CHECK = 0;
 
 async function fetchMissingHomeWeeks() {
   if (HOME_AUTO_FETCHING) return;
-  const home = document.getElementById('s-home');
-  if (!home?.classList.contains('on')) return;
   const missingWeeks = getHomeAutoFetchWeeks();
   if (!missingWeeks.length) return;
 
@@ -1341,17 +1351,40 @@ async function fetchMissingHomeWeeks() {
       fetch(APPS_SCRIPT_URL + '?weekKeys=' + batch.join(','))
         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     ));
+    let got = false;
     results.forEach(raw => {
-      if (raw?.success && raw.data && Object.keys(raw.data).length > 0) applyNewData(raw.data);
+      if (raw?.success && raw.data && Object.keys(raw.data).length > 0) { applyNewData(raw.data); got = true; }
     });
+    LAST_LIVE_CHECK = Date.now();
+    if (!got) return;
     mergeHist();
-    initHome();
+    updateHeaderDate();
+    redrawCurrentTab();
+    updateSyncStatus('시트 기준 · ' + fmtStamp(new Date().toISOString()));
   } catch (e) {
-    console.warn('홈 그래프 추가 주차 조회 실패:', e);
+    console.warn('시트 최신 주차 조회 실패:', e);
   } finally {
     HOME_AUTO_FETCHING = false;
   }
 }
+
+/* 지금 열려 있는 탭만 다시 그린다 — 나머지는 열 때 새로 그려진다 */
+function redrawCurrentTab() {
+  Object.keys(DONE).forEach(k => { DONE[k] = false; });
+  const cur = document.querySelector('.nt.on');
+  const idx = cur ? Array.from(document.querySelectorAll('.nt')).indexOf(cur) : 0;
+  const tab = TABS[idx >= 0 ? idx : 0];
+  DONE[tab] = true;
+  INITS[tab]?.();
+}
+
+/* 다른 창을 보다 돌아오면 그 사이 들어온 입력을 다시 확인한다 */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (Date.now() - LAST_LIVE_CHECK < 3 * 60 * 1000) return;
+  getHomeChartWeeks(LIVE_REFRESH_WEEKS).forEach(w => HOME_AUTO_FETCHED_WEEKS.delete(w));
+  fetchMissingHomeWeeks();
+});
 
 function updatePeriodLabel(fw) {
   const n = fw.length, el = document.getElementById('flt-period');

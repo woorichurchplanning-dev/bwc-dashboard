@@ -16,4 +16,13 @@ test -s public/data.json || { echo "data.json 이 비어 있음 — 배포 중�
 node -e "const d=require('./public/data.json'); if(!d.weekCount) throw new Error('weekCount 없음');
   console.log('▸ 배포할 데이터: '+d.weekCount+'주 · '+d.weekRange.join(' ~ '))"
 
+# 화면이 실제로 읽는 것은 Blob 이다. 배포만 하면 오래된 Blob 이 그대로 남아
+# 아무도 새 데이터를 못 본다. 그래서 Blob 에도 같이 올린다.
+if [ ! -f .env.local ]; then
+  vercel env pull .env.local --environment=production --yes >/dev/null
+  PULLED=1
+fi
+node scripts/push-data.mjs
+[ "${PULLED:-}" = 1 ] && rm -f .env.local
+
 vercel deploy --prod --yes
