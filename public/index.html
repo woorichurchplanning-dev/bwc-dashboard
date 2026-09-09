@@ -4558,7 +4558,8 @@ async function boot() {
   // ① 정적 스냅샷(data.json)을 먼저 로드 — GitHub Pages CDN에서 즉시 응답 (기존 36초 Apps Script 호출 대체)
   let snapshotAt = '';
   try {
-    const res = await fetch('data.json', { cache: 'no-cache' });
+    // 데이터는 /api/data 가 준다. Blob에 최신본이 있으면 그것, 없으면 배포 사본.
+    const res = await fetch('/api/data', { cache: 'no-store' });
     if (res.ok) {
       const snap = await res.json();
       if (snap && snap.data) applyNewData(snap.data);

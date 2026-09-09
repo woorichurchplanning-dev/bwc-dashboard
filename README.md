@@ -51,11 +51,16 @@ Blob 저장소에 있고 관리자 화면이 그것을 수정한다.
 ## 데이터가 들어오는 경로
 
 ```
-구글 시트 ──(Apps Script doGet)──> GitHub Action ──> public/data.json ──> Vercel 배포
+구글 시트 ──(Apps Script doGet)──> GitHub Action ──> Blob 저장소 ──> /api/data ──> 대시보드
                                     매일 KST 05:00
                                     월 KST 13:00
                                     시트 수정 시 즉시(repository_dispatch)
 ```
+
+데이터 갱신에는 **배포가 필요 없다.** 예전에는 Action이 `vercel deploy` 로 파일을
+올렸는데, 배포 토큰이 회전하거나 scope가 어긋나면 갱신이 통째로 멈췄다(실제로 멈췄다).
+지금은 Action이 Blob에만 쓰고, 배포는 코드가 바뀔 때만 한다.
+Blob 토큰은 그 스토어 하나에만 쓰이고 회전하지 않는다.
 
 - **data.json은 레포에 커밋하지 않는다.** 레포가 public이라 커밋하면 출석 데이터가
   `raw.githubusercontent.com` 으로 그대로 공개된다. Action이 만들어 바로 배포한다.
@@ -105,12 +110,13 @@ Vercel ↔ GitHub 자동 연동은 **안 되어 있다.** Vercel 앱이
 |---|---|
 | `SESSION_SECRET` | 세션 쿠키 HMAC 서명 키 |
 | `STORE_KEY` | 계정 저장소 AES-256-GCM 암호화 키 |
-| `BLOB_READ_WRITE_TOKEN` | 계정 저장소(Blob) 접근. 이 스토어 하나에만 유효 |
+| `BLOB_READ_WRITE_TOKEN` | 계정·주간데이터 저장소(Blob) 접근. 이 스토어 하나에만 유효 |
 | `BOOTSTRAP_CODE` | 최초 관리자 생성 코드 |
 
 ### GitHub Secrets
 
-`VERCEL_TOKEN` · `VERCEL_ORG_ID` · `VERCEL_PROJECT_ID`
+`BLOB_READ_WRITE_TOKEN` · `STORE_KEY` — 데이터 갱신에 쓰인다.
+(`VERCEL_TOKEN` 등은 더 이상 필요 없다. 배포는 로컬에서 `scripts/deploy.sh` 로 한다.)
 
 > `VERCEL_TOKEN` 은 현재 개인 계정 토큰이다. 이 프로젝트 전용 토큰으로 교체하는 편이 안전하다.
 
