@@ -7,3 +7,6 @@ node_modules
 public/data.json
 .env*
 .env.local
+
+# 교역자 명단·초기 비밀번호는 공개 레포에 두지 않는다.
+scripts/roster.csv
