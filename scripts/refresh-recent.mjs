@@ -7,7 +7,7 @@
    합치고, 전체는 하루 한 번만 다시 만든다.
 
      node scripts/refresh-recent.mjs [주수]
-   필요한 환경변수: INGEST_URL, INGEST_SECRET */
+   필요한 환경변수: INGEST_SECRET, SHEET_READ_KEY */
 const WEEKS = Number(process.argv[2] || 4);
 const URL_ = process.env.INGEST_URL || 'https://bwc-dashboard.vercel.app/api/ingest';
 const SECRET = process.env.INGEST_SECRET || '';
@@ -26,7 +26,9 @@ for (let i = 0; i < WEEKS; i++) {
               String(d.getDate()).padStart(2, '0')].join('-'));
 }
 
-const res = await fetch(`${GAS}?weekKeys=${weeks.join(',')}`, { redirect: 'follow' });
+const READ_KEY = process.env.SHEET_READ_KEY || '';
+const res = await fetch(`${GAS}?weekKeys=${weeks.join(',')}` +
+  (READ_KEY ? `&key=${encodeURIComponent(READ_KEY)}` : ''), { redirect: 'follow' });
 if (!res.ok) { console.error(`Apps Script HTTP ${res.status}`); process.exit(1); }
 const raw = await res.json();
 if (!raw?.success || !raw.data) { console.error('Apps Script 응답 오류:', raw?.error || '형식 오류'); process.exit(1); }

@@ -6,6 +6,7 @@ set -euo pipefail
 
 URL="${APPS_SCRIPT_URL:-https://script.google.com/macros/s/AKfycbxJ1NDZxTpDsaVkb7GqlesBvlM_9lBBv2s4f53chZdqbHVnLZqOfVT1qzXVfsXW7qxA/exec}"
 WEEKS_BACK="${WEEKS_BACK:-130}"
+READ_KEY="${SHEET_READ_KEY:-}"        # Apps Script 조회 키 (없으면 그냥 호출)
 
 cd "$(dirname "$0")/.."
 
@@ -26,7 +27,7 @@ echo "fetching in $(wc -l < "$TMP/batches.txt") parallel batches (each ~30-40s).
 
 # 2) 배치 병렬 조회 (Apps Script는 302 리다이렉트 → curl -L 필요, 요청당 최대 12주)
 while read -r idx keys; do
-  curl -sL "$URL?weekKeys=$keys" -o "$TMP/b$idx.json" &
+  curl -sL "$URL?weekKeys=$keys${READ_KEY:+&key=$READ_KEY}" -o "$TMP/b$idx.json" &
 done < "$TMP/batches.txt"
 wait
 

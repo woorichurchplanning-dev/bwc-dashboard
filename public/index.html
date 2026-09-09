@@ -4159,7 +4159,9 @@ function ss2(sec,sub,opts){
 }
 
 // ── 구글 시트 연동 (JSONP) ──
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJ1NDZxTpDsaVkb7GqlesBvlM_9lBBv2s4f53chZdqbHVnLZqOfVT1qzXVfsXW7qxA/exec';
+/* 시트는 서버(/api/sheet)를 거쳐 읽는다. 예전처럼 Apps Script 주소를 화면에
+   두면, 그 주소만 알면 로그인 없이 전체 자료를 받아 갈 수 있다. */
+const APPS_SCRIPT_URL = '/api/sheet';
 
 /* 오늘 기준으로 최근 N주의 일요일 날짜 배열 생성 */
 function genSundays(weeksBack) {

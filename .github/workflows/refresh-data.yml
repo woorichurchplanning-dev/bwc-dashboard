@@ -36,10 +36,13 @@ jobs:
         if: github.event_name != 'schedule' || github.event.schedule == '*/15 * * * *'
         env:
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
+          SHEET_READ_KEY: ${{ secrets.SHEET_READ_KEY }}
         run: node scripts/refresh-recent.mjs 3
 
       - name: 전체 다시 수집
         if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
+        env:
+          SHEET_READ_KEY: ${{ secrets.SHEET_READ_KEY }}
         run: bash scripts/refresh-data.sh
 
       - name: 형식 확인
