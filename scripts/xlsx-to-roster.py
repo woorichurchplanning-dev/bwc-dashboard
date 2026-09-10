@@ -21,7 +21,7 @@ def main(src, dst):
         if not uid:
             continue
         admin = checked(get('관리자'))
-        tabs = 'home/' + '/'.join(k for k, label in TABS if checked(get(label)))
+        tabs = 'home/' + '/'.join(k for k, label in TABS if checked(get(label)))   # 주간현황은 항상
         cell = lambda h: str(get(h) or '').strip().replace(',', '/')
         pw = str(get('초기비밀번호') or '').strip()
         out.append(','.join([uid, str(get('이름') or '').strip(),

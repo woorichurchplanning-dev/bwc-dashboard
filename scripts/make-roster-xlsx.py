@@ -22,6 +22,19 @@ PHONE_FIXES = {'신용헌': '010-2857-9658'}
 # 주소록 라벨만으로는 담당을 알 수 없는 사람
 EXTRA_TABS = {'이동선': ['sunday','wd','special','yearcomp']}   # 예배담당
 
+# 주소록에 없는 실제 직책. 라벨에는 교구사역자/주일학교 정도만 있어서
+# 안내부·주차·디렉터 같은 것은 여기 적어 둔다.
+DUTIES = {
+    '고두빈': '안내부', '김성민': '안내부',
+    '남세권': '주차',   '구귀현': '주차',
+    '은주성': '디렉터', '박기범': '디렉터', '이진환': '디렉터',
+    '오경제': '행정목사', '한승우': '기획팀장',
+    '김영환': '기획팀',  '지원일': '기획팀',
+}
+
+# 전체를 보는 사람 — 행정목사·기획팀장·기획팀
+FULL_ACCESS = {'오경제', '한승우', '김영환', '지원일'}
+
 TABS = [('sunday','주일예배'), ('youth','청년교구'), ('school','주일학교'),
         ('wd','주중·새벽'), ('district','교구'), ('newfam','새가족'),
         ('special','특별예배'), ('yearcomp','연도비교')]
@@ -52,6 +65,8 @@ def main(src, dst):
         for g in groups:
             tabs.update(BY_GROUP.get(g, []))
         tabs.update(EXTRA_TABS.get(name, []))
+        if name in FULL_ACCESS:
+            tabs = {k for k, _ in TABS}
         people.append({
             'id': name + (note or ''),
             'name': name,
@@ -63,13 +78,14 @@ def main(src, dst):
             'tabs': tabs,
             'school': note if note else '',
             'admin': name in ADMINS,
+            'duty': DUTIES.get(name, ''),
         })
 
     wb = Workbook()
     ws = wb.active
     ws.title = '계정'
 
-    head = ['아이디','이름','직분','연락처','초기비밀번호','관리자'] + \
+    head = ['아이디','이름','직분','직책','연락처','초기비밀번호','관리자','주간현황'] + \
            [label for _, label in TABS] + \
            ['주일학교 담당부서','담당 청년부','담당 팀','담당 교구','주소록 라벨']
     ws.append(head)
@@ -82,13 +98,14 @@ def main(src, dst):
         c = ws.cell(row=1, column=i)
         c.font = Font(bold=True, color='FFFFFF', size=10)
         c.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-        c.fill = tab_fill if 7 <= i <= 6 + len(TABS) else \
-                 (scope_fill if i > 6 + len(TABS) else hdr_fill)
+        c.fill = tab_fill if 9 <= i <= 8 + len(TABS) else \
+                 (scope_fill if i > 8 + len(TABS) else hdr_fill)
         c.border = Border(bottom=thin)
 
     for p in sorted(people, key=lambda x: (not x['groups'], x['groups'], x['name'])):
         ws.append([
-            p['id'], p['name'], p['title'], p['phone'], p['pw'], 'O' if p['admin'] else '',
+            p['id'], p['name'], p['title'], p['duty'], p['phone'], p['pw'],
+            'O' if p['admin'] else '', 'O',        # 주간현황은 모두에게 열려 있다
             *['O' if k in p['tabs'] else '' for k, _ in TABS],
             p['school'], '', '', '', ' / '.join(p['groups']),
         ])
@@ -97,19 +114,19 @@ def main(src, dst):
     # 주소록에 담당 라벨이 없어 주간현황만 열린 사람
     warn = PatternFill('solid', fgColor='FFF3CD')
     for row in range(2, ws.max_row + 1):
-        if not ws.cell(row=row, column=5).value or not ws.cell(row=row, column=len(head)).value:
+        if not ws.cell(row=row, column=6).value or not ws.cell(row=row, column=len(head)).value:
             for col in range(1, len(head) + 1):
                 ws.cell(row=row, column=col).fill = warn
 
     last = ws.max_row
     dv = DataValidation(type='list', formula1='"O"', allow_blank=True)
     ws.add_data_validation(dv)
-    for col in range(6, 7 + len(TABS)):          # 관리자 + 탭 칸
+    for col in range(7, 9 + len(TABS)):          # 관리자 · 주간현황 + 탭 칸
         dv.add(f'{get_column_letter(col)}2:{get_column_letter(col)}{last}')
         for row in range(2, last + 1):
             ws.cell(row=row, column=col).alignment = Alignment(horizontal='center')
 
-    widths = [14, 9, 7, 15, 12, 8] + [10] * len(TABS) + [20, 14, 16, 14, 26]
+    widths = [14, 9, 7, 10, 15, 12, 8, 10] + [10] * len(TABS) + [20, 14, 16, 14, 26]
     for i, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
     ws.row_dimensions[1].height = 34
@@ -120,12 +137,13 @@ def main(src, dst):
         ['대시보드 계정·권한 체크표'], [],
         ['아이디', '교역자 이름. 동명이인만 뒤에 담당을 붙였습니다.'],
         ['초기비밀번호', '휴대폰 뒷 4자리. 첫 로그인에서 본인이 바꾸게 되어 있습니다.'],
+        ['직책', '주소록에 없는 실제 담당(안내부·주차·디렉터·기획팀 등)입니다.'],
+        ['주간현황', '모두에게 열려 있어 끄고 켤 수 없습니다. 확인용 표시입니다.'],
         ['관리자', 'O 를 넣으면 모든 탭이 열리고, 다른 사람 권한도 줄 수 있습니다.'],
         ['노란 줄', '연락처가 없어 비밀번호가 비었거나, 담당 라벨이 없어 주간현황만'],
         ['', '열린 사람입니다. 채워 주셔야 계정이 만들어집니다.'],
         [], ['탭 칸 (주일예배 ~ 연도비교)'],
         ['', 'O = 그 탭을 볼 수 있음. 비우면 안 보입니다.'],
-        ['', '주간현황은 모두에게 열려 있어 칸이 없습니다.'],
         [], ['담당 범위 칸 (오른쪽 네 칸)'],
         ['', '비워 두면 그 탭 안의 전체가 보입니다.'],
         ['', '적으면 적은 것만 보입니다. 둘 이상은 / 로 나눕니다.'],
