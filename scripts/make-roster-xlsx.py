@@ -14,7 +14,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.utils import get_column_letter
 
 # 대시보드를 직접 굴리는 사람 — 처음 한 명은 관리자로 두어야 나머지에게 권한을 줄 수 있다
-ADMINS = {'김영환'}
+ADMINS = {'김영환', '지원일'}
 
 # 주소록에 없거나 틀린 연락처를 여기서 메운다
 PHONE_FIXES = {'신용헌': '010-2857-9658'}
