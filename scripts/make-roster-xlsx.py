@@ -35,6 +35,12 @@ DUTIES = {
 # 전체를 보는 사람 — 행정목사·기획팀장·기획팀
 FULL_ACCESS = {'오경제', '한승우', '김영환', '지원일'}
 
+# 교역자 주소록에 없는 사람 (사무직 등)
+EXTRA_PEOPLE = [
+    {'name': '이승지', 'title': '사무장', 'duty': '사무장',
+     'phone': '010-3204-4464', 'groups': [], 'tabs': set()},
+]
+
 TABS = [('sunday','주일예배'), ('youth','청년교구'), ('school','주일학교'),
         ('wd','주중·새벽'), ('district','교구'), ('newfam','새가족'),
         ('special','특별예배'), ('yearcomp','연도비교')]
@@ -79,6 +85,14 @@ def main(src, dst):
             'school': note if note else '',
             'admin': name in ADMINS,
             'duty': DUTIES.get(name, ''),
+        })
+
+    for x in EXTRA_PEOPLE:
+        people.append({
+            'id': x['name'], 'name': x['name'], 'title': x['title'], 'phone': x['phone'],
+            'pw': re.sub(r'\D', '', x['phone'])[-4:], 'groups': x['groups'],
+            'tabs': set(x['tabs']), 'school': '',
+            'admin': x['name'] in ADMINS, 'duty': x['duty'],
         })
 
     wb = Workbook()
