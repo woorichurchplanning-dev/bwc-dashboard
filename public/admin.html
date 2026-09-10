@@ -64,6 +64,27 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 .msg.warn{background:var(--warn-bg);color:var(--warn)}
 .row-actions{display:flex;gap:6px;justify-content:flex-end}
 @media (max-width:720px){main{padding:14px}.card{padding:16px}th:nth-child(4),td:nth-child(4){display:none}}
+
+/* ── 부서별 묶음 ── */
+.summary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.stat{background:var(--bg2,#f6f8fa);border:1px solid var(--line,rgba(0,0,0,.08));
+  border-radius:9px;padding:8px 12px;font-size:12px;line-height:1.35}
+.stat b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em}
+.stat.warn b{color:var(--warn)}
+.grp{border:1px solid var(--line,rgba(0,0,0,.08));border-radius:10px;margin-bottom:10px;overflow:hidden}
+.grp-hd{display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
+  padding:11px 14px;background:var(--bg2,#f6f8fa);border:0;font:inherit}
+.grp-hd:hover{background:var(--bg3,#eef1f4)}
+.grp-name{font-weight:700;font-size:13.5px}
+.grp-count{font-size:12px;color:var(--text3);font-variant-numeric:tabular-nums}
+.grp-spacer{flex:1}
+.grp-arrow{color:var(--text3);font-size:11px;transition:transform .15s}
+.grp.closed .grp-arrow{transform:rotate(-90deg)}
+.grp.closed .grp-body{display:none}
+.grp-body{overflow-x:auto}
+.grp-body table{margin:0}
+.grp-body th{background:#fff}
+#q{padding:9px 12px;border:1px solid var(--line,rgba(0,0,0,.15));border-radius:9px;font:inherit;font-size:13px}
 </style>
 </head>
 <body>
@@ -82,10 +103,10 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
     <h2>계정 목록</h2>
     <div class="desc">교역자별로 볼 수 있는 탭을 지정합니다. 주간현황은 모두에게 공통으로 열립니다.
       <b>초기 비밀번호</b> 표시가 있는 계정은 아직 본인이 비밀번호를 바꾸지 않은 상태입니다.</div>
-    <div style="overflow-x:auto"><table id="tbl">
-      <thead><tr><th>아이디</th><th>이름</th><th>역할</th><th>권한 탭</th><th></th></tr></thead>
-      <tbody id="rows"><tr><td colspan="5" style="color:var(--text3)">불러오는 중…</td></tr></tbody>
-    </table></div>
+    <div class="summary" id="summary"></div>
+    <input type="search" id="q" placeholder="이름 · 아이디 · 부서로 찾기" autocomplete="off"
+           oninput="renderRows()" style="width:100%;margin:0 0 14px">
+    <div id="groups"><div style="color:var(--text3);font-size:13px">불러오는 중…</div></div>
   </div>
 
   <div class="card">
@@ -95,6 +116,9 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
       <div class="grid">
         <div><label for="f-id">아이디</label><input type="text" id="f-id" autocapitalize="off" spellcheck="false" placeholder="김철수" required></div>
         <div><label for="f-name">이름</label><input type="text" id="f-name" placeholder="김철수 목사" required></div>
+        <div><label for="f-dept">부서</label>
+          <input type="text" id="f-dept" list="dept-list" placeholder="교구 / 주일학교 / 청년교구 …" autocomplete="off">
+          <datalist id="dept-list"></datalist></div>
         <div><label for="f-role">역할</label>
           <select id="f-role"><option value="staff">담당 (staff)</option><option value="admin">관리자 (admin)</option></select></div>
         <div><label for="f-pw">초기 비밀번호</label><input type="password" id="f-pw" autocomplete="new-password" placeholder="전화번호 뒷자리 등 4자 이상"></div>
@@ -157,17 +181,88 @@ function renderChecks() {
     `<label><input type="checkbox" name="yteam" value="${t}"> ${t}</label>`).join('');
   $('f-districts').innerHTML = (STATE.districts || []).map(d =>
     `<label><input type="checkbox" name="dist" value="${d}"> ${d}</label>`).join('');
+  // 이미 쓰고 있는 부서도 함께 고를 수 있게 넣는다
+  const seen = [...new Set([...(STATE.depts || []), ...STATE.users.map(u => u.dept).filter(Boolean)])];
+  $('dept-list').innerHTML = seen.map(d => `<option value="${d}">`).join('');
+}
+
+function deptOf(u) {
+  if (u.dept) return u.dept;
+  // 부서를 안 넣은 계정은 볼 수 있는 것으로 미루어 묶는다
+  if (u.role === 'admin') return '관리자';
+  const t = u.effectiveTabs || [];
+  if (t.includes('district') && t.length <= 2) return '교구';
+  if (t.includes('school') && t.length <= 2) return '주일학교';
+  if (t.includes('youth')) return '청년교구';
+  if (t.length <= 1) return '미지정';
+  return '기타';
+}
+
+function renderSummary() {
+  const us = STATE.users;
+  const init = us.filter(u => u.mustChangePassword).length;
+  const admins = us.filter(u => u.role === 'admin').length;
+  $('summary').innerHTML = [
+    ['전체 계정', us.length, ''],
+    ['관리자', admins, ''],
+    ['비밀번호 미변경', init, init ? 'warn' : ''],
+    ['부서', new Set(us.map(deptOf)).size, ''],
+  ].map(([k, v, cls]) => `<div class="stat ${cls}"><b>${v}</b>${k}</div>`).join('');
+}
+
+const CLOSED = new Set();
+function toggleGrp(name) {
+  CLOSED.has(name) ? CLOSED.delete(name) : CLOSED.add(name);
+  renderRows();
 }
 
 function renderRows() {
-  const tb = $('rows');
+  renderSummary();
+  const box = $('groups');
+  const q = ($('q')?.value || '').trim().toLowerCase();
+  const match = u => !q || [u.id, u.name, deptOf(u)].join(' ').toLowerCase().includes(q);
+  const shown = STATE.users.filter(match);
+
   if (!STATE.users.length) {
-    tb.innerHTML = '<tr><td colspan="5" style="color:var(--text3)">계정이 없습니다. 아래에서 추가하세요.</td></tr>';
+    box.innerHTML = '<div style="color:var(--text3);font-size:13px">계정이 없습니다. 아래에서 추가하세요.</div>';
     return;
   }
+  if (!shown.length) {
+    box.innerHTML = '<div style="color:var(--text3);font-size:13px">찾는 계정이 없습니다.</div>';
+    return;
+  }
+
+  const groups = new Map();
+  shown.forEach(u => {
+    const d = deptOf(u);
+    if (!groups.has(d)) groups.set(d, []);
+    groups.get(d).push(u);
+  });
+  // 관리자를 맨 위로, 나머지는 인원이 많은 순
+  const order = [...groups.entries()].sort((a, b) =>
+    (a[0] === '관리자' ? -1 : b[0] === '관리자' ? 1 : 0) || b[1].length - a[1].length || a[0].localeCompare(b[0]));
+
+  box.innerHTML = order.map(([name, list]) => {
+    const init = list.filter(u => u.mustChangePassword).length;
+    const closed = CLOSED.has(name) ? ' closed' : '';
+    return `<div class="grp${closed}">
+      <button class="grp-hd" onclick="toggleGrp('${name.replace(/'/g, "\\'")}')">
+        <span class="grp-arrow">▼</span>
+        <span class="grp-name">${name}</span>
+        <span class="grp-count">${list.length}명${init ? ` · 비밀번호 미변경 ${init}` : ''}</span>
+        <span class="grp-spacer"></span>
+      </button>
+      <div class="grp-body"><table>
+        <thead><tr><th>아이디</th><th>이름</th><th>역할</th><th>권한 탭</th><th></th></tr></thead>
+        <tbody>${list.map(rowHtml).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }).join('');
+}
+
+function rowHtml(u) {
   const labelOf = (k) => (STATE.tabDefs.find(t => t.key === k) || {}).label || k;
-  tb.innerHTML = STATE.users.map(u => `
-    <tr>
+  return `<tr>
       <td><code>${u.id}</code></td>
       <td>${u.name}${u.mustChangePassword ? ' <span class="badge init">초기 비밀번호</span>' : ''}</td>
       <td><span class="badge ${u.role}">${u.role === 'admin' ? '관리자' : '담당'}</span></td>
@@ -182,7 +277,7 @@ function renderRows() {
         <button onclick="edit('${u.id}')">수정</button>
         <button class="danger" onclick="remove('${u.id}')" ${u.id === STATE.me ? 'disabled' : ''}>삭제</button>
       </div></td>
-    </tr>`).join('');
+    </tr>`;
 }
 
 function resetForm() {
@@ -203,6 +298,7 @@ function edit(id) {
   STATE.editing = id;
   $('f-id').value = u.id; $('f-id').disabled = true;
   $('f-name').value = u.name;
+  $('f-dept').value = u.dept || '';
   $('f-role').value = u.role;
   $('f-pw').value = '';
   document.querySelectorAll('#f-tabs input').forEach(c => {
@@ -241,6 +337,7 @@ $('form').addEventListener('submit', async (e) => {
   const payload = {
     id: $('f-id').value.trim().toLowerCase(),
     name: $('f-name').value.trim(),
+    dept: $('f-dept').value.trim(),
     role,
     tabs: role === 'admin' ? '*' : [...document.querySelectorAll('#f-tabs input:checked')].map(c => c.value),
     schoolDepts: role === 'admin' ? [] : [...document.querySelectorAll('#f-school input:checked')].map(c => c.value),

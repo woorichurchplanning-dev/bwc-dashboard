@@ -12,7 +12,7 @@ def main(src, dst):
     head = [str(c.value or '').strip() for c in ws[1]]
     idx = {h: i for i, h in enumerate(head)}
     out = ['# 권한 체크표에서 자동 생성. 직접 고치지 말고 xlsx 를 고치세요.',
-           '아이디,이름,역할,탭,주일학교부서,청년부,담당팀,교구,초기비밀번호']
+           '아이디,이름,부서,역할,탭,주일학교부서,청년부,담당팀,교구,초기비밀번호']
     checked = lambda v: str(v or '').strip().upper() in ('O', 'V', 'X', 'Y', '1', 'TRUE', '예')
     n = 0
     for row in ws.iter_rows(min_row=2, values_only=True):
@@ -24,7 +24,19 @@ def main(src, dst):
         tabs = 'home/' + '/'.join(k for k, label in TABS if checked(get(label)))   # 주간현황은 항상
         cell = lambda h: str(get(h) or '').strip().replace(',', '/')
         pw = str(get('초기비밀번호') or '').strip()
-        out.append(','.join([uid, str(get('이름') or '').strip(),
+        # 부서는 직책이 있으면 그것, 없으면 주소록 라벨에서 고른다.
+        # 행정목사·기획팀장은 직책일 뿐 따로 부서가 아니라 기획팀으로 묶는다.
+        DUTY_TO_DEPT = {'행정목사': '기획팀', '기획팀장': '기획팀',
+                        '사무장': '사무', '예배담당': '예배'}
+        label = str(get('주소록 라벨') or '')
+        dept = str(get('직책') or '').strip()
+        dept = DUTY_TO_DEPT.get(dept, dept)
+        if not dept:
+            for cand in ('기획팀', '청년교구', '주일학교', '교육전도사', '교구사역자'):
+                if cand in label:
+                    dept = {'교구사역자': '교구', '교육전도사': '주일학교'}.get(cand, cand)
+                    break
+        out.append(','.join([uid, str(get('이름') or '').strip(), dept,
                              'admin' if admin else 'staff', '' if admin else tabs,
                              cell('주일학교 담당부서'), cell('담당 청년부'),
                              cell('담당 팀'), cell('담당 교구'), pw]))

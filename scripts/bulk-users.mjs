@@ -3,7 +3,7 @@
      1) vercel env pull .env.local --environment=production
      2) node scripts/bulk-users.mjs scripts/roster.csv           # 미리보기
      3) node scripts/bulk-users.mjs scripts/roster.csv --apply   # 실제 생성
-   CSV 열: 아이디,이름,역할,탭,주일학교부서,청년부,담당팀,교구,초기비밀번호
+   CSV 열: 아이디,이름,부서,역할,탭,주일학교부서,청년부,담당팀,교구,초기비밀번호
    (여러 값은 / 로 구분. 예: leader/cell, 중등부/고등부, 1청년부 2팀/1청년부 3팀)
    초기비밀번호가 빈 행은 건너뛴다. 기존 아이디는 권한만 갱신하고 비밀번호는 두지 않는다. */
 import { readFileSync } from 'node:fs';
@@ -42,7 +42,7 @@ const plan = [];
 const skipped = [];
 
 for (const line of rows) {
-  const [rawId, name, role = 'staff', tabsRaw = '', deptsRaw = '',
+  const [rawId, name, dept = '', role = 'staff', tabsRaw = '', deptsRaw = '',
          youthRaw = '', teamRaw = '', distRaw = '', pw = ''] =
     line.split(',').map(s => (s || '').trim());
   const id = normId(rawId);
@@ -60,7 +60,7 @@ for (const line of rows) {
   const youthDepts  = pickList(youthRaw, YOUTH_DEPTS);
   const youthTeams  = pickList(teamRaw, YOUTH_TEAMS);
   const districts   = pickList(distRaw, DISTRICTS);
-  plan.push({ id, name, role: role === 'admin' ? 'admin' : 'staff',
+  plan.push({ id, name, dept, role: role === 'admin' ? 'admin' : 'staff',
               tabs, schoolDepts, youthDepts, youthTeams, districts, pw, exists });
 }
 
@@ -81,7 +81,7 @@ if (skipped.length) { console.log('\n건너뛴 행:'); skipped.forEach(s => cons
 if (!apply) { console.log('\n미리보기입니다. 실제로 만들려면 --apply 를 붙이세요.'); process.exit(0); }
 
 for (const p of plan) {
-  const rec = { id: p.id, name: p.name, role: p.role, tabs: p.tabs,
+  const rec = { id: p.id, name: p.name, dept: p.dept, role: p.role, tabs: p.tabs,
                 schoolDepts: p.schoolDepts, youthDepts: p.youthDepts,
                 youthTeams: p.youthTeams, districts: p.districts,
                 updatedAt: new Date().toISOString() };

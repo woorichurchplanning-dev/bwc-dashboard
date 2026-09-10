@@ -1,6 +1,6 @@
 import { verifySession, readCookie, SESSION_COOKIE, hashPassword } from '../lib/auth.js';
 import { ALL_TABS, TAB_DEFS, grantsOf, ID_RE, normId, MIN_INITIAL_PASSWORD,
-         SCHOOL_DEPTS, YOUTH_DEPTS, YOUTH_TEAMS, DISTRICTS } from '../lib/users.js';
+         SCHOOL_DEPTS, YOUTH_DEPTS, YOUTH_TEAMS, DISTRICTS, DEPTS } from '../lib/users.js';
 import { loadStore, saveStore, canWrite } from '../lib/store.js';
 
 const clean = (s, max = 40) => String(s ?? '').trim().slice(0, max);
@@ -10,7 +10,7 @@ const pick = (arr, allowed) => (Array.isArray(arr) ? arr.map(x => clean(x)).filt
 const publicView = (u) => {
   const g = grantsOf(u);
   return {
-    id: u.id, name: u.name, role: u.role,
+    id: u.id, name: u.name, role: u.role, dept: u.dept || '',
     tabs: u.tabs === '*' ? '*' : (u.tabs || []),
     effectiveTabs: g.tabs,
     schoolDepts: u.schoolDepts || [],
@@ -35,6 +35,7 @@ export default async function handler(req, res) {
       readOnly: readOnly || !canWrite(),
       me: s.u,
       tabDefs: TAB_DEFS,
+      depts: DEPTS,
       schoolDepts: SCHOOL_DEPTS,
       youthDepts: YOUTH_DEPTS,
       youthTeams: YOUTH_TEAMS,
@@ -62,6 +63,7 @@ export default async function handler(req, res) {
       const name = clean(body.name, 40);
       if (!name) return res.status(400).json({ error: 'bad_name', message: '이름을 입력하세요.' });
 
+      const dept = clean(body.dept, 20);
       const role = body.role === 'admin' ? 'admin' : 'staff';
       const tabs = role === 'admin' ? '*'
         : (body.tabs === '*' ? '*' : pick(body.tabs, ALL_TABS));
@@ -82,7 +84,7 @@ export default async function handler(req, res) {
 
       if (i < 0) {
         if (!cred) return res.status(400).json({ error: 'password_required', message: '새 계정은 비밀번호가 필요합니다.' });
-        users.push({ id, name, role, tabs, schoolDepts, youthDepts, youthTeams, districts,
+        users.push({ id, name, dept, role, tabs, schoolDepts, youthDepts, youthTeams, districts,
                      ...cred, updatedAt: new Date().toISOString() });
       } else {
         // 마지막 관리자의 권한을 내리지 못하게 막는다
@@ -90,7 +92,7 @@ export default async function handler(req, res) {
             && users.filter(u => u.role === 'admin').length <= 1) {
           return res.status(400).json({ error: 'last_admin', message: '마지막 관리자의 역할은 바꿀 수 없습니다.' });
         }
-        Object.assign(users[i], { name, role, tabs, schoolDepts, youthDepts, youthTeams, districts,
+        Object.assign(users[i], { name, dept, role, tabs, schoolDepts, youthDepts, youthTeams, districts,
                                   updatedAt: new Date().toISOString() }, cred || {});
       }
     } else if (req.method === 'DELETE') {
