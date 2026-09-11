@@ -49,7 +49,7 @@ for (const line of rows) {
   if (!ID_RE.test(id)) { skipped.push(`${rawId}: 아이디 형식`); continue; }
   if (!name) { skipped.push(`${id}: 이름 없음`); continue; }
 
-  const exists = users.findIndex(u => u.id === id);
+  const exists = users.findIndex(u => u.id.toLowerCase() === id.toLowerCase());
   if (!pw && exists < 0) { skipped.push(`${id}: 초기 비밀번호 없음(신규라 필요)`); continue; }
   if (pw && pw.length < MIN_INITIAL_PASSWORD) { skipped.push(`${id}: 비밀번호가 너무 짧음`); continue; }
 

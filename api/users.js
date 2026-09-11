@@ -53,7 +53,8 @@ export default async function handler(req, res) {
 
   const body = req.body || {};
   const id = normId(clean(body.id, 20));
-  const i = users.findIndex(u => u.id === id);
+  const sameId = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+  const i = users.findIndex(u => sameId(u.id, id));
 
   try {
     if (req.method === 'POST' || req.method === 'PUT') {

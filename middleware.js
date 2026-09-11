@@ -1,13 +1,45 @@
 import { verifySession, readCookie, SESSION_COOKIE } from './lib/auth.js';
 
 export const config = {
-  // 로그인 화면·인증 API·아이콘류만 열어 두고 나머지는 전부 막는다.
-  // api/ingest 는 사람이 아니라 Apps Script가 부르므로 쿠키가 없다 — 자체 비밀키로 막는다.
-  matcher: ['/((?!login\\.html|setup\\.html|password\\.html|api/login|api/logout|api/bootstrap|api/password|api/ingest|manifest\\.json|icon-|apple-touch-icon|favicon|sw\\.js|_vercel).*)'],
+  // 아이콘·폰트 같은 정적 파일만 빼고 전부 거친다. 예전에는 로그인 화면이
+  // 아예 미들웨어를 안 타서 크롤러 차단을 걸 자리가 없었다.
+  matcher: ['/((?!_vercel|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|woff2?)$).*)'],
 };
+
+/* 학습·수집용 봇은 받지 않는다.
+
+   대시보드는 로그인 뒤에 있어 어차피 자료에 닿지 못하지만, 로그인 화면과
+   robots.txt 는 열려 있으므로 문 앞에서 돌려보낸다. 사람이 쓰는 브라우저는
+   이 목록에 없으므로 영향이 없다. */
+const BOT_UA = /(GPTBot|OAI-SearchBot|ChatGPT-User|ClaudeBot|Claude-Web|anthropic-ai|PerplexityBot|Perplexity-User|CCBot|Google-Extended|Applebot-Extended|Bytespider|Amazonbot|meta-externalagent|FacebookBot|Diffbot|cohere-ai|Omgilibot|ImagesiftBot|YouBot|Timpibot|Scrapy|python-requests|node-fetch|axios\/|Go-http-client|libwww-perl|Wget|HeadlessChrome)/i;
+
+/* 로그인 없이 열어 두는 곳 */
+const PUBLIC_PATHS = new Set([
+  '/login.html', '/setup.html', '/password.html', '/robots.txt',
+  '/manifest.json', '/sw.js', '/favicon.ico',
+  '/api/login', '/api/logout', '/api/bootstrap', '/api/password', '/api/ingest',
+]);
+const isPublic = (p) =>
+  PUBLIC_PATHS.has(p) || p.startsWith('/icon-') || p.startsWith('/apple-touch-icon') || p.startsWith('/favicon');
 
 export default async function middleware(request) {
   const url = new URL(request.url);
+
+  // ① 학습용 수집기는 무엇이든 주지 않는다.
+  //    robots.txt 는 읽을 수 있게 두고, api/ingest 는 시트가 부르는 자리라
+  //    브라우저가 아니므로 빼 둔다(그쪽은 자체 비밀키로 막혀 있다).
+  const ua = request.headers.get('user-agent') || '';
+  const exempt = url.pathname === '/robots.txt' || url.pathname === '/api/ingest';
+  if (!exempt && (BOT_UA.test(ua) || !ua)) {
+    return new Response('Not available.', {
+      status: 403,
+      headers: { 'content-type': 'text/plain; charset=utf-8', 'x-robots-tag': 'noindex, nofollow, noai' },
+    });
+  }
+
+  // ② 로그인 없이 여는 곳은 그대로 통과
+  if (isPublic(url.pathname)) return;
+
   const token = readCookie(request.headers.get('cookie'), SESSION_COOKIE);
   const session = await verifySession(token, process.env.SESSION_SECRET || '');
 

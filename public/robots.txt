@@ -1,0 +1,28 @@
+# 이 대시보드는 교회 내부 자료입니다. 색인도 학습도 허락하지 않습니다.
+# 로그인 뒤에 있어 크롤러가 실제 자료에 닿지는 못하지만, 뜻을 분명히 밝혀 둡니다.
+User-agent: *
+Disallow: /
+
+# 학습용 수집기 — 위 규칙으로 이미 막히지만 이름을 따로 적어 둔다
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: anthropic-ai
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: CCBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Bytespider
+User-agent: Amazonbot
+User-agent: meta-externalagent
+User-agent: FacebookBot
+User-agent: Diffbot
+User-agent: cohere-ai
+User-agent: Omgilibot
+User-agent: ImagesiftBot
+User-agent: YouBot
+User-agent: Timpibot
+Disallow: /
