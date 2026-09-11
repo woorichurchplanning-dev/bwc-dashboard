@@ -870,6 +870,9 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
       <div class="cc"><div class="ch"><div><div class="ct" id="sun-chart-title">서현·송림 장년 출석 추이 (지난 12주)</div></div></div><canvas id="c-sun-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">온라인 예배 추이</div><div class="cs">현장 인원만 제외</div></div></div><canvas id="c-sun-grand"></canvas></div>
     </div>
+    <div class="cc"><div class="ch"><div><div class="ct">주별 출석 상세</div><div class="cs">서현·송림 부별 현장 출석</div></div></div>
+      <div style="overflow-x:auto"><table id="t-sun"></table></div>
+    </div>
   </div>
 
   <div class="ss" id="sun-seohhyeon">
@@ -904,6 +907,9 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">청년부별 예배 출석 추이</div></div></div><canvas id="c-youth-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-youth-pie">청년부별 비중</div></div></div><canvas id="c-youth-pie"></canvas></div>
+    </div>
+    <div class="cc"><div class="ch"><div><div class="ct">주별 출석 상세</div><div class="cs">청년부별 예배 출석</div></div></div>
+      <div style="overflow-x:auto"><table id="t-youth"></table></div>
     </div>
   </div>
   <div class="ss" id="youth-y1"></div>
@@ -2729,6 +2735,17 @@ function initSunday() {
   };
   renderShTrend(fw);
   addCardPeriod('c-sh-trend', renderShTrend);
+  // 전체 탭 주별 상세 — 서현·송림 부별을 한 표에
+  mkTable('t-sun', ['날짜','서현1부','서현2부','서현3부','서현 소계','송림1부','송림2부','송림3부','송림 소계','합계'],
+    fw.map((w, i) => {
+      const a = [buSeries('장년','1부',fw)[i], buSeries('장년','2부',fw)[i], buSeries('장년','3부',fw)[i]];
+      const b = [buSeries('송림','1부',fw)[i], buSeries('송림','2부',fw)[i], buSeries('송림','3부',fw)[i]];
+      const sa = a.some(x => x != null) ? a.reduce((x,y)=>x+(y||0),0) : null;
+      const sb = b.some(x => x != null) ? b.reduce((x,y)=>x+(y||0),0) : null;
+      return [w, ...a.map(x=>fmtOr(x)), fmtOr(sa), ...b.map(x=>fmtOr(x)), fmtOr(sb),
+              fmtOr(sa == null && sb == null ? null : (sa||0)+(sb||0))];
+    }));
+
   const s1t=sh1.reduce((a,b)=>a+b,0),s2t=sh2.reduce((a,b)=>a+b,0),s3t=sh3.reduce((a,b)=>a+b,0);
   const el_shpie=document.getElementById('ct-sh-pie');
   if(el_shpie) el_shpie.textContent=`서현 부별 비중 (${fw.length}주 누적)`;
@@ -3024,6 +3041,10 @@ function initYouth() {
   };
   trendOf(fw);
   addCardPeriod('c-youth-trend', trendOf, kpiOf);
+
+  mkTable('t-youth', ['날짜', ...DEPTS, '합계'],
+    fw.map((w, i) => [w, ...DEPTS.map(d => fmtOr(series[d][i])),
+      fmtOr(DEPTS.reduce((a, d) => a + (series[d][i] || 0), 0) || null)]));
 
   // 비중은 '최근 4주 평균 예배인원'으로 나눈다. 전 기간 누적으로 하면 오래전
   // 조직 개편이나 결측 주차까지 섞여 지금의 크기를 나타내지 못한다.
