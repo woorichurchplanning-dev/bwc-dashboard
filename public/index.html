@@ -576,6 +576,17 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   [data-tip] { border-bottom:none; } [data-tip]::after { display:none; }
 }
 
+/* ── 골라서 겹쳐 보는 버튼 ── */
+.pick { display:flex; flex-direction:column; gap:6px; margin:2px 0 10px; }
+.pick-row { display:flex; flex-wrap:wrap; gap:6px; }
+.pill { border:1px solid var(--color-border-default); background:var(--color-bg-surface);
+  color:var(--text3); font:inherit; font-size:11.5px; font-weight:600; padding:4px 11px;
+  border-radius:999px; cursor:pointer; transition:all var(--t-fast) var(--ease-default); }
+.pill:hover { border-color:var(--color-border-strong); color:var(--text2); }
+.pill.on { background:var(--color-accent); border-color:var(--color-accent); color:#fff; }
+.pill.kind { font-weight:500; }
+.pill.kind.on { background:var(--color-text-primary); border-color:var(--color-text-primary); }
+
 /* ── WEEKLY REPORT ── */
 .wk-report { margin-bottom:var(--s6); }
 .wk-report-hdr { padding:4px 0 16px; display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:8px; }
@@ -2054,8 +2065,12 @@ function mkKPI(id, cards) {
 
 function mkTable(id, heads, rows) {
   const t = document.getElementById(id); if (!t) return;
+  // 첫 칸이 날짜인 표는 최근 주가 위로 오게 뒤집는다. 늘 최근 것을 먼저 보는데
+  // 오래된 주부터 쌓여 있으면 매번 맨 아래까지 내려가야 했다.
+  const isWeekly = rows.length > 1 && rows.every(r => /^\d{4}-\d{2}-\d{2}$/.test(String(r[0])));
+  const body = isWeekly ? [...rows].reverse() : rows;
   t.innerHTML = '<thead><tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'
-    + rows.map(r=>'<tr>'+r.map((c,i)=>`<td class="${i>0?'nr':''}">${c}</td>`).join('')+'</tr>').join('')+'</tbody>';
+    + body.map(r=>'<tr>'+r.map((c,i)=>`<td class="${i>0?'nr':''}">${c}</td>`).join('')+'</tr>').join('')+'</tbody>';
 }
 
 // ── 데이터 헬퍼 ──
@@ -2830,9 +2845,11 @@ function initYouth() {
   trendOf(fw);
   addCardPeriod('c-youth-trend', trendOf, kpiOf);
 
-  const sums = DEPTS.map(d => series[d].reduce((a, b) => a + (b || 0), 0));
-  setText('ct-youth-pie', `청년부별 비중 (${fw.length}주 누적)`);
-  mkChart('c-youth-pie', 'doughnut', DEPTS, dnut(DEPTS, sums, DEPTS.map(d => COLORS[d])), {});
+  // 비중은 '최근 4주 평균 예배인원'으로 나눈다. 전 기간 누적으로 하면 오래전
+  // 조직 개편이나 결측 주차까지 섞여 지금의 크기를 나타내지 못한다.
+  const recent = DEPTS.map(d => last4avg(series[d]));
+  setText('ct-youth-pie', '청년부별 비중 (최근 4주 평균 예배)');
+  mkChart('c-youth-pie', 'doughnut', DEPTS, dnut(DEPTS, recent, DEPTS.map(d => COLORS[d])), {});
 
   // ── 청년부별 상세 (팀은 데이터에서 찾아 동적으로 그린다) ──
   DEPTS.forEach(dept => {
@@ -2857,16 +2874,23 @@ function initYouth() {
         <div class="cc"><div class="ch"><div><div class="ct" id="ct-y${idx}-a">${dept} 예배 출석 추이</div>
           <div class="cs" id="cs-y${idx}-a"></div></div></div>
           <canvas id="c-y${idx}-worship"></canvas></div>
-        <div class="cc"><div class="ch"><div><div class="ct" id="ct-y${idx}-b">${dept} 팀별 부서모임 · 소그룹</div>
-          <div class="cs" id="cs-y${idx}-b">${teams.length ? teams.join(' · ') : '팀 데이터 없음'}</div></div></div>
+        <div class="cc"><div class="ch"><div><div class="ct" id="ct-y${idx}-b">${dept} 팀별 비교</div>
+          <div class="cs" id="cs-y${idx}-b">${teams.length ? '보고 싶은 팀만 눌러서 켜고 끕니다' : '팀 데이터 없음'}</div></div></div>
+          ${teams.length ? `<div class="pick" id="pick-y${idx}">
+            <div class="pick-row">${teams.map((t, i) => `
+              <button class="pill on" data-team="${t}" onclick="toggleYouthPick(${idx}, this)">${t}</button>`).join('')}</div>
+            <div class="pick-row">
+              <button class="pill kind on" data-kind="부서모임" onclick="pickYouthKind(${idx}, this)">부서모임</button>
+              <button class="pill kind" data-kind="소그룹" onclick="pickYouthKind(${idx}, this)">소그룹</button>
+              <button class="pill kind" data-kind="둘 다" onclick="pickYouthKind(${idx}, this)">둘 다</button>
+            </div>
+          </div>` : ''}
           <canvas id="c-y${idx}-cell"></canvas></div>
       </div>
-      <div id="y${idx}-teamgrid">
-      ${teams.length ? `<div class="cg ${teams.length >= 3 ? 'three' : ''}">${teams.map(t => `
-        <div class="cc"><div class="ch"><div><div class="ct">${dept} ${t}</div>
-          <div class="cs">부서모임 · 소그룹</div></div></div>
-          <canvas id="c-y${idx}t-${parseInt(t) || t}"></canvas></div>`).join('')}</div>` : ''}
-      </div>
+      <div id="y${idx}-teamgrid"></div>
+      ${teams.length ? `<div class="cc"><div class="ch"><div><div class="ct">${dept} 예배 대비 팀 비중</div>
+        <div class="cs">각 팀 소그룹이 부서 예배 출석의 몇 %인지 (최근 4주 평균)</div></div></div>
+        <div class="fw" id="fw-y${idx}"></div></div>` : ''}
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-y${idx}-t">${dept} 주별 상세</div></div></div>
         <div style="overflow-x:auto"><table id="t-y${idx}"></table></div></div>`;
 
@@ -2910,11 +2934,14 @@ function renderYouthTeam(idx) {
   const from = mo.findIndex((v, i) => v != null || cg[i] != null);
   if (from > 0) { fw = fw.slice(from); wl = wl.slice(from); mo = mo.slice(from); cg = cg.slice(from); }
 
+  const yoy = yoySeries(fw, y => nn(D.youth[y]?.[dept]?.팀?.[team]?.부서모임));
+  const hasYoy = yoy.some(x => x != null);
   setText(`ct-y${idx}-a`, `${dept} ${team} 부서모임 · 소그룹 추이`);
-  setText(`cs-y${idx}-a`, '실선 부서모임 · 점선 소그룹');
+  setText(`cs-y${idx}-a`, '실선 부서모임 · 점선 소그룹' + (hasYoy ? ' · 회색 점선 전년' : ''));
   mkChart(`c-y${idx}-worship`, 'line', wl, [
     lds('부서모임', mo, color, true),
     ldsDash('소그룹', cg, teamColors[(ti + 3) % teamColors.length]),
+    ...(hasYoy ? [ldsDash('전년 같은 주', yoy, '#94a3b8')] : []),
   ], { fw });
 
   // 같은 부서 팀끼리 견줘 본다
@@ -2937,7 +2964,14 @@ function renderYouthTeam(idx) {
     { label: `${team} 부서모임 (최근)`, value: fmtOr(lm), sub: `평균 ${fmt(avg(mo))}명`, color: 'blue',
       ...(dm == null ? {} : { trend: `${dm >= 0 ? '▲' : '▼'} 직전 ${dm >= 0 ? '+' : ''}${fmt(dm)}`, td: dm >= 0 ? 'up' : 'dn' }) },
     { label: `${team} 소그룹 (최근)`, value: fmtOr(lc), sub: `평균 ${fmt(avg(cg))}명`, color: 'teal' },
-    { label: '최근 4주 평균', value: fmtOr(last4avg(mo)), sub: `소그룹 ${fmtOr(last4avg(cg))}`, color: 'gold' },
+    (() => {
+      const li = mo.reduce((a, v, i) => v != null ? i : a, -1);
+      const yv = li >= 0 ? yoy[li] : null;
+      const dy = lm != null && yv != null ? lm - yv : null;
+      return { label: '전년 같은 주 대비', value: dy == null ? '–' : `${dy >= 0 ? '+' : ''}${fmt(dy)}명`,
+        sub: dy == null ? '전년 자료 없음' : `${yv}명 → ${lm}명 · ${dy >= 0 ? '+' : ''}${Math.round(dy / yv * 100)}%`,
+        color: dy == null ? 'gold' : (dy >= 0 ? 'green' : 'orange') };
+    })(),
     { label: `${dept} 안에서`, value: allSum ? Math.round(teamSum / allSum * 100) + '%' : '–',
       sub: `${teams.length}개 팀 소그룹 누계 대비`, color: 'green' },
   ]);
@@ -2948,39 +2982,94 @@ function renderYouthTeam(idx) {
 }
 
 /* 청년부 전체 보기의 차트·지표·표 — 팀 선택을 '전체'로 되돌릴 때도 쓴다 */
+const YOUTH_PICK = {};   // idx -> { teams:Set, kind:'부서모임'|'소그룹'|'둘 다' }
+
+function toggleYouthPick(idx, btn) {
+  btn.classList.toggle('on');
+  drawYouthCompare(idx);
+}
+function pickYouthKind(idx, btn) {
+  btn.parentElement.querySelectorAll('.pill.kind').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  drawYouthCompare(idx);
+}
+
+/* 팀을 골라 한 그래프에 겹쳐 본다. 예전에는 팀마다 작은 차트가 따로 있어서
+   서로 견주려면 눈으로 옮겨 다녀야 했다. */
+function drawYouthCompare(idx) {
+  const dept = YOUTH_DEPTS[idx - 1];
+  const fw = getFW(); const wl = getWL(fw);
+  const box = document.getElementById(`pick-y${idx}`);
+  if (!dept || !fw.length || !box) return;
+  const teamColors = [C.b, C.t, C.p, C.or, C.gr, C.pk];
+  const all = myTeams(dept);
+  const on = [...box.querySelectorAll('.pill[data-team].on')].map(b => b.dataset.team);
+  const kind = box.querySelector('.pill.kind.on')?.dataset.kind || '부서모임';
+
+  // 팀 자료는 부서 전체보다 늦게 시작한다. 앞의 빈 주를 그대로 두면 선이
+  // 오른쪽 끝에만 몰려 서로 견줄 수가 없다. 값이 처음 들어온 주부터 그린다.
+  const probe = on.flatMap(t => [teamSeries(dept, t, '부서모임', fw), teamSeries(dept, t, '소그룹', fw)]);
+  const from = fw.findIndex((_, i) => probe.some(a => a[i] != null));
+  const fw2 = from > 0 ? fw.slice(from) : fw;
+  const wl2 = from > 0 ? wl.slice(from) : wl;
+
+  const ds = [];
+  on.forEach(t => {
+    const ci = all.indexOf(t);
+    const col = teamColors[(ci < 0 ? 0 : ci) % teamColors.length];
+    if (kind === '부서모임' || kind === '둘 다')
+      ds.push(lds(kind === '둘 다' ? `${t} 부서모임` : t, teamSeries(dept, t, '부서모임', fw2), col));
+    if (kind === '소그룹' || kind === '둘 다')
+      ds.push(kind === '둘 다'
+        ? ldsDash(`${t} 소그룹`, teamSeries(dept, t, '소그룹', fw2), col)
+        : lds(t, teamSeries(dept, t, '소그룹', fw2), col));
+  });
+  setText(`cs-y${idx}-b`, on.length
+    ? `${kind} · ${on.join(' · ')}`
+    : '볼 팀을 하나 이상 켜 주세요');
+  mkChart(`c-y${idx}-cell`, 'line', wl2, ds, { fw: fw2 });
+}
+
 function renderYouthDeptCharts(idx, dept, fw, wl, teams, teamColors) {
   const COLORS = { '1청년부': C.b, '2청년부': C.p, '3청년부': C.or, '4청년부': C.gr };
   const last = arr => arr.filter(x => x != null).slice(-1)[0] ?? null;
   const prev = arr => arr.filter(x => x != null).slice(-2)[0] ?? null;
 
-  mkChart(`c-y${idx}-worship`, 'line', wl, [lds('예배 출석', youthSeries(dept, fw), COLORS[dept], true)], { fw });
-
-  const ds = [];
-  teams.forEach((t, i) => {
-    ds.push(lds(`${t} 부서모임`, teamSeries(dept, t, '부서모임', fw), teamColors[i % teamColors.length]));
-    ds.push(ldsDash(`${t} 소그룹`, teamSeries(dept, t, '소그룹', fw), teamColors[i % teamColors.length]));
-  });
-  // 3·4청년부처럼 팀 구분 없이 부서 단위로만 들어오는 경우
-  if (!teams.length) {
-    ds.push(lds('부서모임', deptSeries(dept, '부서모임', fw), C.g));
-    ds.push(lds('소그룹', deptSeries(dept, '소그룹', fw), C.lm));
-  }
-  mkChart(`c-y${idx}-cell`, 'line', wl, ds, { fw });
-
-  teams.forEach((t, i) => {
-    mkChart(`c-y${idx}t-${parseInt(t) || t}`, 'line', wl, [
-      lds('부서모임', teamSeries(dept, t, '부서모임', fw), teamColors[i % teamColors.length]),
-      lds('소그룹', teamSeries(dept, t, '소그룹', fw), teamColors[(i + 3) % teamColors.length]),
-    ], { fw });
-  });
-
+  // ── 예배 추이 (전년 같은 주를 점선으로 겹친다) ──
   const wor = youthSeries(dept, fw);
+  const yoy = yoySeries(fw, y => nn(D.youth[y]?.[dept]?.예배));
+  const hasYoy = yoy.some(x => x != null);
+  mkChart(`c-y${idx}-worship`, 'line', wl, [
+    lds('예배 출석', wor, COLORS[dept], true),
+    ...(hasYoy ? [ldsDash('전년 같은 주', yoy, '#94a3b8')] : []),
+  ], { fw });
+  setText(`cs-y${idx}-a`, hasYoy ? '점선은 전년 같은 주' : '');
+
+  if (teams.length) {
+    // 처음에는 모든 팀 · 부서모임 기준으로 그린다
+    drawYouthCompare(idx);
+  } else {
+    // 3·4청년부처럼 팀 구분 없이 부서 단위로만 들어오는 경우
+    mkChart(`c-y${idx}-cell`, 'line', wl, [
+      lds('부서모임', deptSeries(dept, '부서모임', fw), C.g),
+      lds('소그룹', deptSeries(dept, '소그룹', fw), C.lm),
+    ], { fw });
+  }
+
+  // ── 지표: 최근 · 전년 대비 ──
   const lw = last(wor), pw2 = prev(wor);
   const dw = lw != null && pw2 != null ? lw - pw2 : null;
+  const li = wor.reduce((a, v, i) => v != null ? i : a, -1);
+  const yv = li >= 0 ? yoy[li] : null;
+  const dy = lw != null && yv != null ? lw - yv : null;
+
   mkKPI(`kk-y${idx}`, [
     { label: `${dept} 예배 (최근)`, value: fmtOr(lw), sub: `평균 ${fmt(avg(wor))}명`, color: 'blue',
       ...(dw == null ? {} : { trend: `${dw >= 0 ? '▲' : '▼'} 직전 ${dw >= 0 ? '+' : ''}${fmt(dw)}`, td: dw >= 0 ? 'up' : 'dn' }) },
-    ...(teams.length ? teams.slice(0, 3).map(t => {
+    { label: '전년 같은 주 대비', value: dy == null ? '–' : `${dy >= 0 ? '+' : ''}${fmt(dy)}명`,
+      sub: dy == null ? '전년 자료 없음' : `${yv}명 → ${lw}명 · ${dy >= 0 ? '+' : ''}${Math.round(dy / yv * 100)}%`,
+      color: dy == null ? 'teal' : (dy >= 0 ? 'green' : 'orange') },
+    ...(teams.length ? teams.slice(0, 2).map(t => {
       const m = teamSeries(dept, t, '부서모임', fw), c = teamSeries(dept, t, '소그룹', fw);
       return { label: `${t} (최근)`, value: fmtOr(last(m)),
                sub: `소그룹 ${fmtOr(last(c))} · 평균 ${fmt(avg(m))}명`, color: 'teal' };
@@ -2990,11 +3079,31 @@ function renderYouthDeptCharts(idx, dept, fw, wl, teams, teamColors) {
     ]),
   ]);
 
+  // ── 예배 대비 팀 비중 ──
+  const fwEl = document.getElementById(`fw-y${idx}`);
+  if (fwEl && teams.length) {
+    // 최근 4주 평균끼리 견준다. 전 기간 누계로 하면 팀 자료가 시작되기 전
+    // 주차까지 예배 쪽에만 쌓여서 비중이 7~8%로 내려앉는다.
+    const worAvg = last4avg(wor);
+    const rows = teams.map((t, i) => {
+      const cAvg = last4avg(teamSeries(dept, t, '소그룹', fw));
+      return { team: t, val: cAvg, pct: worAvg ? Math.round(cAvg / worAvg * 100) : 0,
+               color: teamColors[i % teamColors.length] };
+    });
+    const max = Math.max(...rows.map(r => r.pct), 1);
+    fwEl.innerHTML = rows.map(r => `<div class="fr"><div class="fl">${r.team}</div>
+        <div class="fbo"><div class="fbi" style="width:${Math.round(r.pct / max * 100)}%;background:${r.color}">${fmt(r.val)}</div></div>
+        <div class="fp">${r.pct}%</div></div>`).join('')
+      + `<div class="fr" style="margin-top:6px"><div class="fl" style="font-weight:700">예배 (4주 평균)</div>
+        <div class="fbo" style="background:transparent"></div><div class="fp">${fmt(worAvg)}명</div></div>`;
+  }
+
+  // ── 주별 상세 (최근 주가 위로 — mkTable이 알아서 뒤집는다) ──
   const heads = ['날짜', '예배', ...(teams.length
     ? teams.flatMap(t => [`${t} 모임`, `${t} 소그룹`])
     : ['부서모임', '소그룹'])];
   mkTable(`t-y${idx}`, heads, fw.map((w, i) => [
-    w, fmtOr(youthSeries(dept, fw)[i]),
+    w, fmtOr(wor[i]),
     ...(teams.length
       ? teams.flatMap(t => [fmtOr(teamSeries(dept, t, '부서모임', fw)[i]), fmtOr(teamSeries(dept, t, '소그룹', fw)[i])])
       : [fmtOr(deptSeries(dept, '부서모임', fw)[i]), fmtOr(deptSeries(dept, '소그룹', fw)[i])]),
