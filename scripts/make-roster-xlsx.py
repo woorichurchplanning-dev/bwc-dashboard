@@ -17,7 +17,7 @@ from openpyxl.utils import get_column_letter
 ADMINS = {'김영환', '지원일'}
 
 # 주소록에 없거나 틀린 연락처를 여기서 메운다
-PHONE_FIXES = {'신용헌': '010-2857-9658'}
+PHONE_FIXES = {'신용헌': '010-2857-9658', '박세흠': '010-3283-8229'}
 
 # 주소록 라벨만으로는 담당을 알 수 없는 사람
 EXTRA_TABS = {'이동선': ['home','sunday','wd','special']}   # 예배담당
@@ -64,7 +64,7 @@ BY_GROUP = {
     '교구사역자': ['district', 'newfam'],
     '주일학교':   ['school'],
     '교육전도사': ['school'],
-    '청년교구':   ['youth'],
+    '청년교구':   ['youth', 'newfam'],
     '기획팀':     [k for k,_ in TABS],          # 기획팀은 전체를 본다
 }
 
