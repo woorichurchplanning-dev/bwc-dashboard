@@ -28,8 +28,14 @@ export default async function middleware(request) {
   // ① 학습용 수집기는 무엇이든 주지 않는다.
   //    robots.txt 는 읽을 수 있게 두고, api/ingest 는 시트가 부르는 자리라
   //    브라우저가 아니므로 빼 둔다(그쪽은 자체 비밀키로 막혀 있다).
+  //    robots.txt·서비스워커·아이콘 같은 부속 파일과 시트가 부르는 api/ingest 는
+  //    브라우저가 보내는 요청과 헤더가 달라 빼 둔다. 실제로 서비스워커 등록이
+  //    403 으로 막혀 화면이 오프라인 캐시를 못 쓰는 일이 있었다.
   const ua = request.headers.get('user-agent') || '';
-  const exempt = url.pathname === '/robots.txt' || url.pathname === '/api/ingest';
+  const exempt = url.pathname === '/robots.txt' || url.pathname === '/sw.js' ||
+    url.pathname === '/manifest.json' || url.pathname === '/api/ingest' ||
+    url.pathname.startsWith('/icon-') || url.pathname.startsWith('/apple-touch-icon') ||
+    url.pathname.startsWith('/favicon');
   if (!exempt && (BOT_UA.test(ua) || !ua)) {
     return new Response('Not available.', {
       status: 403,

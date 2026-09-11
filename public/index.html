@@ -926,9 +926,9 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="stabs">
     <button class="stab on" onclick="ss2('school','all')">전체</button>
     <button class="stab" onclick="ss2('school','love')">사랑부</button>
-    <button class="stab" onclick="ss2('school','pre')">미취학부</button>
-    <button class="stab" onclick="ss2('school','sch')">취학부</button>
-    <button class="stab" onclick="ss2('school','teen')">청소년부</button>
+    <button class="stab" onclick="ss2('school','pre')">미취학</button>
+    <button class="stab" onclick="ss2('school','sch')">어린이</button>
+    <button class="stab" onclick="ss2('school','teen')">청소년</button>
   </div>
 
   <div class="ss on" id="school-all">
@@ -950,6 +950,12 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     </div>
 
     </div>
+    <div class="cc" style="margin-bottom:16px"><div class="ch"><div><div class="ct">부별 인원 (학생 · 최근 4주 평균)</div>
+      <div class="cs" id="cs-school-bu">1부·2부를 따로 드리는 부서의 부별 출석</div></div></div>
+      <div class="fw" id="fw-school-bu"></div>
+      <div style="overflow-x:auto;margin-top:var(--s4)"><table id="t-school-bu"></table></div>
+    </div>
+
     <div class="cc" style="margin-bottom:16px"><div class="ch"><div><div class="ct" id="ct-school-bar">부서별 인원 (최근 4주 평균)</div>
       <div class="cs" id="cs-school-bar">학생 기준</div></div></div>
       <div class="pick" id="pick-school">
@@ -976,7 +982,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="ss" id="school-pre">
     <div class="kg" id="kk-school-pre"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">미취학부 출석 추이</div><div class="cs">영아부·유아부·유치부</div></div></div><canvas id="c-school-pre-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">미취학 출석 추이</div><div class="cs">영아부·유아부·유치부</div></div></div><canvas id="c-school-pre-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">부서별 인원</div></div></div><canvas id="c-school-pre-pie"></canvas></div>
     </div>
   </div>
@@ -984,7 +990,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="ss" id="school-sch">
     <div class="kg" id="kk-school-sch"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">취학부 출석 추이</div><div class="cs">유년부·초등부·소년부</div></div></div><canvas id="c-school-sch-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">어린이 출석 추이</div><div class="cs">유년부·초등부·소년부</div></div></div><canvas id="c-school-sch-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">부서별 인원</div></div></div><canvas id="c-school-sch-pie"></canvas></div>
     </div>
   </div>
@@ -992,7 +998,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="ss" id="school-teen">
     <div class="kg" id="kk-school-teen"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">청소년부 출석 추이</div><div class="cs">송림청소년부·서현중등부·서현고등부</div></div></div><canvas id="c-school-teen-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">청소년 출석 추이</div><div class="cs">송림청소년부·서현중등부·서현고등부</div></div></div><canvas id="c-school-teen-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">부서별 인원</div></div></div><canvas id="c-school-teen-pie"></canvas></div>
     </div>
   </div>
@@ -1839,9 +1845,9 @@ function myDepts() {
 }
 const SCHOOL_GROUPS = {
   love: { label:'사랑부',   depts:['사랑부'], color:'gold' },
-  pre:  { label:'미취학부', depts:['영아부','유아부','유치부'], color:'blue' },
-  sch:  { label:'취학부',   depts:['송림유년부','서현유년부','송림초등부','서현초등부','송림소년부','서현소년부'], color:'teal' },
-  teen: { label:'청소년부', depts:['송림청소년부','서현중등부','서현고등부'], color:'purple' },
+  pre:  { label:'미취학', depts:['영아부','유아부','유치부'], color:'blue' },
+  sch:  { label:'어린이', depts:['송림유년부','서현유년부','송림초등부','서현초등부','송림소년부','서현소년부'], color:'teal' },
+  teen: { label:'청소년', depts:['송림청소년부','서현중등부','서현고등부'], color:'purple' },
 };
 // ── 차트 카드별 독립 기간 상태 ──
 const CARD_PERIOD = {};
@@ -2529,7 +2535,7 @@ function initHome() {
         extraHtml: (() => {
           const groups = [
             { name:'미취학', depts:['사랑부','영아부','유아부','유치부'] },
-            { name:'취학', depts:['송림유년부','서현유년부','송림초등부','서현초등부','송림소년부','서현소년부'] },
+            { name:'어린이', depts:['송림유년부','서현유년부','송림초등부','서현초등부','송림소년부','서현소년부'] },
             { name:'청소년', depts:['송림청소년부','서현중등부','서현고등부'] },
           ];
           const items = groups.map(g => {
@@ -3332,6 +3338,7 @@ function initSchool() {
   const DS = myDepts();
   setText('ct-school-bar', '부서별 인원 (최근 4주 평균)');
   renderSchoolBars(fw);
+  renderSchoolBu(fw);
   mkTable('t-school',['날짜',...DS,'합계'],
     fw.map(w=>[w,...DS.map(d=>fmtOr(schoolDeptTotal(w,d))),
       fmtOr(schoolGroupTotal(w))]));
@@ -3403,6 +3410,41 @@ function schoolKindAvg4(dept, kind, fw) {
   };
   const v = (fw || getFW()).map(pick).filter(x => x != null);
   return v.length ? Math.round(v.slice(-4).reduce((a, b) => a + b, 0) / Math.min(v.length, 4)) : 0;
+}
+
+/* 부별(1부·2부) 인원. 부서마다 한 번만 드리는 곳도 있고 두 번 드리는 곳도 있어
+   전체 비율과 부서별 비율을 같이 본다. 학생 기준. */
+function schoolBuAvg4(dept, bu, fw) {
+  const v = (fw || getFW()).map(w => nn(D.school[w]?.[dept]?.[bu + '학생'])).filter(x => x != null);
+  return v.length ? Math.round(v.slice(-4).reduce((a, b) => a + b, 0) / Math.min(v.length, 4)) : 0;
+}
+
+function renderSchoolBu(fw) {
+  fw = fw || getFW();
+  const DS = myDepts();
+  const rows = DS.map(d => {
+    const a = schoolBuAvg4(d, '1부', fw), b = schoolBuAvg4(d, '2부', fw);
+    return { d, a, b, t: a + b };
+  }).filter(r => r.t > 0);
+
+  const box = document.getElementById('fw-school-bu');
+  if (!box) return;
+  if (!rows.length) {
+    box.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">부별 자료가 없습니다. 2026년부터 들어옵니다.</div>';
+    mkTable('t-school-bu', [], []);
+    return;
+  }
+  const A = rows.reduce((x, r) => x + r.a, 0), B = rows.reduce((x, r) => x + r.b, 0);
+  const tot = A + B, max = Math.max(A, B, 1);
+  box.innerHTML = [['1부', A, C.b], ['2부', B, C.or]].map(([l, v, col]) =>
+    `<div class="fr"><div class="fl">${l}</div>
+      <div class="fbo"><div class="fbi" style="width:${Math.round(v / max * 100)}%;background:${col}">${fmt(v)}</div></div>
+      <div class="fp">${tot ? Math.round(v / tot * 100) : 0}%</div></div>`).join('');
+
+  setText('cs-school-bu', `전체 ${fmt(A + B)}명 · 1부 ${A + B ? Math.round(A / (A + B) * 100) : 0}% · 2부 ${A + B ? Math.round(B / (A + B) * 100) : 0}%`);
+  mkTable('t-school-bu', ['부서', '1부', '2부', '계', '1부 비율'],
+    rows.sort((x, y) => y.t - x.t).map(r =>
+      [r.d, fmt(r.a), fmt(r.b), fmt(r.t), r.t ? Math.round(r.a / r.t * 100) + '%' : '–']));
 }
 
 function renderSchoolBars(fw) {
@@ -4799,12 +4841,18 @@ function applyNewData(data) {
               .reduce((a, [, v]) => a + (Number(v)||0), 0);
           }
         }
+        const n0 = k => Number(val[k]) || 0;
         D.school[date][key] = {
           '1부': one || null,
           '2부': two || null,
           '합계': Number(total) || null,
-          학생: (Number(val['1부 학생'])||0) + (Number(val['2부 학생'])||0) || null,
-          교사: (Number(val['1부 교사'])||0) + (Number(val['2부 교사'])||0) || null,
+          학생: n0('1부 학생') + n0('2부 학생') || null,
+          교사: n0('1부 교사') + n0('2부 교사') || null,
+          // 부별로 따로 드리는 부서가 있어 1·2부를 나눠 본다
+          '1부학생': n0('1부 학생') || null,
+          '2부학생': n0('2부 학생') || null,
+          '1부교사': n0('1부 교사') || null,
+          '2부교사': n0('2부 교사') || null,
         };
       });
     }
