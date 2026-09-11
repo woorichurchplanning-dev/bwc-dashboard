@@ -878,7 +878,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="ss" id="sun-seohhyeon">
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">서현 1·2·3부 출석 추이</div></div></div><canvas id="c-sh-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct" id="ct-sh-pie">서현 부별 비중</div></div></div><canvas id="c-sh-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct" id="ct-sh-pie">서현 부별 인원</div></div></div><canvas id="c-sh-pie"></canvas></div>
     </div>
     <div class="cc"><div class="ch"><div><div class="ct">서현 부별 출석 (주별 데이터)</div></div></div>
       <div style="overflow-x:auto"><table id="t-sh"></table></div>
@@ -888,7 +888,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="ss" id="sun-songrim">
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">송림 1·2·3부 출석 추이</div></div></div><canvas id="c-sr-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct" id="ct-sr-pie">송림 부별 비중</div></div></div><canvas id="c-sr-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct" id="ct-sr-pie">송림 부별 인원</div></div></div><canvas id="c-sr-pie"></canvas></div>
     </div>
     <div class="cc"><div class="ch"><div><div class="ct">송림 부별 출석 (주별 데이터)</div></div></div>
       <div style="overflow-x:auto"><table id="t-sr"></table></div>
@@ -906,7 +906,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <div class="kg" id="kk-youth"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">청년부별 예배 출석 추이</div></div></div><canvas id="c-youth-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct" id="ct-youth-pie">청년부별 비중</div></div></div><canvas id="c-youth-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct" id="ct-youth-pie">청년부별 인원</div></div></div><canvas id="c-youth-pie"></canvas></div>
     </div>
     <div class="cc"><div class="ch"><div><div class="ct">주별 출석 상세</div><div class="cs">청년부별 예배 출석</div></div></div>
       <div style="overflow-x:auto"><table id="t-youth"></table></div>
@@ -944,8 +944,11 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     </div>
     <div class="kg" id="kk-school"></div>
     <div class="cg">
+      <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-school-trend">주일학교 전체 출석 추이</div></div></div><canvas id="c-school-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct" id="ct-school-pie">부서별 비중 (누적)</div></div></div><canvas id="c-school-pie"></canvas></div>
+      <div class="cc" id="card-school-pie" style="display:none"><div class="ch"><div><div class="ct" id="ct-school-pie"></div></div></div><canvas id="c-school-pie"></canvas></div>
+    </div>
+
     </div>
     <div class="cc" style="margin-bottom:16px"><div class="ch"><div><div class="ct" id="ct-school-bar">부서별 인원 (최근 4주 평균)</div>
       <div class="cs" id="cs-school-bar">학생 기준</div></div></div>
@@ -966,7 +969,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <div class="kg" id="kk-school-love"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">사랑부 출석 추이</div></div></div><canvas id="c-school-love-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">부서별 비중</div></div></div><canvas id="c-school-love-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">부서별 인원</div></div></div><canvas id="c-school-love-pie"></canvas></div>
     </div>
   </div>
 
@@ -974,7 +977,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <div class="kg" id="kk-school-pre"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">미취학부 출석 추이</div><div class="cs">영아부·유아부·유치부</div></div></div><canvas id="c-school-pre-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">부서별 비중</div></div></div><canvas id="c-school-pre-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">부서별 인원</div></div></div><canvas id="c-school-pre-pie"></canvas></div>
     </div>
   </div>
 
@@ -982,7 +985,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <div class="kg" id="kk-school-sch"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">취학부 출석 추이</div><div class="cs">유년부·초등부·소년부</div></div></div><canvas id="c-school-sch-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">부서별 비중</div></div></div><canvas id="c-school-sch-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">부서별 인원</div></div></div><canvas id="c-school-sch-pie"></canvas></div>
     </div>
   </div>
 
@@ -990,7 +993,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <div class="kg" id="kk-school-teen"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">청소년부 출석 추이</div><div class="cs">송림청소년부·서현중등부·서현고등부</div></div></div><canvas id="c-school-teen-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">부서별 비중</div></div></div><canvas id="c-school-teen-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">부서별 인원</div></div></div><canvas id="c-school-teen-pie"></canvas></div>
     </div>
   </div>
 
@@ -2071,6 +2074,10 @@ function v(x) { return x || 0; }
 function mkChart(id, type, labels, datasets, opts={}) {
   const ctx = document.getElementById(id); if (!ctx) return;
   const ex = Chart.getChart(ctx); if (ex) ex.destroy();
+  // 같은 자리를 mkShareBars 가 목록으로 쓰고 있었으면 되돌린다
+  if (ctx.style.display === 'none') ctx.style.display = '';
+  const sib = ctx.nextElementSibling;
+  if (sib && sib.classList.contains('share-bars')) sib.remove();
   const isPct = opts.pct||false, isH = opts.horiz||false, isStack = opts.stack||false;
   const onDrill = opts.drill || null;
   const isPie = type === 'doughnut' || type === 'pie';
@@ -2748,7 +2755,7 @@ function initSunday() {
 
   const s1t=sh1.reduce((a,b)=>a+b,0),s2t=sh2.reduce((a,b)=>a+b,0),s3t=sh3.reduce((a,b)=>a+b,0);
   const el_shpie=document.getElementById('ct-sh-pie');
-  if(el_shpie) el_shpie.textContent=`서현 부별 비중 (${fw.length}주 누적)`;
+  if(el_shpie) el_shpie.textContent=`서현 부별 인원 (${fw.length}주 누계)`;
   mkShareBars('c-sh-pie',['서현1부','서현2부','서현3부'],[s1t,s2t,s3t],[C.b,C.id,C.p]);
   mkTable('t-sh',['날짜','서현1부','서현2부','서현3부','소계'],
     fw.map(w=>[w,fmt(v(D.sunday[w]?.bu?.['1부']?.장년)),fmt(v(D.sunday[w]?.bu?.['2부']?.장년)),fmt(v(D.sunday[w]?.bu?.['3부']?.장년)),
@@ -2763,7 +2770,7 @@ function initSunday() {
   addCardPeriod('c-sr-trend', renderSrTrend);
   const r1t=sr1.reduce((a,b)=>a+b,0),r2t=sr2.reduce((a,b)=>a+b,0),r3t=sr3.reduce((a,b)=>a+b,0);
   const el_srpie=document.getElementById('ct-sr-pie');
-  if(el_srpie) el_srpie.textContent=`송림 부별 비중 (${fw.length}주 누적)`;
+  if(el_srpie) el_srpie.textContent=`송림 부별 인원 (${fw.length}주 누계)`;
   mkShareBars('c-sr-pie',['송림1부','송림2부','송림3부'],[r1t,r2t,r3t],[C.t,C.gr,C.lm]);
   mkTable('t-sr',['날짜','송림1부','송림2부','송림3부','소계'],
     fw.map(w=>[w,fmt(v(D.sunday[w]?.bu?.['1부']?.송림)),fmt(v(D.sunday[w]?.bu?.['2부']?.송림)),fmt(v(D.sunday[w]?.bu?.['3부']?.송림)),
@@ -3049,7 +3056,7 @@ function initYouth() {
   // 비중은 '최근 4주 평균 예배인원'으로 나눈다. 전 기간 누적으로 하면 오래전
   // 조직 개편이나 결측 주차까지 섞여 지금의 크기를 나타내지 못한다.
   const recent = DEPTS.map(d => last4avg(series[d]));
-  setText('ct-youth-pie', '청년부별 비중 (최근 4주 평균 예배)');
+  setText('ct-youth-pie', '청년부별 인원 (최근 4주 평균 예배)');
   mkShareBars('c-youth-pie', DEPTS, recent, DEPTS.map(d => COLORS[d]));
 
   // ── 청년부별 상세 (팀은 데이터에서 찾아 동적으로 그린다) ──
@@ -3323,8 +3330,6 @@ function initSchool() {
   renderSchoolTrend(fw);
   addCardPeriod('c-school-trend', renderSchoolTrend, renderSchoolKpiAll);
   const DS = myDepts();
-  setText('ct-school-pie', '부서별 비중 (학생 · 최근 4주 평균)');
-  mkShareBars('c-school-pie', DS, DS.map(d => schoolStudentAvg4(d, fw)), DS.map((_,i)=>CA[i%CA.length]));
   setText('ct-school-bar', '부서별 인원 (최근 4주 평균)');
   renderSchoolBars(fw);
   mkTable('t-school',['날짜',...DS,'합계'],
@@ -3444,18 +3449,14 @@ function renderSchoolDept() {
 
   if (!dept) {
     // ── 전체 보기 복원 ──
+    const pc = document.getElementById('card-school-pie');
+    if (pc) pc.style.display = 'none';
     setText('ct-school-trend', '주일학교 전체 출석 추이');
-    setText('ct-school-pie',   '부서별 비중 (누적)');
     setText('ct-school-bar',   '부서별 인원 (최근 4주 평균)');
     setText('ct-school-table', '부서별 주별 출석 상세');
     const tots = fw.map(w => schoolGroupTotal(w));
     mkChart('c-school-trend','line',wl,[lds('주일학교 합계',tots,C.b,true)],{fw});
-    // 누적으로 하면 결측 주차와 옛 조직까지 섞여 지금의 크기를 못 나타낸다.
-    // 학생 기준 최근 4주 평균으로 견준다.
     const DS = myDepts();
-    const deptAvg = DS.map(d => schoolStudentAvg4(d, fw));
-    setText('ct-school-pie', '부서별 비중 (학생 · 최근 4주 평균)');
-    mkShareBars('c-school-pie', DS, deptAvg, DS.map((_,i)=>CA[i%CA.length]));
     renderSchoolBars(fw);
     mkTable('t-school',['날짜',...DS,'합계'],
       fw.map(w=>[w,...DS.map(d=>fmtOr(schoolDeptTotal(w,d))), fmtOr(schoolGroupTotal(w))]));
@@ -3506,6 +3507,8 @@ function renderSchoolDept() {
   mkChart('c-school-trend','line',wl,ds1,{fw});
 
   // ② 1부 / 2부 구성
+  const pieCard = document.getElementById('card-school-pie');
+  if (pieCard) pieCard.style.display = '';
   setText('ct-school-pie', `${dept} 1부 · 2부 구성`);
   if (bu1.some(x=>x!=null) || bu2.some(x=>x!=null)) {
     mkChart('c-school-pie','bar',wl,[bds('1부',bu1,C.b),bds('2부',bu2,C.t)],{stack:true,fw,total:true});
