@@ -1157,7 +1157,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 <!-- ═══ YEAR COMPARISON ═══ -->
 <section class="sec" id="s-yearcomp">
   <div class="page-hdr">
-    <div class="page-hdr-title"><h2>연도별 비교</h2><p>같은 <b>주차 번호</b>로 정렬해 연도 간 출석을 비교합니다 — 결측 주가 있어도 시점이 밀리지 않습니다</p></div>
+    <div class="page-hdr-title"><h2>연도별 비교</h2><p id="yc-scope">같은 <b>주차 번호</b>로 정렬해 연도 간 출석을 비교합니다 — 결측 주가 있어도 시점이 밀리지 않습니다</p></div>
   </div>
   <div class="stabs">
     <button class="stab on" onclick="ss2('yearcomp','summary')">연도 요약</button>
@@ -4153,8 +4153,23 @@ const YC_METRICS = [
   { key:'wed',    label:'수요예배',   sub:'현장 출석',           color:'#0891b2', fn: w => nn(D.weekday[w]?.wed_off) },
   { key:'fri',    label:'금요기도회', sub:'현장 출석',           color:'#c0123c', fn: w => nn(D.weekday[w]?.fri_off) },
   { key:'dawn',   label:'새벽기도',   sub:'주간 현장 합계',      color:'#7c3aed', fn: ycDawnOff },
+  { key:'dist',   label:'장년교구',   sub:'다락방 출석',         color:'#0e7490',
+    fn: w => { const r = D.cell.find(x => x.date === w); return r ? r.totalChul : null; } },
+  { key:'nf',     label:'새가족',     sub:'방문자',              color:'#db2777',
+    fn: w => { const r = D.newFamily.find(x => x.date === w);
+               return r ? nfRequestTotal(r,'adult') + nfRequestTotal(r,'youth') : null; } },
 ];
-const ycMetric = key => YC_METRICS.find(m => m.key === key) || YC_METRICS[0];
+/* 어느 탭을 볼 수 있어야 이 지표를 볼 수 있는지 */
+const YC_METRIC_TAB = { adult:'sunday', school:'school', youth:'youth',
+                        wed:'wd', fri:'wd', dawn:'wd', dist:'district', nf:'newfam' };
+/* 연도별 비교도 자기 담당만 본다. 연도별 비교 탭만 열어 주면 교회 전체가
+   다 보이던 것을 막는다. */
+function myYCMetrics() {
+  // 볼 수 있는 게 없으면 빈 목록을 준다. 예전에는 전체로 되돌려 담당이 아닌
+  // 숫자까지 열렸다.
+  return YC_METRICS.filter(m => canSee(YC_METRIC_TAB[m.key]));
+}
+const ycMetric = key => myYCMetrics().find(m => m.key === key) || myYCMetrics()[0] || YC_METRICS[0];
 
 /* 연도 × 주차번호 값 맵 */
 function ycWeekMap(year, fn) {
@@ -4207,16 +4222,29 @@ function initYearComp() {
 
   // 지표 버튼
   const btns = document.getElementById('yc-metric-btns');
-  if (btns) btns.innerHTML = YC_METRICS.map(m =>
+  const metrics = myYCMetrics();
+  if (!metrics.length) {
+    setText('yc-scope', '연도별로 견줄 수 있는 담당 항목이 없습니다.');
+    const sec = document.getElementById('s-yearcomp');
+    if (sec) sec.classList.add('data-empty');
+    return;
+  }
+  if (!metrics.some(m => m.key === YC_METRIC)) YC_METRIC = metrics[0].key;
+  if (btns) btns.innerHTML = metrics.map(m =>
     `<button class="yc-seg${m.key === YC_METRIC ? ' on' : ''}" id="yc-m-${m.key}" onclick="setYCMetric('${m.key}')">${m.label}</button>`
   ).join('');
 
   // 히트맵 지표 선택
   const heatSel = document.getElementById('yc-heat-metric');
-  if (heatSel && !heatSel.options.length) {
-    heatSel.innerHTML = YC_METRICS.map(m => `<option value="${m.key}">${m.label}</option>`).join('');
+  if (heatSel) {
+    const keepM = heatSel.value;
+    heatSel.innerHTML = metrics.map(m => `<option value="${m.key}">${m.label}</option>`).join('');
+    if (keepM && metrics.some(m => m.key === keepM)) heatSel.value = keepM;
   }
 
+  if (ME && ME.tabs && ME.tabs !== '*' && metrics.length < YC_METRICS.length) {
+    setText('yc-scope', `담당하시는 ${metrics.map(m => m.label).join(' · ')}만 보입니다`);
+  }
   initYCPointControls();
   renderYCSummary();
   renderYCHeat();
@@ -4227,7 +4255,7 @@ function initYearComp() {
 /* ─── 연도 요약 ─── */
 function renderYCSummary() {
   const cur = YC_YEARS[YC_YEARS.length - 1], prev = cur - 1;
-  const cards = YC_METRICS.map(m => {
+  const cards = myYCMetrics().map(m => {
     const c = ycCompare(m.fn, cur, prev);
     if (!c) return { label: m.label, value: '–', sub: `${prev}년 비교 데이터 없음`, color: 'blue' };
     const sign = c.diff >= 0 ? '+' : '';
@@ -4422,18 +4450,39 @@ function renderYCTrend() {
 /* ─── 특정 주일 비교 ─── */
 function ycPointItems() {
   const items = [];
-  ['1부','2부','3부'].forEach(p => {
-    items.push({ id:`sh:${p}`, label:`주일예배 · 서현 ${p}`, fn: w => nn(D.sunday[w]?.bu?.[p]?.['장년']) });
-    items.push({ id:`sr:${p}`, label:`주일예배 · 송림 ${p}`, fn: w => nn(D.sunday[w]?.bu?.[p]?.['송림']) });
-  });
-  items.push({ id:'sun:all', label:'주일예배 · 장년 현장 합계', fn: ycAdult });
-  items.push({ id:'school:all', label:'주일학교 · 전체', fn: w => schoolTot(w) });
-  myDepts().forEach(d => items.push({ id:`school:${d}`, label:`주일학교 · ${d}`, fn: w => schoolDeptTotal(w, d) }));
-  myYouthDepts().forEach(d => items.push({ id:`youth:${d}`, label:`청년교구 · ${d}`, fn: w => nn(D.youth[w]?.[d]?.예배) }));
-  items.push({ id:'youth:all', label:'청년교구 · 합계', fn: ycYouth });
-  items.push({ id:'wd:wed', label:'수요예배 · 현장', fn: w => nn(D.weekday[w]?.wed_off) });
-  items.push({ id:'wd:fri', label:'금요기도회 · 현장', fn: w => nn(D.weekday[w]?.fri_off) });
-  items.push({ id:'wd:dawn', label:'새벽기도 · 주간 현장 합계', fn: ycDawnOff });
+  if (canSee('sunday')) {
+    ['1부','2부','3부'].forEach(p => {
+      items.push({ id:`sh:${p}`, label:`주일예배 · 서현 ${p}`, fn: w => nn(D.sunday[w]?.bu?.[p]?.['장년']) });
+      items.push({ id:`sr:${p}`, label:`주일예배 · 송림 ${p}`, fn: w => nn(D.sunday[w]?.bu?.[p]?.['송림']) });
+    });
+    items.push({ id:'sun:all', label:'주일예배 · 장년 현장 합계', fn: ycAdult });
+  }
+  if (canSee('school')) {
+    items.push({ id:'school:all', label:'주일학교 · 전체', fn: w => schoolTot(w) });
+    myDepts().forEach(d => items.push({ id:`school:${d}`, label:`주일학교 · ${d}`, fn: w => schoolDeptTotal(w, d) }));
+  }
+  if (canSee('youth')) {
+    myYouthDepts().forEach(d => items.push({ id:`youth:${d}`, label:`청년교구 · ${d}`, fn: w => nn(D.youth[w]?.[d]?.예배) }));
+    items.push({ id:'youth:all', label:'청년교구 · 합계', fn: ycYouth });
+  }
+  if (canSee('district')) {
+    items.push({ id:'dist:cell', label:'장년교구 · 다락방 합계',
+      fn: w => { const r = D.cell.find(x => x.date === w); return r ? r.totalChul : null; } });
+    items.push({ id:'dist:lead', label:'장년교구 · 순장반 합계',
+      fn: w => { const r = D.leader.find(x => x.date === w); return r ? r.totalChul : null; } });
+  }
+  if (canSee('newfam')) {
+    items.push({ id:'nf:visit', label:'새가족 · 방문자',
+      fn: w => { const r = D.newFamily.find(x => x.date === w);
+                 return r ? nfRequestTotal(r,'adult') + nfRequestTotal(r,'youth') : null; } });
+    items.push({ id:'nf:reg', label:'새가족 · 등록자',
+      fn: w => { const r = D.newFamily.find(x => x.date === w); return r?.regTotal ?? null; } });
+  }
+  if (canSee('wd')) {
+    items.push({ id:'wd:wed', label:'수요예배 · 현장', fn: w => nn(D.weekday[w]?.wed_off) });
+    items.push({ id:'wd:fri', label:'금요기도회 · 현장', fn: w => nn(D.weekday[w]?.fri_off) });
+    items.push({ id:'wd:dawn', label:'새벽기도 · 주간 현장 합계', fn: ycDawnOff });
+  }
   return items;
 }
 let YC_POINT_ITEMS = [];
@@ -4442,8 +4491,10 @@ function initYCPointControls() {
   YC_POINT_ITEMS = ycPointItems();
   const dateSel = document.getElementById('yc-point-date');
   const deptSel = document.getElementById('yc-point-dept');
-  if (deptSel && !deptSel.options.length) {
+  if (deptSel) {
+    const keepIt = deptSel.value;
     deptSel.innerHTML = YC_POINT_ITEMS.map(it => `<option value="${it.id}">${it.label}</option>`).join('');
+    if (keepIt && YC_POINT_ITEMS.some(it => it.id === keepIt)) deptSel.value = keepIt;
   }
   if (!dateSel) return;
   const cur = YC_YEARS[YC_YEARS.length - 1];
