@@ -905,9 +905,10 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   </div>
   <div class="stabs">
     <button class="stab on" onclick="ss2('school','all')">전체</button>
-    <button class="stab" onclick="ss2('school','infant')">영유아부</button>
-    <button class="stab" onclick="ss2('school','child')">아동부</button>
-    <button class="stab" onclick="ss2('school','teen')">중고등부</button>
+    <button class="stab" onclick="ss2('school','love')">사랑부</button>
+    <button class="stab" onclick="ss2('school','pre')">미취학부</button>
+    <button class="stab" onclick="ss2('school','sch')">취학부</button>
+    <button class="stab" onclick="ss2('school','teen')">청소년부</button>
   </div>
 
   <div class="ss on" id="school-all">
@@ -916,9 +917,9 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
       <select class="dist-sel" id="school-dept-sel" onchange="renderSchoolDept()">
         <option value="">전체</option>
         <option>사랑부</option><option>영아부</option><option>유아부</option><option>유치부</option>
-        <option>송림유년</option><option>서현유년</option><option>송림초등</option><option>서현초등</option>
-        <option>송림소년</option><option>서현소년</option><option>송림청소년부</option>
-        <option>중등부</option><option>고등부</option>
+        <option>송림유년부</option><option>서현유년부</option><option>송림초등부</option><option>서현초등부</option>
+        <option>송림소년부</option><option>서현소년부</option><option>송림청소년부</option>
+        <option>서현중등부</option><option>서현고등부</option>
       </select>
     </div>
     <div class="kg" id="kk-school"></div>
@@ -932,29 +933,38 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     </div>
   </div>
 
-  <div class="ss" id="school-infant">
-    <div class="kg" id="kk-school-infant"></div>
+  <div class="ss" id="school-love">
+    <div class="kg" id="kk-school-love"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">영유아부 출석 추이</div><div class="cs">사랑부·영아부·유아부·유치부</div></div></div><canvas id="c-school-infant-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">부서별 비중</div></div></div><canvas id="c-school-infant-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">사랑부 출석 추이</div></div></div><canvas id="c-school-love-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">부서별 비중</div></div></div><canvas id="c-school-love-pie"></canvas></div>
     </div>
   </div>
 
-  <div class="ss" id="school-child">
-    <div class="kg" id="kk-school-child"></div>
+  <div class="ss" id="school-pre">
+    <div class="kg" id="kk-school-pre"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">아동부 출석 추이</div><div class="cs">유년·초등·소년·청소년</div></div></div><canvas id="c-school-child-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">부서별 비중</div></div></div><canvas id="c-school-child-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">미취학부 출석 추이</div><div class="cs">영아부·유아부·유치부</div></div></div><canvas id="c-school-pre-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">부서별 비중</div></div></div><canvas id="c-school-pre-pie"></canvas></div>
+    </div>
+  </div>
+
+  <div class="ss" id="school-sch">
+    <div class="kg" id="kk-school-sch"></div>
+    <div class="cg">
+      <div class="cc"><div class="ch"><div><div class="ct">취학부 출석 추이</div><div class="cs">유년부·초등부·소년부</div></div></div><canvas id="c-school-sch-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">부서별 비중</div></div></div><canvas id="c-school-sch-pie"></canvas></div>
     </div>
   </div>
 
   <div class="ss" id="school-teen">
     <div class="kg" id="kk-school-teen"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">중고등부 출석 추이</div><div class="cs">중등부·고등부</div></div></div><canvas id="c-school-teen-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">중등부 vs 고등부 비중</div></div></div><canvas id="c-school-teen-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">청소년부 출석 추이</div><div class="cs">송림청소년부·서현중등부·서현고등부</div></div></div><canvas id="c-school-teen-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">부서별 비중</div></div></div><canvas id="c-school-teen-pie"></canvas></div>
     </div>
   </div>
+
 </section>
 
 <!-- ═══ WEEKDAY ═══ -->
@@ -1219,6 +1229,19 @@ function mergeHist() {
       });
     });
     HIST._campusFixed = true;
+  }
+
+  // 예전 파싱본은 '중등부'처럼 짧은 이름을 쓴다. 정식 이름으로 한 번만 옮긴다.
+  if (!HIST._schoolRenamed) {
+    Object.values(HIST.school || {}).forEach(rec => {
+      if (!rec) return;
+      Object.entries(SCHOOL_DEPT_MAP).forEach(([oldName, newName]) => {
+        if (rec[oldName] !== undefined && rec[newName] === undefined) {
+          rec[newName] = rec[oldName]; delete rec[oldName];
+        }
+      });
+    });
+    HIST._schoolRenamed = true;
   }
 
   const live = new Set(D.weeks);
@@ -1724,7 +1747,9 @@ const WEEK_NOTES = {
 
 // ── 상수 ──
 const MONTHS_KR = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-const SCHOOL_DEPTS = ['사랑부','영아부','유아부','유치부','송림유년','서현유년','송림초등','서현초등','송림소년','서현소년','송림청소년부','중등부','고등부'];
+/* 시트에 들어오는 정식 이름을 그대로 쓴다. 예전에는 '중등부'처럼 줄여 놓아
+   시트 이름과 화면 이름이 달랐다. */
+const SCHOOL_DEPTS = ['사랑부', '영아부', '유아부', '유치부', '송림유년부', '서현유년부', '송림초등부', '서현초등부', '송림소년부', '서현소년부', '송림청소년부', '서현중등부', '서현고등부'];
 /* 로그인한 사용자가 볼 수 있는 주일학교 부서.
    담당 부서가 지정돼 있으면 선택지뿐 아니라 차트·표·합계까지 그 부서로만 좁힌다.
    (드롭다운만 막고 그래프에 전체 부서를 그리면 제한한 의미가 없다) */
@@ -1734,9 +1759,10 @@ function myDepts() {
   return SCHOOL_DEPTS.filter(d => allow.includes(d));
 }
 const SCHOOL_GROUPS = {
-  infant: { label:'영유아부', depts:['사랑부','영아부','유아부','유치부'], color:'blue' },
-  child:  { label:'아동부',   depts:['송림유년','서현유년','송림초등','서현초등','송림소년','서현소년','송림청소년부'], color:'teal' },
-  teen:   { label:'중고등부', depts:['중등부','고등부'], color:'purple' },
+  love: { label:'사랑부',   depts:['사랑부'], color:'gold' },
+  pre:  { label:'미취학부', depts:['영아부','유아부','유치부'], color:'blue' },
+  sch:  { label:'취학부',   depts:['송림유년부','서현유년부','송림초등부','서현초등부','송림소년부','서현소년부'], color:'teal' },
+  teen: { label:'청소년부', depts:['송림청소년부','서현중등부','서현고등부'], color:'purple' },
 };
 // ── 차트 카드별 독립 기간 상태 ──
 const CARD_PERIOD = {};
@@ -2406,8 +2432,8 @@ function initHome() {
         extraHtml: (() => {
           const groups = [
             { name:'미취학', depts:['사랑부','영아부','유아부','유치부'] },
-            { name:'어린이', depts:['송림유년','서현유년','송림초등','서현초등','송림소년','서현소년'] },
-            { name:'청소년', depts:['송림청소년부','중등부','고등부'] },
+            { name:'취학', depts:['송림유년부','서현유년부','송림초등부','서현초등부','송림소년부','서현소년부'] },
+            { name:'청소년', depts:['송림청소년부','서현중등부','서현고등부'] },
           ];
           const items = groups.map(g => {
             const n = g.depts.reduce((a,d) => a + schoolDeptValue(lW,d), 0);
@@ -3271,8 +3297,8 @@ function renderSchoolKpiAll(fw2) {
     mkKPI('kk-school',[
       {label:'주일학교 합계 (최근)',value:fmtOr(lat2),sub:`${lblDate} · ${fw2.length}주 평균 ${fmt(avg(tots2))}명`,color:'blue',
         trend: dT2 == null ? '' : `${dT2>=0?'▲':'▼'} 직전 ${dT2>=0?'+':''}${fmt(dT2)}`, td: dT2>=0?'up':'dn'},
-      {label:'중등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'중등부')),sub:lblDate,color:'purple'},
-      {label:'고등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'고등부')),sub:lblDate,color:'teal'},
+      {label:'서현중등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'서현중등부')),sub:lblDate,color:'purple'},
+      {label:'서현고등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'서현고등부')),sub:lblDate,color:'teal'},
       {label:'기간 내 최고',value:fmtOr(maxT2),sub:maxD2,color:'gold'},
     ]);
 }
@@ -4559,13 +4585,12 @@ function genSundays(weeksBack) {
 }
 
 /* 주일학교 부서명 매핑: 새 GAS → 대시보드 D 오브젝트 */
+/* 시트 이름을 그대로 쓴다. 예전 짧은 이름으로 들어오는 자료만 옮겨 준다. */
 const SCHOOL_DEPT_MAP = {
-  '사랑부': '사랑부', '영아부': '영아부', '유아부': '유아부', '유치부': '유치부',
-  '서현유년부': '서현유년', '송림유년부': '송림유년',
-  '서현초등부': '서현초등', '송림초등부': '송림초등',
-  '서현소년부': '서현소년', '송림소년부': '송림소년',
-  '송림청소년부': '송림청소년부',
-  '서현중등부': '중등부', '서현고등부': '고등부',
+  '송림유년': '송림유년부', '서현유년': '서현유년부',
+  '송림초등': '송림초등부', '서현초등': '서현초등부',
+  '송림소년': '송림소년부', '서현소년': '서현소년부',
+  '중등부': '서현중등부', '고등부': '서현고등부',
 };
 
 /* 새 GAS 응답을 D 오브젝트에 반영 */
