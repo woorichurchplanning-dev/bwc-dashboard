@@ -175,7 +175,7 @@ nav::-webkit-scrollbar { display: none; }
 .nt[onclick*="leader"]   { --nt-tint: rgba(8,145,178,0.06); }
 .nt[onclick*="cell"]     { --nt-tint: rgba(234,88,12,0.06); }
 .nt[onclick*="newfam"]   { --nt-tint: rgba(219,39,119,0.06); }
-.nt[onclick*="special"]  { --nt-tint: rgba(107,114,128,0.08); }
+.nt[onclick*="special"]  { --nt-tint: rgba(147,51,234,0.06); }
 .nt[onclick*="yearcomp"] { --nt-tint: rgba(107,114,128,0.08); }
 .nt:hover { background: var(--nt-tint, var(--color-bg-subtle)); }
 .nt.on    { background: var(--nt-tint, var(--color-accent-light)); }
@@ -761,10 +761,10 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="nt" onclick="sw('sunday')">주일예배</div>
   <div class="nt" onclick="sw('youth')">청년교구</div>
   <div class="nt" onclick="sw('school')">주일학교</div>
-  <div class="nt" onclick="sw('wd')">주중·새벽</div>
+  <div class="nt" onclick="sw('wd')">주중예배</div>
   <div class="nt" onclick="sw('district')">교구</div>
   <div class="nt" onclick="sw('newfam')">새가족</div>
-  <button class="nt" onclick="sw('special')"><span class="nt-icon">✦</span><span>&nbsp;특별예배</span></button>
+  <div class="nt" onclick="sw('special')">특별예배</div>
   <div class="nt" onclick="sw('yearcomp')">연도 비교</div>
 </nav>
 
@@ -1002,7 +1002,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 <!-- ═══ WEEKDAY ═══ -->
 <section class="sec" id="s-wd">
   <div class="page-hdr">
-    <div class="page-hdr-title"><h2>주중 예배 · 새벽기도</h2><p>수요예배·금요기도회·새벽기도 출석 현황</p></div>
+    <div class="page-hdr-title"><h2>주중예배</h2><p>수요예배·금요기도회·새벽기도 출석 현황</p></div>
   </div>
   <div class="kg" id="kk-wd"></div>
   <div class="cg">

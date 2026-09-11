@@ -43,7 +43,7 @@ EXTRA_PEOPLE = [
 ]
 
 TABS = [('sunday','주일예배'), ('youth','청년교구'), ('school','주일학교'),
-        ('wd','주중·새벽'), ('district','교구'), ('newfam','새가족'),
+        ('wd','주중예배'), ('district','교구'), ('newfam','새가족'),
         ('special','특별예배'), ('yearcomp','연도비교')]
 
 # 주소록 라벨 → 기본으로 열어 줄 탭
