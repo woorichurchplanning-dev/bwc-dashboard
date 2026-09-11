@@ -589,6 +589,20 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   [data-tip] { border-bottom:none; } [data-tip]::after { display:none; }
 }
 
+/* 같은 탭 안에서 성격이 다른 묶음을 가르는 줄 */
+.nf-split { display:flex; align-items:center; gap:12px; margin:var(--s6) 0 var(--s4); }
+.nf-split::before, .nf-split::after { content:''; flex:1; height:1px; background:var(--color-border-default); }
+.nf-split span { font-size:11.5px; font-weight:700; color:var(--text3); white-space:nowrap; }
+
+/* 연·월·일 고르는 칸 */
+.dsel { display:inline-flex; gap:3px; }
+.dsel select {
+  height:26px; padding:0 4px; border-radius:5px; font:inherit; font-size:11.5px; font-weight:600;
+  border:1px solid var(--color-border-default); background:var(--color-bg-surface);
+  color:var(--color-text-secondary); cursor:pointer;
+}
+.dsel select:focus { outline:2px solid var(--color-accent); outline-offset:-1px; }
+
 /* 표 더 보기 줄 */
 .tbl-more { text-align:center !important; padding:10px !important; background:var(--color-bg-subtle); }
 .tbl-more button {
@@ -772,13 +786,11 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <span class="flt-lbl">주</span>
     <button class="flt-apply" onclick="applyNweeks()">적용</button>
   </div>
-  <div class="flt-quick-sep"></div>
-  <div class="flt-group" id="flt-years"></div>
   <span class="flt-sep-or">또는</span>
   <div class="flt-group">
-    <input type="date" class="flt-date-in" id="flt-s">
+    <span class="dsel" id="dsel-s"></span>
     <span class="flt-lbl" style="color:var(--text3)">~</span>
-    <input type="date" class="flt-date-in" id="flt-e">
+    <span class="dsel" id="dsel-e"></span>
     <button class="flt-apply" onclick="applyDateRange()">적용</button>
   </div>
   <button class="flt-reset" id="flt-reset-btn" onclick="resetFilter()" style="display:none">✕ 초기화</button>
@@ -929,7 +941,16 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-school-trend">주일학교 전체 출석 추이</div></div></div><canvas id="c-school-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-school-pie">부서별 비중 (누적)</div></div></div><canvas id="c-school-pie"></canvas></div>
     </div>
-    <div class="cc" style="margin-bottom:16px"><div class="ch"><div><div class="ct" id="ct-school-bar">부서별 최근 4주 평균 출석</div></div></div><canvas id="c-school-bar" style="max-height:380px"></canvas></div>
+    <div class="cc" style="margin-bottom:16px"><div class="ch"><div><div class="ct" id="ct-school-bar">부서별 인원 (최근 4주 평균)</div>
+      <div class="cs" id="cs-school-bar">학생 기준</div></div></div>
+      <div class="pick" id="pick-school">
+        <div class="pick-row">
+          <button class="pill kind on" data-kind="학생" onclick="pickSchoolKind(this)">학생</button>
+          <button class="pill kind" data-kind="교사" onclick="pickSchoolKind(this)">교사</button>
+          <button class="pill kind" data-kind="학생+교사" onclick="pickSchoolKind(this)">학생+교사</button>
+        </div>
+      </div>
+      <canvas id="c-school-bar" style="display:none"></canvas></div>
     <div class="cc"><div class="ch"><div><div class="ct" id="ct-school-table">부서별 주별 출석 상세</div></div></div>
       <div style="overflow-x:auto"><table id="t-school"></table></div>
     </div>
@@ -1048,7 +1069,6 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="stabs">
     <button class="stab on" onclick="ss2('newfam','adult')">장년</button>
     <button class="stab" onclick="ss2('newfam','youth')">청년</button>
-    <button class="stab" onclick="ss2('newfam','reg')">장년등록자</button>
   </div>
 
   <div class="ss on" id="newfam-adult">
@@ -1060,9 +1080,8 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <div class="cc"><div class="ch"><div><div class="ct">장년 등록요청자 구성</div></div></div>
       <div class="fw" id="fw-adult"></div>
     </div>
-  </div>
 
-  <div class="ss" id="newfam-reg">
+    <div class="nf-split"><span>같은 사람들을 연령대·성별로 본 것</span></div>
     <div class="kg" id="kk-newfam-reg"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">연령대별 등록자</div><div class="cs">선택 기간 누계 · 남녀</div></div></div><canvas id="c-nf-reg-age"></canvas></div>
@@ -1505,7 +1524,6 @@ let QUICK_N = 8;
 
 function syncQuickBtns(active) {
   QUICK_N = active;
-  document.querySelectorAll('.flt-year').forEach(b => b.classList.remove('on'));
   ['all','52','26','8','4'].forEach(k => {
     const el = document.getElementById('fq-' + k);
     if (el) el.classList.toggle('on', String(k) === String(active));
@@ -1513,37 +1531,50 @@ function syncQuickBtns(active) {
   document.getElementById('flt-reset-btn').style.display = (active === 'all') ? 'none' : '';
 }
 
-/* 자료가 있는 연도를 버튼으로 낸다. 예전에는 작년을 보려면 날짜 칸의
-   화살표를 수십 번 눌러야 했다. */
-function renderYearButtons() {
-  const box = document.getElementById('flt-years');
-  if (!box || !D.weeks.length) return;
+/* 날짜는 연·월·일을 각각 고르게 한다. 예전에는 date 칸의 화살표를 눌러
+   하루씩 옮겨야 해서 작년으로 가려면 수십 번을 눌렀다. 휴대폰에서는
+   위아래로 돌리는 바퀴가 떠서 한 번에 넘어간다. */
+function buildDateSelects() {
+  if (!D.weeks.length) return;
   const years = [...new Set(D.weeks.map(w => w.slice(0, 4)))].sort();
-  box.innerHTML = `<span class="flt-lbl">연도</span>` + years.map(y =>
-    `<button class="flt-quick flt-year" id="fy-${y}" onclick="applyYear('${y}')">${y.slice(2)}년</button>`).join('');
-  syncYearBtns();
-}
-
-function syncYearBtns() {
-  document.querySelectorAll('.flt-year').forEach(b => {
-    const y = b.id.slice(3);
-    b.classList.toggle('on', FILTER_MODE === 'custom' && FILTER_S === `${y}-01-01` && FILTER_E === `${y}-12-31`);
+  const first = D.weeks[0], last = D.weeks[D.weeks.length - 1];
+  [['s', first], ['e', last]].forEach(([which, def]) => {
+    const box = document.getElementById('dsel-' + which);
+    if (!box) return;
+    const cur = (which === 's' ? FILTER_S : FILTER_E) || def;
+    const [cy, cm, cd] = cur.split('-');
+    const opt = (v, sel, txt) => `<option value="${v}"${v === sel ? ' selected' : ''}>${txt}</option>`;
+    box.innerHTML =
+      `<select class="dsel-y" onchange="onDateSel('${which}')">` +
+        years.map(y => opt(y, cy, y + '년')).join('') + '</select>' +
+      `<select class="dsel-m" onchange="onDateSel('${which}')">` +
+        Array.from({length:12}, (_, i) => String(i+1).padStart(2,'0'))
+             .map(m => opt(m, cm, Number(m) + '월')).join('') + '</select>' +
+      `<select class="dsel-d" onchange="onDateSel('${which}')">` +
+        Array.from({length:31}, (_, i) => String(i+1).padStart(2,'0'))
+             .map(d => opt(d, cd, Number(d) + '일')).join('') + '</select>';
   });
 }
 
-function applyYear(y) {
-  FILTER_MODE = 'custom';
-  FILTER_S = `${y}-01-01`; FILTER_E = `${y}-12-31`;
-  FILTER_N = 0;
-  const si = document.getElementById('flt-s'), ei = document.getElementById('flt-e');
-  if (si) si.value = FILTER_S;
-  if (ei) ei.value = FILTER_E;
-  const nw = document.getElementById('flt-nweeks'); if (nw) nw.value = '';
-  Object.keys(CARD_PERIOD).forEach(k => delete CARD_PERIOD[k]);
-  syncQuickBtns(null);
-  syncYearBtns();
-  rerender();
+function dateSelValue(which) {
+  const box = document.getElementById('dsel-' + which);
+  if (!box) return '';
+  const g = c => box.querySelector('.dsel-' + c)?.value;
+  return [g('y'), g('m'), g('d')].every(Boolean) ? `${g('y')}-${g('m')}-${g('d')}` : '';
 }
+
+function onDateSel(which) {
+  // 고르는 즉시 반영하면 연 → 월 → 일 사이에 엉뚱한 구간이 잡힌다. '적용'을 눌러야 한다.
+  const el = document.getElementById('flt-reset-btn');
+  if (el) el.style.display = '';
+}
+
+/* (안 씀) 자료가 있는 연도를 버튼으로 낸다. 예전에는 작년을 보려면 날짜 칸의
+   화살표를 수십 번 눌러야 했다. */
+function renderYearButtons() {
+  buildDateSelects();
+}
+
 
 function applyQuick(n) {
   if (n === 'all') { resetFilter(); return; }
@@ -1551,8 +1582,7 @@ function applyQuick(n) {
   FILTER_MODE = 'nweeks';
   FILTER_S = ''; FILTER_E = '';
   document.getElementById('flt-nweeks').value = '';
-  document.getElementById('flt-s').value = '';
-  document.getElementById('flt-e').value = '';
+  buildDateSelects();
   Object.keys(CARD_PERIOD).forEach(k => delete CARD_PERIOD[k]);
   syncQuickBtns(n);
   rerender();
@@ -1564,8 +1594,7 @@ function applyNweeks() {
   FILTER_N = Math.min(raw, D.weeks.length);
   FILTER_MODE = 'nweeks';
   FILTER_S = ''; FILTER_E = '';
-  document.getElementById('flt-s').value = '';
-  document.getElementById('flt-e').value = '';
+  buildDateSelects();
   document.getElementById('flt-reset-btn').style.display = '';
   Object.keys(CARD_PERIOD).forEach(k => delete CARD_PERIOD[k]);
   syncQuickBtns('custom');
@@ -1573,8 +1602,8 @@ function applyNweeks() {
 }
 
 function applyDateRange() {
-  const s = document.getElementById('flt-s').value;
-  const e = document.getElementById('flt-e').value;
+  const s = dateSelValue('s');
+  const e = dateSelValue('e');
   if (!s || !e) { alert('시작일과 종료일을 모두 선택해 주세요.'); return; }
   if (s > e) { alert('시작일이 종료일보다 늦습니다.'); return; }
   FILTER_S = s; FILTER_E = e;
@@ -1591,8 +1620,7 @@ function resetFilter() {
   FILTER_MODE = 'all';
   FILTER_S = ''; FILTER_E = ''; FILTER_N = 0;
   document.getElementById('flt-nweeks').value = '';
-  document.getElementById('flt-s').value = '';
-  document.getElementById('flt-e').value = '';
+  buildDateSelects();
   Object.keys(CARD_PERIOD).forEach(k => delete CARD_PERIOD[k]);
   syncQuickBtns('all');
   rerender();
@@ -2253,6 +2281,20 @@ function lastFilledIdx(arr, before) {
 /* 미입력은 0이 아니라 '–' */
 function fmtOr(n, dash = '–') { return n == null ? dash : fmt(n); }
 function schoolSeries(dept, fw)  { return (fw||getFW()).map(w => nn(schoolDeptTotal(w, dept))); }
+
+/* 학생만 센다. 부서 합계에는 교사가 들어 있어 실제 아이들 수보다 많다.
+   2025년까지의 예전 파싱본에는 학생·교사 구분이 없어 null 을 준다 —
+   있는 것처럼 총계를 대신 넣으면 숫자가 부풀어 비교가 틀어진다. */
+function schoolStudent(w, dept) { return nn(D.school[w]?.[dept]?.['학생']); }
+function schoolStudentAvg4(dept, fw) {
+  const v = (fw || getFW()).map(w => schoolStudent(w, dept)).filter(x => x != null);
+  return v.length ? Math.round(v.slice(-4).reduce((a, b) => a + b, 0) / Math.min(v.length, 4)) : 0;
+}
+/* 파트(사랑부·미취학부·취학부·청소년부) 최근 4주 평균 학생 수 */
+function schoolPartAvg4(key, fw) {
+  const depts = SCHOOL_GROUPS[key].depts.filter(d => myDepts().includes(d));
+  return depts.reduce((a, d) => a + schoolStudentAvg4(d, fw), 0);
+}
 /* 주일학교 전 부서 합계 — initHome/initYearComp 양쪽에서 쓰이므로 모듈 스코프에 둔다 */
 function schoolTot(w) {
   if (!D.school[w]) return null;
@@ -3260,10 +3302,10 @@ function initSchool() {
   renderSchoolTrend(fw);
   addCardPeriod('c-school-trend', renderSchoolTrend, renderSchoolKpiAll);
   const DS = myDepts();
-  const deptSums = DS.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
-  mkShareBars('c-school-pie', DS, deptSums, DS.map((_,i)=>CA[i%CA.length]));
-  const avgs4 = DS.map(d=>last4avg(fw.map(w=>schoolDeptValue(w,d))));
-  mkChart('c-school-bar','bar',DS,[{data:avgs4,backgroundColor:DS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
+  setText('ct-school-pie', '부서별 비중 (학생 · 최근 4주 평균)');
+  mkShareBars('c-school-pie', DS, DS.map(d => schoolStudentAvg4(d, fw)), DS.map((_,i)=>CA[i%CA.length]));
+  setText('ct-school-bar', '부서별 인원 (최근 4주 평균)');
+  renderSchoolBars(fw);
   mkTable('t-school',['날짜',...DS,'합계'],
     fw.map(w=>[w,...DS.map(d=>fmtOr(schoolDeptTotal(w,d))),
       fmtOr(schoolGroupTotal(w))]));
@@ -3289,7 +3331,7 @@ function initSchool() {
       ...depts.slice(0,3).map(d=>({label:d+' (최근)',value:fmtOr(schoolDeptTotal(gW,d)),sub:gDate,color:'teal'})),
     ]);
     mkChart(`c-school-${key}-trend`,'line',wl,depts.map((d,i)=>lds(d,schoolSeries(d,fw),colors[i])));
-    mkShareBars(`c-school-${key}-pie`, depts, gSums, colors);
+    mkShareBars(`c-school-${key}-pie`, depts, depts.map(d => schoolStudentAvg4(d, fw)), colors);
   });
 }
 
@@ -3316,6 +3358,35 @@ function movAvg(arr, n) {
 }
 
 /* 주일학교 '전체' KPI — initSchool과 부서 선택 해제 시 공용 */
+/* 부서별 인원 — 가로 막대 차트는 부서가 열셋이라 세로로 길어져서 숫자를
+   보려면 일일이 짚어야 했다. 목록으로 내면 이름·인원·비중이 다 보인다. */
+function pickSchoolKind(btn) {
+  btn.parentElement.querySelectorAll('.pill.kind').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderSchoolBars();
+}
+
+function schoolKindAvg4(dept, kind, fw) {
+  const pick = w => {
+    const r = D.school[w]?.[dept];
+    if (!r) return null;
+    if (kind === '학생') return nn(r['학생']);
+    if (kind === '교사') return nn(r['교사']);
+    const a = nn(r['학생']), b = nn(r['교사']);
+    return a == null && b == null ? nn(r['합계']) : (a || 0) + (b || 0);
+  };
+  const v = (fw || getFW()).map(pick).filter(x => x != null);
+  return v.length ? Math.round(v.slice(-4).reduce((a, b) => a + b, 0) / Math.min(v.length, 4)) : 0;
+}
+
+function renderSchoolBars(fw) {
+  fw = fw || getFW();
+  const kind = document.querySelector('#pick-school .pill.kind.on')?.dataset.kind || '학생';
+  const DS = myDepts();
+  setText('cs-school-bar', `${kind} 기준`);
+  mkShareBars('c-school-bar', DS, DS.map(d => schoolKindAvg4(d, kind, fw)), DS.map((_, i) => CA[i % CA.length]));
+}
+
 function renderSchoolKpiAll(fw2) {
     const tots2 = fw2.map(w => schoolGroupTotal(w));
     // '최근'은 마지막 주가 아니라 실제로 입력된 마지막 주 기준
@@ -3329,12 +3400,19 @@ function renderSchoolKpiAll(fw2) {
     const maxT2 = filled.length ? Math.max(...filled) : null;
     const maxW2 = maxT2 != null ? fw2[tots2.indexOf(maxT2)] : '';
     const maxD2 = maxW2 ? `${Number(maxW2.slice(5,7))}/${Number(maxW2.slice(8,10))}` : '';
-    mkKPI('kk-school',[
-      {label:'주일학교 합계 (최근)',value:fmtOr(lat2),sub:`${lblDate} · ${fw2.length}주 평균 ${fmt(avg(tots2))}명`,color:'blue',
-        trend: dT2 == null ? '' : `${dT2>=0?'▲':'▼'} 직전 ${dT2>=0?'+':''}${fmt(dT2)}`, td: dT2>=0?'up':'dn'},
-      {label:'서현중등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'서현중등부')),sub:lblDate,color:'purple'},
-      {label:'서현고등부 (최근)',value:fmtOr(schoolDeptTotal(lW2,'서현고등부')),sub:lblDate,color:'teal'},
-      {label:'기간 내 최고',value:fmtOr(maxT2),sub:maxD2,color:'gold'},
+    // 네 파트가 각각 몇 명인지부터 보인다. 학생 기준 최근 4주 평균.
+    const parts = Object.entries(SCHOOL_GROUPS).map(([k, g]) => ({ k, g, v: schoolPartAvg4(k, fw2) }));
+    const partTot = parts.reduce((a, x) => a + x.v, 0);
+    mkKPI('kk-school', [
+      { label:'주일학교 학생 (4주 평균)', value: partTot ? fmt(partTot) : fmtOr(lat2),
+        sub: partTot ? `${lblDate} · 교사 제외` : `${lblDate} · ${fw2.length}주 평균 ${fmt(avg(tots2))}명`,
+        color:'blue',
+        trend: dT2 == null ? '' : `${dT2>=0?'▲':'▼'} 직전 ${dT2>=0?'+':''}${fmt(dT2)}`, td: dT2>=0?'up':'dn' },
+      ...parts.map(({ g, v }) => ({
+        label: `${g.label} (4주 평균)`, value: v ? fmt(v) : '–',
+        sub: partTot && v ? `전체의 ${Math.round(v / partTot * 100)}%` : '학생 자료 없음',
+        color: g.color,
+      })),
     ]);
 }
 
@@ -3347,15 +3425,17 @@ function renderSchoolDept() {
     // ── 전체 보기 복원 ──
     setText('ct-school-trend', '주일학교 전체 출석 추이');
     setText('ct-school-pie',   '부서별 비중 (누적)');
-    setText('ct-school-bar',   '부서별 최근 4주 평균 출석');
+    setText('ct-school-bar',   '부서별 인원 (최근 4주 평균)');
     setText('ct-school-table', '부서별 주별 출석 상세');
     const tots = fw.map(w => schoolGroupTotal(w));
     mkChart('c-school-trend','line',wl,[lds('주일학교 합계',tots,C.b,true)],{fw});
+    // 누적으로 하면 결측 주차와 옛 조직까지 섞여 지금의 크기를 못 나타낸다.
+    // 학생 기준 최근 4주 평균으로 견준다.
     const DS = myDepts();
-    const deptSums = DS.map(d => fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
-    mkShareBars('c-school-pie', DS, deptSums, DS.map((_,i)=>CA[i%CA.length]));
-    const avgs4 = DS.map(d => last4avg(fw.map(w=>schoolDeptValue(w,d))));
-    mkChart('c-school-bar','bar',DS,[{data:avgs4,backgroundColor:DS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
+    const deptAvg = DS.map(d => schoolStudentAvg4(d, fw));
+    setText('ct-school-pie', '부서별 비중 (학생 · 최근 4주 평균)');
+    mkShareBars('c-school-pie', DS, deptAvg, DS.map((_,i)=>CA[i%CA.length]));
+    renderSchoolBars(fw);
     mkTable('t-school',['날짜',...DS,'합계'],
       fw.map(w=>[w,...DS.map(d=>fmtOr(schoolDeptTotal(w,d))), fmtOr(schoolGroupTotal(w))]));
     renderSchoolKpiAll(fw);
