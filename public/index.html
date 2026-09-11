@@ -595,6 +595,19 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   [data-tip] { border-bottom:none; } [data-tip]::after { display:none; }
 }
 
+/* 0을 가운데 두고 좌우로 벌어지는 막대 — 는 쪽과 주는 쪽이 한눈에 갈린다 */
+.div-bars { display:flex; flex-direction:column; gap:9px; padding:10px 0 4px; }
+.div-row { display:flex; align-items:center; gap:12px; }
+.div-name { width:88px; flex-shrink:0; text-align:right; font-size:12px; font-weight:600; color:var(--color-text-secondary); }
+.div-track { flex:1; height:26px; position:relative; background:var(--color-bg-subtle); border-radius:6px; }
+.div-zero { position:absolute; left:50%; top:-3px; bottom:-3px; width:1px; background:var(--color-border-strong); }
+.div-fill { position:absolute; top:0; bottom:0; border-radius:5px; display:flex; align-items:center;
+  font-size:11.5px; font-weight:700; color:#fff; padding:0 8px; white-space:nowrap; }
+.div-val { width:120px; flex-shrink:0; font-size:12px; font-variant-numeric:tabular-nums;
+  color:var(--color-text-secondary); }
+.div-val b { font-family:var(--font-mono); }
+.div-none { font-size:12px; color:var(--text3); }
+
 /* 주간현황 새가족 요약 — 기간 합계와 이번 주를 같이 */
 .nf-sum { display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr));
   gap:8px; margin:2px 0 14px; }
@@ -1168,10 +1181,14 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <!-- ─── 연도 요약 ─── -->
   <div class="ss on" id="yearcomp-summary">
     <div class="yc-banner" id="yc-summary-banner"></div>
+    <div class="cc"><div class="ch"><div><div class="ct" id="ct-yc-rank">전년 대비 증감</div>
+      <div class="cs" id="cs-yc-rank"></div></div></div>
+      <div class="div-bars" id="yc-rank"></div>
+    </div>
     <div class="kg" id="kk-yearcomp"></div>
     <div class="cc">
       <div class="ch">
-        <div><div class="ct">연도 × 월 평균 출석</div><div class="cs">셀 색은 전년 같은 달 대비 증감</div></div>
+        <div><div class="ct">연도 × 월 평균 출석</div><div class="cs" id="cs-yc-heat">셀 색은 전년 같은 달 대비 증감</div></div>
         <select class="dist-sel" id="yc-heat-metric" onchange="renderYCHeat()"></select>
       </div>
       <div style="overflow-x:auto"><table id="t-yc-heat" class="yc-heat"></table></div>
@@ -2314,7 +2331,8 @@ function dnut(labels, data, colors) {
 function mkKPI(id, cards) {
   const el = document.getElementById(id); if (!el) return;
   const cls = {blue:'bl',purple:'pu',gold:'go',green:'gr',orange:'or',teal:'te'};
-  el.innerHTML = cards.map((c,i) => `<div class="kc ${cls[c.color]||'bl'}" style="animation-delay:${i*.07}s${c.link?';cursor:pointer':''}" ${c.link?`onclick="sw('${c.link}')"`:''}title="${c.link?'클릭하여 상세 탭으로 이동':''}">
+  // accent 를 주면 그 색을 쓴다 — 지표가 여덟이면 여섯 가지 분류색으로는 모자란다
+  el.innerHTML = cards.map((c,i) => `<div class="kc ${cls[c.color]||'bl'}" style="animation-delay:${i*.07}s${c.link?';cursor:pointer':''}${c.accent?`;--color-accent:${c.accent};--color-accent-light:${c.accent}14`:''}" ${c.link?`onclick="sw('${c.link}')"`:''}title="${c.link?'클릭하여 상세 탭으로 이동':''}">
     <div class="kc-accent-bar"></div><div class="kl">${c.label}${c.link?' ↗':''}</div>
     <div class="kv">${c.value}</div><div class="ks">${c.sub||''}</div>
     ${c.trend?`<div class="kt ${c.td||''}">${c.trend}</div>`:''}</div>`).join('');
@@ -4255,6 +4273,44 @@ function initYearComp() {
 /* ─── 연도 요약 ─── */
 function renderYCSummary() {
   const cur = YC_YEARS[YC_YEARS.length - 1], prev = cur - 1;
+
+  // ── 전년 대비 증감 순위 ──
+  const ranked = myYCMetrics()
+    .map(m => ({ m, c: ycCompare(m.fn, cur, prev) }))
+    .filter(x => x.c && x.c.pct != null)
+    .sort((a, b) => b.c.pct - a.c.pct);
+  const box = document.getElementById('yc-rank');
+  if (box) {
+    if (!ranked.length) {
+      box.innerHTML = `<div class="div-none">${prev}년과 견줄 자료가 아직 없습니다.</div>`;
+      setText('cs-yc-rank', '');
+    } else {
+      const max = Math.max(...ranked.map(x => Math.abs(x.c.pct)), 1);
+      setText('cs-yc-rank', `${cur}년 vs ${prev}년 · 같은 주차끼리 · 가운데 선이 0%`);
+      box.innerHTML = `<div class="div-row"><div class="div-name"></div>
+          <div class="div-track" style="background:transparent"><div class="div-zero"></div></div>
+          <div class="div-val"></div></div>` +
+        ranked.map(({ m, c }) => {
+          const w = Math.abs(c.pct) / max * 50;                 // 절반이 최대
+          const up = c.pct >= 0;
+          const txt = `${up ? '+' : ''}${c.pct.toFixed(1)}%`;
+          // 막대가 짧으면 글씨가 안 들어간다 — 밖에 붙인다
+          const tiny = w < 9;
+          const inner = tiny ? '' : txt;
+          const outer = tiny
+            ? `<span style="position:absolute;${up ? `left:calc(50% + ${w}% + 6px)` : `right:calc(50% + ${w}% + 6px)`};top:50%;transform:translateY(-50%);font-size:11.5px;font-weight:700;color:${up ? C.gr : C.r}">${txt}</span>`
+            : '';
+          return `<div class="div-row">
+            <div class="div-name">${m.label}</div>
+            <div class="div-track"><div class="div-zero"></div>
+              <div class="div-fill" style="${up ? 'left:50%' : `right:50%;justify-content:flex-end`};width:${w}%;background:${up ? C.gr : C.r}">${inner}</div>${outer}</div>
+            <div class="div-val"><b>${fmt(c.cur)}</b>명 · 전년 ${fmt(c.prev)}<br>
+              <span style="color:${up ? C.gr : C.r};font-weight:700">${up ? '+' : ''}${fmt(c.diff)}명</span></div>
+          </div>`;
+        }).join('');
+    }
+  }
+
   const cards = myYCMetrics().map(m => {
     const c = ycCompare(m.fn, cur, prev);
     if (!c) return { label: m.label, value: '–', sub: `${prev}년 비교 데이터 없음`, color: 'blue' };
@@ -4264,7 +4320,7 @@ function renderYCSummary() {
       label: `${m.label} · ${cur}`,
       value: fmt(c.cur),
       sub: `${prev}년 같은 구간 ${fmt(c.prev)}명 · ${c.from}–${c.to}주차 ${c.n}주`,
-      color: c.diff >= 0 ? 'green' : 'orange',
+      accent: m.color,                       // 지표마다 다른 색 — 전부 초록이면 구분이 안 된다
       trend: `${c.diff >= 0 ? '▲' : '▼'} 전년 ${sign}${fmt(c.diff)}${pct}`,
       td: c.diff >= 0 ? 'up' : 'dn',
     };
@@ -4288,13 +4344,15 @@ function renderYCSummary() {
 }
 
 /* ─── 연도 × 월 히트맵 ─── */
-function ycHeatStyle(pct) {
+/* 색 기준을 15% 로 고정해 두니 실제 증감이 대부분 그 안에 몰려 전부 비슷한
+   연두색이 됐다. 그 지표에서 실제로 나온 가장 큰 증감을 100%로 잡는다. */
+function ycHeatStyle(pct, scale) {
   if (pct == null) return 'background:var(--color-bg-subtle);color:var(--color-text-tertiary)';
-  const a = Math.min(Math.abs(pct) / 15, 1);          // 15% 이상이면 최대 채도
-  if (Math.abs(pct) < 2) return 'background:var(--color-bg-subtle);color:var(--color-text-secondary)';
+  const a = Math.min(Math.abs(pct) / (scale || 15), 1);
+  if (Math.abs(pct) < 0.5) return 'background:var(--color-bg-subtle);color:var(--color-text-secondary)';
   return pct > 0
-    ? `background:rgba(9,130,93,${0.10 + a * 0.32});color:#04442f`
-    : `background:rgba(192,18,60,${0.10 + a * 0.32});color:#6b0620`;
+    ? `background:rgba(9,130,93,${0.08 + a * 0.62});color:${a > 0.45 ? '#fff' : '#04442f'}`
+    : `background:rgba(192,18,60,${0.08 + a * 0.62});color:${a > 0.45 ? '#fff' : '#6b0620'}`;
 }
 
 function renderYCHeat() {
@@ -4304,17 +4362,26 @@ function renderYCHeat() {
   const byYear = {};
   YC_YEARS.forEach(y => { byYear[y] = ycMonthArr(y, m.fn); });
 
+  // 이 지표에서 실제로 나온 가장 큰 증감률을 색의 기준으로 삼는다
+  let scale = 0;
+  YC_YEARS.forEach(y => byYear[y].forEach((val, i) => {
+    const p2 = byYear[y - 1]?.[i];
+    if (val != null && p2) scale = Math.max(scale, Math.abs((val - p2) / p2 * 100));
+  }));
+  scale = Math.max(scale, 5);
+
   YC_YEARS.forEach(y => {
     const cells = byYear[y].map((val, i) => {
       if (val == null) return '<span class="yc-cell" style="background:var(--color-bg-subtle);color:var(--color-text-disabled)">–</span>';
       const p = byYear[y - 1]?.[i];
       const pct = p ? (val - p) / p * 100 : null;
       const delta = p ? `<span class="yc-d">${val - p >= 0 ? '+' : ''}${fmt(val - p)}</span>` : '';
-      return `<span class="yc-cell" style="${ycHeatStyle(pct)}">${fmt(val)}${delta}</span>`;
+      return `<span class="yc-cell" style="${ycHeatStyle(pct, scale)}">${fmt(val)}${delta}</span>`;
     });
     rows.push([`${y}년`, ...cells]);
   });
   // 최근 해가 위로 — 늘 올해를 먼저 본다
+  setText('cs-yc-heat', `셀 색은 전년 같은 달 대비 증감 · 가장 진한 색이 ±${Math.round(scale)}%`);
   mkTable('t-yc-heat', ['연도', ...MONTHS_KR], rows.reverse());
   document.querySelectorAll('#t-yc-heat tbody tr').forEach(tr => tr.firstElementChild?.classList.add('yc-yr'));
 }
