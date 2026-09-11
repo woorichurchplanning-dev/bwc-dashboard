@@ -968,13 +968,14 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     </div>
 
     </div>
-    <div class="cc" style="margin-bottom:16px"><div class="ch"><div><div class="ct">부별 인원 (학생 · 최근 4주 평균)</div>
-      <div class="cs" id="cs-school-bu">1부·2부를 따로 드리는 부서의 부별 출석</div></div></div>
-      <div class="fw" id="fw-school-bu"></div>
+    <div class="cc" style="margin-bottom:16px" id="card-school-bu"><div class="ch"><div><div class="ct">주일학교 1부 · 2부 구성</div>
+      <div class="cs" id="cs-school-bu">주차별 학생 수</div></div></div>
+      <canvas id="c-school-bu"></canvas>
+      <div class="fw" id="fw-school-bu" style="margin-top:var(--s4)"></div>
       <div style="overflow-x:auto;margin-top:var(--s4)"><table id="t-school-bu"></table></div>
     </div>
 
-    <div class="cc" style="margin-bottom:16px"><div class="ch"><div><div class="ct" id="ct-school-bar">부서별 인원 (최근 4주 평균)</div>
+    <div class="cc" style="margin-bottom:16px" id="card-school-bar"><div class="ch"><div><div class="ct" id="ct-school-bar">부서별 인원 (최근 4주 평균)</div>
       <div class="cs" id="cs-school-bar">학생 기준</div></div></div>
       <div class="pick" id="pick-school">
         <div class="pick-row">
@@ -3163,12 +3164,11 @@ function initYouth() {
     const scoped = ME?.youthTeams?.length && teams.length < teamsOf(dept).length;
 
     sec.innerHTML = `
-      ${teams.length ? `<div class="school-dept-row">
-        <label for="y${idx}-team-sel">팀 선택</label>
-        <select class="dist-sel" id="y${idx}-team-sel" onchange="renderYouthTeam(${idx})">
-          <option value="">전체</option>
-          ${teams.map(t => `<option>${t}</option>`).join('')}
-        </select>
+      ${teams.length ? `<div class="pick" id="teampick-y${idx}" style="margin-bottom:var(--s5)">
+        <div class="pick-row">
+          <button class="pill kind on" data-team="" onclick="pickYouthTeam(${idx}, this)">전체</button>
+          ${teams.map(t => `<button class="pill kind" data-team="${t}" onclick="pickYouthTeam(${idx}, this)">${t}</button>`).join('')}
+        </div>
       </div>` : ''}
       <div class="kg" id="kk-y${idx}"></div>
       ${scoped ? `<div class="yc-banner"><div>담당 팀(<b>${teams.join(' · ') || '없음'}</b>) 자료만 표시됩니다.</div></div>` : ''}
@@ -3202,11 +3202,18 @@ function initYouth() {
 
 /* 청년부 안에서 팀 하나만 파고들 때. 주일학교에서 부서를 고르는 것과 같은 방식.
    팀 담당 교역자가 자기 팀만 보려고 쓴다. */
+/* 팀은 드롭다운 대신 눌러서 고른다 — 몇 개 안 되니 한눈에 보이는 편이 낫다 */
+function pickYouthTeam(idx, btn) {
+  btn.parentElement.querySelectorAll('.pill').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderYouthTeam(idx);
+}
+
 function renderYouthTeam(idx) {
   const dept = YOUTH_DEPTS[idx - 1];
   let fw = getFW(); let wl = getWL(fw);
   if (!dept || !fw.length) return;
-  const team = document.getElementById(`y${idx}-team-sel`)?.value || '';
+  const team = document.querySelector(`#teampick-y${idx} .pill.on`)?.dataset.team || '';
   const teams = myTeams(dept);
   const teamColors = [C.b, C.t, C.p, C.or, C.gr, C.pk];
   const grid = document.getElementById(`y${idx}-teamgrid`);
@@ -3515,6 +3522,18 @@ function renderSchoolBu(fw) {
     return { d, a, b, t: a + b };
   }).filter(r => r.t > 0);
 
+  // 주차별로 1부·2부가 어떻게 나뉘는지 — 부서 하나 볼 때와 같은 모양으로
+  const wl = getWL(fw);
+  const buSum = (w, bu) => {
+    let t = 0, has = false;
+    DS.forEach(d => { const v2 = nn(D.school[w]?.[d]?.[bu + '학생']); if (v2 != null) { t += v2; has = true; } });
+    return has ? t : null;
+  };
+  mkChart('c-school-bu', 'bar', wl, [
+    bds('1부', fw.map(w => buSum(w, '1부')), C.b),
+    bds('2부', fw.map(w => buSum(w, '2부')), C.or),
+  ], { stack: true, fw, total: true });
+
   const box = document.getElementById('fw-school-bu');
   if (!box) return;
   if (!rows.length) {
@@ -3581,6 +3600,7 @@ function renderSchoolDept() {
     // ── 전체 보기 복원 ──
     const pc = document.getElementById('card-school-pie');
     if (pc) pc.style.display = 'none';
+    ['card-school-bu', 'card-school-bar'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = ''; });
     setText('ct-school-trend', '주일학교 전체 출석 추이');
     setText('ct-school-bar',   '부서별 인원 (최근 4주 평균)');
     setText('ct-school-table', '부서별 주별 출석 상세');
@@ -3637,8 +3657,9 @@ function renderSchoolDept() {
   mkChart('c-school-trend','line',wl,ds1,{fw});
 
   // ② 1부 / 2부 구성
-  const pieCard = document.getElementById('card-school-pie');
-  if (pieCard) pieCard.style.display = '';
+  // 부서 하나를 볼 때는 전체 기준 카드를 감춘다 — 지금 보는 부서 얘기가 아니다
+  ['card-school-pie'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = ''; });
+  ['card-school-bu', 'card-school-bar'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
   setText('ct-school-pie', `${dept} 1부 · 2부 구성`);
   if (bu1.some(x=>x!=null) || bu2.some(x=>x!=null)) {
     mkChart('c-school-pie','bar',wl,[bds('1부',bu1,C.b),bds('2부',bu2,C.t)],{stack:true,fw,total:true});

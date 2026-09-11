@@ -20,7 +20,20 @@ ADMINS = {'김영환', '지원일'}
 PHONE_FIXES = {'신용헌': '010-2857-9658'}
 
 # 주소록 라벨만으로는 담당을 알 수 없는 사람
-EXTRA_TABS = {'이동선': ['sunday','wd','special','yearcomp']}   # 예배담당
+EXTRA_TABS = {'이동선': ['home','sunday','wd','special']}   # 예배담당
+
+# 직책별로 더 얹는 것 (주간현황은 공통이 아니라 여기서 준다)
+AREA_OF = {'교구사역자': 'district', '주일학교': 'school', '교육전도사': 'school', '청년교구': 'youth'}
+def duty_area(groups):
+    for g in ('교구사역자', '청년교구', '주일학교', '교육전도사'):
+        if g in groups: return g
+    return None
+
+DUTY_TABS = {
+    '안내부': ['home','sunday','wd','newfam'],
+    '주차':   ['home','sunday','wd','newfam'],
+    '디렉터': ['home','sunday','wd','newfam','special','yearcomp'],
+}
 
 # 주소록에 없는 실제 직책. 라벨에는 교구사역자/주일학교 정도만 있어서
 # 안내부·주차·디렉터 같은 것은 여기 적어 둔다.
@@ -34,7 +47,7 @@ DUTIES = {
 }
 
 # 전체를 보는 사람 — 행정목사·기획팀장·기획팀
-FULL_ACCESS = {'오경제', '한승우', '김영환', '지원일'}
+FULL_ACCESS = {'오경제', '한승우', '김영환', '지원일', '이승지'}
 
 # 교역자 주소록에 없는 사람 (사무직 등)
 EXTRA_PEOPLE = [
@@ -48,10 +61,10 @@ TABS = [('sunday','주일예배'), ('youth','청년교구'), ('school','주일�
 
 # 주소록 라벨 → 기본으로 열어 줄 탭
 BY_GROUP = {
-    '교구사역자': ['district'],
+    '교구사역자': ['district', 'newfam'],
     '주일학교':   ['school'],
     '교육전도사': ['school'],
-    '청년교구':   ['youth','sunday','newfam'],
+    '청년교구':   ['youth'],
     '기획팀':     [k for k,_ in TABS],          # 기획팀은 전체를 본다
 }
 
@@ -71,9 +84,13 @@ def main(src, dst):
         tabs = set()
         for g in groups:
             tabs.update(BY_GROUP.get(g, []))
+        # 직책 규칙이 있으면 주소록 라벨로 잡은 것을 대신한다
+        duty = DUTIES.get(name, '')
+        if duty in DUTY_TABS:
+            tabs = set(DUTY_TABS[duty]) | ({AREA_OF.get(duty_area(groups))} - {None} if duty == '디렉터' else set())
         tabs.update(EXTRA_TABS.get(name, []))
         if name in FULL_ACCESS:
-            tabs = {k for k, _ in TABS}
+            tabs = {k for k, _ in TABS} | {'home'}
         people.append({
             'id': name + (note or ''),
             'name': name,
@@ -89,10 +106,11 @@ def main(src, dst):
         })
 
     for x in EXTRA_PEOPLE:
+        xt = {k for k, _ in TABS} | {'home'} if x['name'] in FULL_ACCESS else set(x['tabs'])
         people.append({
             'id': x['name'], 'name': x['name'], 'title': x['title'], 'phone': x['phone'],
             'pw': re.sub(r'\D', '', x['phone'])[-4:], 'groups': x['groups'],
-            'tabs': set(x['tabs']), 'school': '',
+            'tabs': xt, 'school': '',
             'admin': x['name'] in ADMINS, 'duty': x['duty'],
         })
 
@@ -120,7 +138,7 @@ def main(src, dst):
     for p in sorted(people, key=lambda x: (not x['groups'], x['groups'], x['name'])):
         ws.append([
             p['id'], p['name'], p['title'], p['duty'], p['phone'], p['pw'],
-            'O' if p['admin'] else '', 'O',        # 주간현황은 모두에게 열려 있다
+            'O' if p['admin'] else '', 'O' if ('home' in p['tabs'] or p['admin']) else '',
             *['O' if k in p['tabs'] else '' for k, _ in TABS],
             p['school'], '', '', '', ' / '.join(p['groups']),
         ])
@@ -153,7 +171,7 @@ def main(src, dst):
         ['아이디', '교역자 이름. 동명이인만 뒤에 담당을 붙였습니다.'],
         ['초기비밀번호', '휴대폰 뒷 4자리. 첫 로그인에서 본인이 바꾸게 되어 있습니다.'],
         ['직책', '주소록에 없는 실제 담당(안내부·주차·디렉터·기획팀 등)입니다.'],
-        ['주간현황', '모두에게 열려 있어 끄고 켤 수 없습니다. 확인용 표시입니다.'],
+        ['주간현황', '교회 전체 숫자입니다. 담당 부서만 보는 분은 비워 둡니다.'],
         ['관리자', 'O 를 넣으면 모든 탭이 열리고, 다른 사람 권한도 줄 수 있습니다.'],
         ['노란 줄', '연락처가 없어 비밀번호가 비었거나, 담당 라벨이 없어 주간현황만'],
         ['', '열린 사람입니다. 채워 주셔야 계정이 만들어집니다.'],

@@ -21,7 +21,9 @@ def main(src, dst):
         if not uid:
             continue
         admin = checked(get('관리자'))
-        tabs = 'home/' + '/'.join(k for k, label in TABS if checked(get(label)))   # 주간현황은 항상
+        # 주간현황도 표에서 켠 사람만 준다
+        tabs = '/'.join(([ 'home' ] if checked(get('주간현황')) else [])
+                        + [k for k, label in TABS if checked(get(label))])
         cell = lambda h: str(get(h) or '').strip().replace(',', '/')
         pw = str(get('초기비밀번호') or '').strip()
         # 부서는 직책이 있으면 그것, 없으면 주소록 라벨에서 고른다.
