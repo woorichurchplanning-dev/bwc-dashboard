@@ -379,6 +379,9 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
 .fw { display:flex; flex-direction:column; gap:10px; padding:8px 0; }
 .fr { display:flex; align-items:center; gap:14px; }
 .fl { font-size:11px; color:var(--color-text-tertiary); width:72px; flex-shrink:0; text-align:right; font-weight:500; }
+.share-bars .fl { width:92px; line-height:1.3; }
+.share-bars .fr { gap:10px; }
+.share-bars .fbo { height:26px; }
 .fbo { flex:1; height:32px; background:var(--color-bg-subtle); border-radius:6px; overflow:hidden; }
 .fbi { height:100%; border-radius:6px; display:flex; align-items:center; padding-left:12px; font-size:12px; font-weight:700; color:#fff; transition:width 0.8s var(--ease-spring); }
 .fp { font-size:11px; color:var(--color-text-tertiary); width:40px; flex-shrink:0; font-weight:500; }
@@ -2074,6 +2077,33 @@ function ldsDash(label, data, color) {
 function bds(label, data, color) {
   return { label, data, backgroundColor:color+'cc', borderColor:color, borderWidth:1, borderRadius:4 };
 }
+/* 비중은 도넛 대신 가로 막대로 그린다. 도넛은 조각마다 올려 봐야 인원을 알 수
+   있어서, 부서가 열 개 넘어가면 하나씩 짚어 보는 수밖에 없었다.
+   막대는 이름·인원·비중이 한 화면에 다 있다.
+   캔버스 자리를 그대로 쓰되 캔버스는 숨기고 그 옆에 목록을 넣는다. */
+function mkShareBars(canvasId, labels, values, colors) {
+  const c = document.getElementById(canvasId); if (!c) return;
+  const ex = Chart.getChart(c); if (ex) ex.destroy();
+  c.style.display = 'none';
+  let box = c.nextElementSibling;
+  if (!box || !box.classList.contains('fw')) {
+    box = document.createElement('div');
+    box.className = 'fw share-bars';
+    c.parentElement.insertBefore(box, c.nextSibling);
+  }
+  const vals = labels.map((_, i) => Number(values[i]) || 0);
+  const tot = vals.reduce((a, b) => a + b, 0);
+  const max = Math.max(...vals, 1);
+  const order = labels.map((l, i) => ({ l, v: vals[i], c: colors[i % colors.length] }))
+                      .sort((a, b) => b.v - a.v);
+  box.innerHTML = order.map(({ l, v, c: col }) => {
+    const pct = tot ? Math.round(v / tot * 100) : 0;
+    return `<div class="fr"><div class="fl">${l}</div>
+      <div class="fbo"><div class="fbi" style="width:${Math.max(Math.round(v / max * 100), v ? 6 : 0)}%;background:${col}">${v ? fmt(v) : ''}</div></div>
+      <div class="fp">${pct}%</div></div>`;
+  }).join('');
+}
+
 function dnut(labels, data, colors) {
   return [{ data, backgroundColor:colors, borderColor:'#f8fafc', borderWidth:3, hoverOffset:5 }];
 }
@@ -2599,7 +2629,7 @@ function initSunday() {
   const s1t=sh1.reduce((a,b)=>a+b,0),s2t=sh2.reduce((a,b)=>a+b,0),s3t=sh3.reduce((a,b)=>a+b,0);
   const el_shpie=document.getElementById('ct-sh-pie');
   if(el_shpie) el_shpie.textContent=`서현 부별 비중 (${fw.length}주 누적)`;
-  mkChart('c-sh-pie','doughnut',['서현1부','서현2부','서현3부'],dnut(['서현1부','서현2부','서현3부'],[s1t,s2t,s3t],[C.b,C.id,C.p]),{});
+  mkShareBars('c-sh-pie',['서현1부','서현2부','서현3부'],[s1t,s2t,s3t],[C.b,C.id,C.p]);
   mkTable('t-sh',['날짜','서현1부','서현2부','서현3부','소계'],
     fw.map(w=>[w,fmt(v(D.sunday[w]?.bu?.['1부']?.장년)),fmt(v(D.sunday[w]?.bu?.['2부']?.장년)),fmt(v(D.sunday[w]?.bu?.['3부']?.장년)),
       fmt(v(D.sunday[w]?.bu?.['1부']?.장년)+v(D.sunday[w]?.bu?.['2부']?.장년)+v(D.sunday[w]?.bu?.['3부']?.장년))]));
@@ -2614,7 +2644,7 @@ function initSunday() {
   const r1t=sr1.reduce((a,b)=>a+b,0),r2t=sr2.reduce((a,b)=>a+b,0),r3t=sr3.reduce((a,b)=>a+b,0);
   const el_srpie=document.getElementById('ct-sr-pie');
   if(el_srpie) el_srpie.textContent=`송림 부별 비중 (${fw.length}주 누적)`;
-  mkChart('c-sr-pie','doughnut',['송림1부','송림2부','송림3부'],dnut(['송림1부','송림2부','송림3부'],[r1t,r2t,r3t],[C.t,C.gr,C.lm]),{});
+  mkShareBars('c-sr-pie',['송림1부','송림2부','송림3부'],[r1t,r2t,r3t],[C.t,C.gr,C.lm]);
   mkTable('t-sr',['날짜','송림1부','송림2부','송림3부','소계'],
     fw.map(w=>[w,fmt(v(D.sunday[w]?.bu?.['1부']?.송림)),fmt(v(D.sunday[w]?.bu?.['2부']?.송림)),fmt(v(D.sunday[w]?.bu?.['3부']?.송림)),
       fmt(v(D.sunday[w]?.bu?.['1부']?.송림)+v(D.sunday[w]?.bu?.['2부']?.송림)+v(D.sunday[w]?.bu?.['3부']?.송림))]));
@@ -2896,7 +2926,7 @@ function initYouth() {
   // 조직 개편이나 결측 주차까지 섞여 지금의 크기를 나타내지 못한다.
   const recent = DEPTS.map(d => last4avg(series[d]));
   setText('ct-youth-pie', '청년부별 비중 (최근 4주 평균 예배)');
-  mkChart('c-youth-pie', 'doughnut', DEPTS, dnut(DEPTS, recent, DEPTS.map(d => COLORS[d])), {});
+  mkShareBars('c-youth-pie', DEPTS, recent, DEPTS.map(d => COLORS[d]));
 
   // ── 청년부별 상세 (팀은 데이터에서 찾아 동적으로 그린다) ──
   DEPTS.forEach(dept => {
@@ -3170,7 +3200,7 @@ function initSchool() {
   addCardPeriod('c-school-trend', renderSchoolTrend, renderSchoolKpiAll);
   const DS = myDepts();
   const deptSums = DS.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
-  mkChart('c-school-pie','doughnut',DS,dnut(DS,deptSums,DS.map((_,i)=>CA[i%CA.length])),{});
+  mkShareBars('c-school-pie', DS, deptSums, DS.map((_,i)=>CA[i%CA.length]));
   const avgs4 = DS.map(d=>last4avg(fw.map(w=>schoolDeptValue(w,d))));
   mkChart('c-school-bar','bar',DS,[{data:avgs4,backgroundColor:DS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
   mkTable('t-school',['날짜',...DS,'합계'],
@@ -3198,7 +3228,7 @@ function initSchool() {
       ...depts.slice(0,3).map(d=>({label:d+' (최근)',value:fmtOr(schoolDeptTotal(gW,d)),sub:gDate,color:'teal'})),
     ]);
     mkChart(`c-school-${key}-trend`,'line',wl,depts.map((d,i)=>lds(d,schoolSeries(d,fw),colors[i])));
-    mkChart(`c-school-${key}-pie`,'doughnut',depts,dnut(depts,gSums,colors),{});
+    mkShareBars(`c-school-${key}-pie`, depts, gSums, colors);
   });
 }
 
@@ -3262,7 +3292,7 @@ function renderSchoolDept() {
     mkChart('c-school-trend','line',wl,[lds('주일학교 합계',tots,C.b,true)],{fw});
     const DS = myDepts();
     const deptSums = DS.map(d => fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
-    mkChart('c-school-pie','doughnut',DS,dnut(DS,deptSums,DS.map((_,i)=>CA[i%CA.length])),{});
+    mkShareBars('c-school-pie', DS, deptSums, DS.map((_,i)=>CA[i%CA.length]));
     const avgs4 = DS.map(d => last4avg(fw.map(w=>schoolDeptValue(w,d))));
     mkChart('c-school-bar','bar',DS,[{data:avgs4,backgroundColor:DS.map((_,i)=>CA[i%CA.length]),borderRadius:4,borderWidth:0}],{horiz:true});
     mkTable('t-school',['날짜',...DS,'합계'],
@@ -3500,8 +3530,8 @@ function renderDistrict() {
   mkChart('c-cell-trend', 'line', labels, CELL_KINDS.map((k, i) =>
     lds(k, rows.map(r => r.cell ? distBreakdown(r.cell, k) || null : null), [C.b, C.t, C.p, C.or, C.gr][i])),
     { fw: rows.map(r => r.date), total: true });
-  mkChart('c-cell-mix', 'doughnut', CELL_KINDS,
-    dnut(CELL_KINDS, CELL_KINDS.map(k => distBreakdown(lastCell, k)), [C.b, C.t, C.p, C.or, C.gr]), {});
+  mkShareBars('c-cell-mix', CELL_KINDS,
+    CELL_KINDS.map(k => distBreakdown(lastCell, k)), [C.b, C.t, C.p, C.or, C.gr]);
   setText('ct-cell-table', `교구별 다락방 상세 (${lastCell?.date || '–'})`);
   mkTable('t-cell', ['교구', ...CELL_KINDS, '계'],
     names.map(n => {
@@ -3687,7 +3717,7 @@ function initNewFam() {
   const aRoutes = nfReasonTotals(fwRows, 'adult');
   const rLabels = Object.keys(aRoutes).filter(k=>aRoutes[k]>0);
   const rData   = rLabels.map(k=>aRoutes[k]);
-  if (rLabels.length) mkChart('c-nf-adult-route', 'doughnut', rLabels, dnut(rLabels, rData, rColors.slice(0,rLabels.length)), {});
+  if (rLabels.length) mkShareBars('c-nf-adult-route', rLabels, rData, rColors);
 
   // ── 장년등록자 (연령대 × 성별) ──
   renderNewFamReg(fwRows);
@@ -3731,7 +3761,7 @@ function initNewFam() {
   const yRoutes = nfReasonTotals(fwRows, 'youth');
   const yrLabels = Object.keys(yRoutes).filter(k=>yRoutes[k]>0);
   const yrData   = yrLabels.map(k=>yRoutes[k]);
-  if (yrLabels.length) mkChart('c-nf-youth-route', 'doughnut', yrLabels, dnut(yrLabels, yrData, rColors.slice(0,yrLabels.length)), {});
+  if (yrLabels.length) mkShareBars('c-nf-youth-route', yrLabels, yrData, rColors);
 }
 
 // ── 연도별 비교 ──
