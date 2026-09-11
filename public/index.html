@@ -185,12 +185,21 @@ nav::-webkit-scrollbar { display: none; }
 .nt-icon { font-size: 14px; }
 
 /* ── FILTER BAR ── */
+/* 예전에는 상단 메뉴 바로 아래 44px 띠로 붙어 있어 눈에 띄지 않았다.
+   본문 맨 위로 내리고 카드처럼 세운다. */
 .flt-bar {
   background: var(--color-bg-surface);
-  border-bottom: 1px solid var(--color-border-default);
-  padding: 0 var(--s8); height: 44px;
-  display: flex; align-items: center; gap: var(--s3);
-  overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--r);
+  margin: 0 0 var(--s5); padding: 10px var(--s4); min-height: 46px;
+  display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap;
+  box-shadow: var(--shadow-sm);
+}
+.flt-title {
+  font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  color: var(--text3); text-transform: uppercase;
+  padding-right: var(--s2); margin-right: var(--s1);
+  border-right: 1px solid var(--color-border-default);
 }
 .flt-bar::-webkit-scrollbar { display: none; }
 .flt-group { display: flex; align-items: center; gap: var(--s2); flex-shrink: 0; }
@@ -467,7 +476,8 @@ td:first-child { color:var(--color-text-primary); font-weight:500; font-family:v
   .kv { font-size:24px; }
   .sample-badge { display:none; }
   .page-hdr-title h2 { font-size:17px; }
-  .flt-bar { padding:0 var(--s4); gap:var(--s2); }
+  .flt-bar { padding:8px var(--s3); gap:var(--s2); }
+  .flt-title { display:none; }
   .flt-sep-or { display:none; }
   canvas { max-height:220px; }
   .trend-layout { flex-direction:column; gap:var(--s3); }
@@ -575,6 +585,16 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   .home-banner { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   [data-tip] { border-bottom:none; } [data-tip]::after { display:none; }
 }
+
+/* 표 더 보기 줄 */
+.tbl-more { text-align:center !important; padding:10px !important; background:var(--color-bg-subtle); }
+.tbl-more button {
+  border:1px solid var(--color-border-default); background:var(--color-bg-surface);
+  color:var(--color-text-secondary); font:inherit; font-size:12px; font-weight:600;
+  padding:5px 12px; border-radius:7px; cursor:pointer; margin:0 3px;
+}
+.tbl-more button:hover { border-color:var(--color-border-strong); color:var(--color-text-primary); }
+.tbl-more span { font-size:11.5px; color:var(--text3); margin-left:8px; }
 
 /* ── 골라서 겹쳐 보는 버튼 ── */
 .pick { display:flex; flex-direction:column; gap:6px; margin:2px 0 10px; }
@@ -731,11 +751,15 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="nt" onclick="sw('yearcomp')">연도 비교</div>
 </nav>
 
+
+<main>
+
 <div class="flt-bar">
-  <button class="flt-quick on" id="fq-all"  onclick="applyQuick('all')">전체</button>
+  <span class="flt-title">기간</span>
+  <button class="flt-quick" id="fq-all"  onclick="applyQuick('all')">전체</button>
   <button class="flt-quick"    id="fq-52"   onclick="applyQuick(52)">52주</button>
   <button class="flt-quick"    id="fq-26"   onclick="applyQuick(26)">26주</button>
-  <button class="flt-quick"    id="fq-8"    onclick="applyQuick(8)">8주</button>
+  <button class="flt-quick on" id="fq-8"    onclick="applyQuick(8)">8주</button>
   <button class="flt-quick"    id="fq-4"    onclick="applyQuick(4)">4주</button>
   <div class="flt-quick-sep"></div>
   <div class="flt-group">
@@ -758,7 +782,6 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <button class="csv-btn" id="print-btn" onclick="printAll()" title="모든 탭을 렌더링한 뒤 인쇄">🖨</button>
 </div>
 
-<main>
 
 <!-- ═══ HOME ═══ -->
 <section class="sec on" id="s-home">
@@ -1215,9 +1238,10 @@ D.cell = [];
 D.newFamily = [];
 
 // ── 기간 필터 ──
-let FILTER_MODE = 'all';
+/* 기본은 최근 8주. 전체(170주)로 열면 최근 흐름이 선 끝에 눌려 안 보인다. */
+let FILTER_MODE = 'nweeks';
 let FILTER_S = '', FILTER_E = '';
-let FILTER_N = 0; // 지난 N주 모드
+let FILTER_N = 8; // 지난 N주 모드
 const HOME_RENDERERS = {};  // 홈 차트 개별 기간 렌더러
 const HCP_STEPS = [4, 8, 13, 26, 52, 0]; // 0 = 전체
 const HOME_PERIODS = {}; // 차트별 현재 기간 (주)
@@ -1442,7 +1466,7 @@ function updatePeriodLabel(fw) {
     : `${fw[0]} ~ ${fw[n-1]} · ${n}주`;
 }
 
-let QUICK_N = 'all';
+let QUICK_N = 8;
 
 function syncQuickBtns(active) {
   QUICK_N = active;
@@ -2063,14 +2087,37 @@ function mkKPI(id, cards) {
     ${c.trend?`<div class="kt ${c.td||''}">${c.trend}</div>`:''}</div>`).join('');
 }
 
+/* 주차 표는 최근 한 달만 펴 놓고, 필요하면 더 연다.
+   170주를 다 쏟아 놓으면 정작 최근 넉 주를 보기가 어렵다. */
+const WEEKS_A_MONTH = 5;
+const TABLE_SHOWN = {};
+
 function mkTable(id, heads, rows) {
   const t = document.getElementById(id); if (!t) return;
+  t._heads = heads; t._rows = rows;
   // 첫 칸이 날짜인 표는 최근 주가 위로 오게 뒤집는다. 늘 최근 것을 먼저 보는데
   // 오래된 주부터 쌓여 있으면 매번 맨 아래까지 내려가야 했다.
   const isWeekly = rows.length > 1 && rows.every(r => /^\d{4}-\d{2}-\d{2}$/.test(String(r[0])));
   const body = isWeekly ? [...rows].reverse() : rows;
+  const limit = isWeekly ? (TABLE_SHOWN[id] || WEEKS_A_MONTH) : body.length;
+  const shown = body.slice(0, limit);
+  const rest = body.length - shown.length;
+
   t.innerHTML = '<thead><tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'
-    + body.map(r=>'<tr>'+r.map((c,i)=>`<td class="${i>0?'nr':''}">${c}</td>`).join('')+'</tr>').join('')+'</tbody>';
+    + shown.map(r=>'<tr>'+r.map((c,i)=>`<td class="${i>0?'nr':''}">${c}</td>`).join('')+'</tr>').join('')+'</tbody>'
+    + (rest > 0 ? `<tfoot><tr><td colspan="${heads.length}" class="tbl-more">
+        <button onclick="moreTable('${id}', ${WEEKS_A_MONTH})">한 달 더 보기</button>
+        <button onclick="moreTable('${id}', 0)">전체 ${body.length}주</button>
+        <span>${rest}주 더 있음</span></td></tr></tfoot>` : '')
+    + (limit > WEEKS_A_MONTH ? `<tfoot><tr><td colspan="${heads.length}" class="tbl-more">
+        <button onclick="moreTable('${id}', -1)">접기</button></td></tr></tfoot>` : '');
+}
+
+function moreTable(id, add) {
+  const t = document.getElementById(id); if (!t || !t._rows) return;
+  const cur = TABLE_SHOWN[id] || WEEKS_A_MONTH;
+  TABLE_SHOWN[id] = add === 0 ? t._rows.length : add < 0 ? WEEKS_A_MONTH : cur + add;
+  mkTable(id, t._heads, t._rows);
 }
 
 // ── 데이터 헬퍼 ──
