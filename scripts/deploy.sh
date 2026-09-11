@@ -16,13 +16,16 @@ test -s public/data.json || { echo "data.json 이 비어 있음 — 배포 중�
 node -e "const d=require('./public/data.json'); if(!d.weekCount) throw new Error('weekCount 없음');
   console.log('▸ 배포할 데이터: '+d.weekCount+'주 · '+d.weekRange.join(' ~ '))"
 
-# 화면이 실제로 읽는 것은 Blob 이다. 배포만 하면 오래된 Blob 이 그대로 남아
-# 아무도 새 데이터를 못 본다. 그래서 Blob 에도 같이 올린다.
-if [ ! -f .env.local ]; then
-  vercel env pull .env.local --environment=production --yes >/dev/null
-  PULLED=1
+# 화면이 실제로 읽는 것은 Blob 이다. 방금 새로 수집했을 때만 올린다.
+# SKIP_REFRESH=1 로 코드만 배포할 때는 손대지 않는다 — 내 작업 폴더의
+# data.json 은 오래돼서, 그걸 올리면 그 사이 들어온 입력이 지워진다.
+if [ "${SKIP_REFRESH:-}" != "1" ]; then
+  if [ ! -f .env.local ]; then
+    vercel env pull .env.local --environment=production --yes >/dev/null
+    PULLED=1
+  fi
+  node scripts/push-data.mjs
+  [ "${PULLED:-}" = 1 ] && rm -f .env.local
 fi
-node scripts/push-data.mjs
-[ "${PULLED:-}" = 1 ] && rm -f .env.local
 
 vercel deploy --prod --yes

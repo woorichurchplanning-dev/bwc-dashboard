@@ -772,6 +772,8 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <span class="flt-lbl">주</span>
     <button class="flt-apply" onclick="applyNweeks()">적용</button>
   </div>
+  <div class="flt-quick-sep"></div>
+  <div class="flt-group" id="flt-years"></div>
   <span class="flt-sep-or">또는</span>
   <div class="flt-group">
     <input type="date" class="flt-date-in" id="flt-s">
@@ -1391,6 +1393,13 @@ function getHomeChartWeeks(nWeeks) {
   return getContinuousWeeksEnding(getHomeWeekKey(getFW()), nWeeks);
 }
 
+/* 새가족은 자료가 없는 주가 섞여 있다(8/9처럼). 연속된 주 눈금을 그대로 쓰면
+   그 자리가 빈 칸으로 남아 막대 사이가 뚝 끊긴 것처럼 보인다. 값이 있는 주만
+   추려서 그린다. */
+function nfWeeks(fw) {
+  return fw.filter(w => D.newFamily?.some(r => r.date === w));
+}
+
 function homeChartOpts(fw, extra = {}) {
   return { ...extra, fw, focusWeek: getHomeWeekKey(getFW()) };
 }
@@ -1496,11 +1505,44 @@ let QUICK_N = 8;
 
 function syncQuickBtns(active) {
   QUICK_N = active;
+  document.querySelectorAll('.flt-year').forEach(b => b.classList.remove('on'));
   ['all','52','26','8','4'].forEach(k => {
     const el = document.getElementById('fq-' + k);
     if (el) el.classList.toggle('on', String(k) === String(active));
   });
   document.getElementById('flt-reset-btn').style.display = (active === 'all') ? 'none' : '';
+}
+
+/* 자료가 있는 연도를 버튼으로 낸다. 예전에는 작년을 보려면 날짜 칸의
+   화살표를 수십 번 눌러야 했다. */
+function renderYearButtons() {
+  const box = document.getElementById('flt-years');
+  if (!box || !D.weeks.length) return;
+  const years = [...new Set(D.weeks.map(w => w.slice(0, 4)))].sort();
+  box.innerHTML = `<span class="flt-lbl">연도</span>` + years.map(y =>
+    `<button class="flt-quick flt-year" id="fy-${y}" onclick="applyYear('${y}')">${y.slice(2)}년</button>`).join('');
+  syncYearBtns();
+}
+
+function syncYearBtns() {
+  document.querySelectorAll('.flt-year').forEach(b => {
+    const y = b.id.slice(3);
+    b.classList.toggle('on', FILTER_MODE === 'custom' && FILTER_S === `${y}-01-01` && FILTER_E === `${y}-12-31`);
+  });
+}
+
+function applyYear(y) {
+  FILTER_MODE = 'custom';
+  FILTER_S = `${y}-01-01`; FILTER_E = `${y}-12-31`;
+  FILTER_N = 0;
+  const si = document.getElementById('flt-s'), ei = document.getElementById('flt-e');
+  if (si) si.value = FILTER_S;
+  if (ei) ei.value = FILTER_E;
+  const nw = document.getElementById('flt-nweeks'); if (nw) nw.value = '';
+  Object.keys(CARD_PERIOD).forEach(k => delete CARD_PERIOD[k]);
+  syncQuickBtns(null);
+  syncYearBtns();
+  rerender();
 }
 
 function applyQuick(n) {
@@ -2524,17 +2566,21 @@ function initHome() {
   mkChart('c-hm-dist', 'line', wl8, distSets(fw8), homeChartOpts(fw8));
 
   // 5. 새가족 추이
-  if (D.newFamily && D.newFamily.length > 0) {
+  const nfDraw = (fw2) => {
+    if (!D.newFamily?.length) return;
+    const ws = nfWeeks(fw2);
+    if (!ws.length) return;
     const nfByWeek = w => D.newFamily.find(r => r.date === w);
-    mkChart('c-hm-newfam', 'bar', wl8, [
-      bds('등록요청자', fw8.map(w => {
-        const r = nfByWeek(w); return r ? nfRequestTotal(r, 'adult') + nfRequestTotal(r, 'youth') : null;
+    mkChart('c-hm-newfam', 'bar', getWL(ws), [
+      bds('등록요청자', ws.map(w => {
+        const r = nfByWeek(w); return nfRequestTotal(r, 'adult') + nfRequestTotal(r, 'youth');
       }), C.b),
-      bds('등록가능자', fw8.map(w => {
-        const r = nfByWeek(w); return r ? nfVal(r, 'adult', 'available') + nfVal(r, 'youth', 'available') : null;
+      bds('등록가능자', ws.map(w => {
+        const r = nfByWeek(w); return nfVal(r, 'adult', 'available') + nfVal(r, 'youth', 'available');
       }), C.gr),
-    ], homeChartOpts(fw8, {stack: true}));
-  }
+    ], homeChartOpts(ws, { stack: true }));
+  };
+  nfDraw(fw8);
 
   // ── 홈 차트 개별 기간 렌더러 등록 ─────────────────────────────────────────
   HOME_RENDERERS['c-hm-adult'] = fw2 => {
@@ -2553,18 +2599,7 @@ function initHome() {
   HOME_RENDERERS['c-hm-dist'] = fw2 => {
     mkChart('c-hm-dist', 'line', getWL(fw2), distSets(fw2), homeChartOpts(fw2));
   };
-  HOME_RENDERERS['c-hm-newfam'] = fw2 => {
-    if (!D.newFamily?.length) return;
-    const nfByWeek = w => D.newFamily.find(r => r.date === w);
-    mkChart('c-hm-newfam', 'bar', getWL(fw2), [
-      bds('등록요청자', fw2.map(w=>{
-        const r = nfByWeek(w); return r ? nfRequestTotal(r,'adult')+nfRequestTotal(r,'youth') : null;
-      }), C.b),
-      bds('등록가능자', fw2.map(w=>{
-        const r = nfByWeek(w); return r ? nfVal(r,'adult','available')+nfVal(r,'youth','available') : null;
-      }), C.gr),
-    ], homeChartOpts(fw2, {stack:true}));
-  };
+  HOME_RENDERERS['c-hm-newfam'] = nfDraw;
 
   IDS8.forEach(id => setHCPStep(id, HOME_PERIODS[id] ?? 8));
   setTimeout(fetchMissingHomeWeeks, 0);
@@ -4471,10 +4506,19 @@ function sw(name, opts){
   document.querySelectorAll('.nt').forEach((el,i)=>el.classList.toggle('on',TABS[i]===name));
   document.querySelectorAll('.sec').forEach(el=>el.classList.remove('on'));
   document.getElementById('s-'+name).classList.add('on');
-  // 홈 탭: 전역 필터 바 숨기기 (각 차트에 개별 기간 버튼 있음)
+  // 기간 줄은 그 탭의 제목 바로 아래로 옮긴다. 맨 위에 두면 어느 화면의
+  // 기간인지 와 닿지 않고, 제목과 떨어져 있어 눈에 잘 안 들어온다.
   const fb = document.querySelector('.flt-bar');
   // 홈·연도비교·특별예배는 전역 기간 필터를 쓰지 않는다 (주차 네비 / 연도 전체 기준)
-  if (fb) fb.style.display = ['home','yearcomp','special'].includes(name) ? 'none' : '';
+  const hide = ['home','yearcomp','special'].includes(name);
+  if (fb) {
+    fb.style.display = hide ? 'none' : '';
+    if (!hide) {
+      const sec = document.getElementById('s-' + name);
+      const hdr = sec?.querySelector('.page-hdr');
+      if (hdr && fb.previousElementSibling !== hdr) hdr.after(fb);
+    }
+  }
   if(!DONE[name]){DONE[name]=true;setTimeout(()=>INITS[name](),60);}
   if(!opts?.silent) writeHash(name);
 }
@@ -5117,6 +5161,7 @@ async function boot() {
   // ② 이전 수동 새로고침 캐시 — 스냅샷보다 새로운 경우에만 덮어씀
   loadSheetCache(snapshotAt);
   mergeHist();
+  renderYearButtons();
   updateHeaderDate();
   updateSyncStatus(snapshotAt ? `데이터 기준 · ${fmtStamp(snapshotAt)}` : '데이터 기준 · 오프라인 캐시');
   DONE['home'] = true;
