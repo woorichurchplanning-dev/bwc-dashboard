@@ -834,7 +834,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   </div>
   <div class="cg">
     <div class="cc"><div class="ch"><div><div class="ct">교구 추이</div><div class="cs">다락방·순장반 출석</div></div><div class="cpf"><button class="cpb" onclick="sw('district')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-dist',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-dist">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-dist',1)">▲</button></div></div></div><canvas id="c-hm-dist"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct">새가족 현황</div><div class="cs">등록요청자·등록가능자</div></div><div class="cpf"><button class="cpb" onclick="sw('newfam')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-newfam',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-newfam">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-newfam',1)">▲</button></div></div></div><canvas id="c-hm-newfam"></canvas></div>
+    <div class="cc"><div class="ch"><div><div class="ct">새가족 현황</div><div class="cs">방문자·등록가능자</div></div><div class="cpf"><button class="cpb" onclick="sw('newfam')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-newfam',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-newfam">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-newfam',1)">▲</button></div></div></div><canvas id="c-hm-newfam"></canvas></div>
   </div>
 </section>
 
@@ -1086,7 +1086,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 <!-- ═══ NEWFAM ═══ -->
 <section class="sec" id="s-newfam">
   <div class="page-hdr">
-    <div class="page-hdr-title"><h2>새가족</h2><p>등록요청자·등록가능 여부·등록 가능 사유 현황</p></div>
+    <div class="page-hdr-title"><h2>새가족</h2><p>방문자 · 등록 가능 여부 · 등록 가능 사유 현황</p></div>
   </div>
   <div class="stabs">
     <button class="stab on" onclick="ss2('newfam','adult')">장년</button>
@@ -1095,14 +1095,15 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 
   <div class="ss on" id="newfam-adult">
     <div class="kg" id="kk-newfam-adult"></div>
-    <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">장년 등록요청자 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-adult-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">장년 등록 가능 사유 (누적)</div><div class="cs">냉담기·이사·짝믿음·결혼·초신자 등</div></div></div><canvas id="c-nf-adult-route"></canvas></div>
-    </div>
-    <div class="cc"><div class="ch"><div><div class="ct">장년 등록요청자 구성</div></div></div>
+    <div class="cc"><div class="ch"><div><div class="ct">장년 방문자 구성</div>
+      <div class="cs">방문자 중 등록 가능 · 등록 불가능</div></div></div>
       <div class="fw" id="fw-adult"></div>
     </div>
 
+    <div class="cg">
+      <div class="cc"><div class="ch"><div><div class="ct">장년 방문자 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-adult-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">장년 등록 가능 사유 (누적)</div><div class="cs">냉담기·이사·짝믿음·결혼·초신자 등</div></div></div><canvas id="c-nf-adult-route"></canvas></div>
+    </div>
     <div class="nf-split"><span>같은 사람들을 연령대·성별로 본 것</span></div>
     <div class="kg" id="kk-newfam-reg"></div>
     <div class="cg">
@@ -1117,7 +1118,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="ss" id="newfam-youth">
     <div class="kg" id="kk-newfam-youth"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">청년 등록요청자 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-youth-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">청년 방문자 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-youth-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">청년 등록 가능 사유 (누적)</div><div class="cs">냉담기·이사·짝믿음·결혼·초신자 등</div></div></div><canvas id="c-nf-youth-route"></canvas></div>
     </div>
   </div>
@@ -1765,7 +1766,7 @@ function exportCSV() {
   } else if (tab === 'newfam') {
     name = '새가족';
     const fd = filterByMode(D.newFamily);
-    rows.push(['날짜','구분','등록요청자','등록 가능','등록 불가능','냉담기','이사','짝믿음','기타(이단 등)','결혼(부부)','초신자']);
+    rows.push(['날짜','구분','방문자','등록 가능','등록 불가능','냉담기','이사','짝믿음','기타(이단 등)','결혼(부부)','초신자']);
     fd.forEach(r => {
       ['adult','youth'].forEach(type => {
         rows.push([
@@ -2652,7 +2653,7 @@ function initHome() {
     if (!ws.length) return;
     const nfByWeek = w => D.newFamily.find(r => r.date === w);
     mkChart('c-hm-newfam', 'bar', getWL(ws), [
-      bds('등록요청자', ws.map(w => {
+      bds('방문자', ws.map(w => {
         const r = nfByWeek(w); return nfRequestTotal(r, 'adult') + nfRequestTotal(r, 'youth');
       }), C.b),
       bds('등록가능자', ws.map(w => {
@@ -3946,9 +3947,9 @@ function initNewFam() {
   const latestAAv = nfVal(latestAdult,'adult','available');
 
   mkKPI('kk-newfam-adult', [
-    {label:'이번 주 등록요청자', value:fmt(latestAReq), sub:'등록 가능 + 등록 불가능', color:'blue'},
+    {label:'이번 주 방문자', value:fmt(latestAReq), sub:'등록 가능 + 등록 불가능', color:'blue'},
     {label:'이번 주 등록가능자', value:fmt(latestAAv), sub:latestAReq>0?`${Math.round(latestAAv/latestAReq*100)}% 가능`:'', color:'green'},
-    {label:'기간 등록요청자', value:fmt(totAReq), sub:'선택 기간 누계', color:'gold'},
+    {label:'기간 방문자', value:fmt(totAReq), sub:'선택 기간 누계', color:'gold'},
     {label:'기간 등록불가능자', value:fmt(totAUn), sub:'선택 기간 누계', color:'teal'},
   ]);
 
@@ -3956,7 +3957,7 @@ function initNewFam() {
     const d2=D.newFamily.filter(r=>fw2.includes(r.date));
     const dt2=d2.map(r=>{const d=new Date(r.date);return `${d.getMonth()+1}/${d.getDate()}`;});
     mkChart('c-nf-adult-trend','line',dt2,[
-      lds('등록요청자',d2.map(r=>nfRequestTotal(r,'adult')),C.b),
+      lds('방문자',d2.map(r=>nfRequestTotal(r,'adult')),C.b),
       lds('등록가능자',d2.map(r=>nfVal(r,'adult','available')),C.gr),
       lds('등록불가능자',d2.map(r=>nfVal(r,'adult','unavailable')),C.or)
     ]);
@@ -3974,7 +3975,7 @@ function initNewFam() {
 
   const fw = document.getElementById('fw-adult');
   if (fw && totAReq > 0) {
-    fw.innerHTML = [{label:'등록요청',val:totAReq,color:'#2563eb'},{label:'등록 가능',val:totAAv,color:'#059669'},{label:'등록 불가능',val:totAUn,color:'#d97706'}]
+    fw.innerHTML = [{label:'방문자',val:totAReq,color:'#2563eb'},{label:'등록 가능',val:totAAv,color:'#059669'},{label:'등록 불가능',val:totAUn,color:'#d97706'}]
       .map(({label,val,color}) => {
         const p = Math.round(val/totAReq*100)||0;
         return `<div class="fr"><div class="fl">${label}</div><div class="fbo"><div class="fbi" style="width:${p}%;background:${color}">${fmt(val)}</div></div><div class="fp">${p}%</div></div>`;
@@ -3990,9 +3991,9 @@ function initNewFam() {
   const latestYAv = nfVal(latestYouth,'youth','available');
 
   mkKPI('kk-newfam-youth', [
-    {label:'이번 주 등록요청자', value:fmt(latestYReq), sub:'등록 가능 + 등록 불가능', color:'purple'},
+    {label:'이번 주 방문자', value:fmt(latestYReq), sub:'등록 가능 + 등록 불가능', color:'purple'},
     {label:'이번 주 등록가능자', value:fmt(latestYAv), sub:latestYReq>0?`${Math.round(latestYAv/latestYReq*100)}% 가능`:'', color:'green'},
-    {label:'기간 등록요청자', value:fmt(totYReq), sub:'선택 기간 누계', color:'gold'},
+    {label:'기간 방문자', value:fmt(totYReq), sub:'선택 기간 누계', color:'gold'},
     {label:'기간 등록불가능자', value:fmt(totYUn), sub:'선택 기간 누계', color:'teal'},
   ]);
 
@@ -4000,7 +4001,7 @@ function initNewFam() {
     const d2=D.newFamily.filter(r=>fw2.includes(r.date));
     const dt2=d2.map(r=>{const d=new Date(r.date);return `${d.getMonth()+1}/${d.getDate()}`;});
     mkChart('c-nf-youth-trend','line',dt2,[
-      lds('등록요청자',d2.map(r=>nfRequestTotal(r,'youth')),C.p),
+      lds('방문자',d2.map(r=>nfRequestTotal(r,'youth')),C.p),
       lds('등록가능자',d2.map(r=>nfVal(r,'youth','available')),C.gr),
       lds('등록불가능자',d2.map(r=>nfVal(r,'youth','unavailable')),C.or)
     ]);
