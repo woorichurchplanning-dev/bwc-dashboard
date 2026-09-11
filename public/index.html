@@ -758,14 +758,14 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 
 <nav>
   <div class="nt on" onclick="sw('home')">주간현황</div>
-  <div class="nt" onclick="sw('sunday')">주일예배</div>
+  <div class="nt" onclick="sw('district')">장년교구</div>
   <div class="nt" onclick="sw('youth')">청년교구</div>
   <div class="nt" onclick="sw('school')">주일학교</div>
+  <div class="nt" onclick="sw('sunday')">주일예배</div>
   <div class="nt" onclick="sw('wd')">주중예배</div>
-  <div class="nt" onclick="sw('district')">교구</div>
   <div class="nt" onclick="sw('newfam')">새가족</div>
   <div class="nt" onclick="sw('special')">특별예배</div>
-  <div class="nt" onclick="sw('yearcomp')">연도 비교</div>
+  <div class="nt" onclick="sw('yearcomp')">연도별 비교</div>
 </nav>
 
 
@@ -1025,7 +1025,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 <!-- ═══ LEADER ═══ -->
 <section class="sec" id="s-district">
   <div class="page-hdr">
-    <div class="page-hdr-title"><h2>교구</h2>
+    <div class="page-hdr-title"><h2>장년교구</h2>
       <p><span data-tip="가정에서 드리는 소그룹 예배 모임">다락방</span> ·
          <span data-tip="다락방 목자·리더들이 함께 모이는 훈련 모임">순장반</span> 출석 현황</p></div>
   </div>
@@ -1141,7 +1141,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="stabs">
     <button class="stab on" onclick="ss2('yearcomp','summary')">연도 요약</button>
     <button class="stab" onclick="ss2('yearcomp','trend')">추이 비교</button>
-    <button class="stab" onclick="ss2('yearcomp','point')">특정 주일 비교</button>
+    <button class="stab" onclick="ss2('yearcomp','point')">주일·기간 비교</button>
   </div>
 
   <!-- ─── 연도 요약 ─── -->
@@ -1182,8 +1182,19 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <!-- ─── 특정 주일 비교 ─── -->
   <div class="ss" id="yearcomp-point">
     <div class="yc-ctl">
-      <span class="yc-ctl-lbl">기준 주일</span>
+      <span class="yc-ctl-lbl">보기</span>
+      <div class="yc-seg-group">
+        <button class="yc-seg on" id="yc-pm-one" onclick="setYCPointMode('one')">주일 하나</button>
+        <button class="yc-seg" id="yc-pm-span" onclick="setYCPointMode('span')">기간</button>
+      </div>
+      <span class="yc-ctl-lbl" id="yc-point-date-lbl">기준 주일</span>
       <select class="dist-sel" id="yc-point-date" onchange="updateYCPoint()"></select>
+      <span id="yc-span-box" style="display:none">
+        <span class="yc-ctl-lbl">기간</span>
+        <span class="dsel" id="dsel-ycs"></span>
+        <span class="yc-ctl-lbl">~</span>
+        <span class="dsel" id="dsel-yce"></span>
+      </span>
       <span class="yc-ctl-lbl">항목</span>
       <select class="dist-sel" id="yc-point-dept" onchange="updateYCPoint()"></select>
     </div>
@@ -2128,7 +2139,8 @@ function mkChart(id, type, labels, datasets, opts={}) {
             const raw = isH ? c.parsed.x : (c.parsed.y ?? c.parsed);
             if (raw === null || raw === undefined) return null;
             const name = c.dataset.label ? ` ${c.dataset.label}` : '';
-            return `${name}  ${fmt(raw)}${isPct ? '%' : '명'}`;
+            const note = opts.pointNote ? opts.pointNote(c.datasetIndex, c.dataIndex) : '';
+            return `${name}${note ? ' ' + note : ''}  ${fmt(raw)}${isPct ? '%' : '명'}`;
           },
           afterTitle: items => {
             if (!opts.fw) return;
@@ -4032,6 +4044,12 @@ function ycWeekMap(year, fn) {
   });
   return map;
 }
+/* 주차 번호 → 그 해의 실제 주일. 툴팁에 '17주'만 뜨면 언제인지 와 닿지 않는다. */
+function ycWeekDate(year, wk) {
+  const d = (YC_BY_YEAR[year] || []).find(x => ycWeekNo(x) === wk);
+  return d ? `${Number(d.slice(5,7))}/${Number(d.slice(8,10))}` : '';
+}
+
 function ycWeekArr(year, fn) {
   const map = ycWeekMap(year, fn);
   return Array.from({ length: YC_MAX_WK }, (_, i) => map[i + 1] ?? null);
@@ -4184,7 +4202,12 @@ function renderYCTrend() {
 
   setText('yc-trend-title', `${m.label} — 연도별 ${YC_GRAN === 'week' ? '주차' : '월 평균'} 비교`);
   setText('yc-trend-sub', `${m.sub}${smooth ? ' · 4주 이동평균' : ''} · 올해는 실선, 과거는 점선`);
-  mkChart('c-yc-main', 'line', labels, datasets, { legendTop: true });
+  mkChart('c-yc-main', 'line', labels, datasets, { legendTop: true,
+    pointNote: (di, i) => {
+      if (YC_GRAN !== 'week') return '';
+      const d = ycWeekDate(YC_YEARS[di], i + 1);
+      return d ? `(${d})` : '';
+    } });
 
   // 연도별 요약표
   const rows = YC_YEARS.map(y => {
@@ -4201,8 +4224,16 @@ function renderYCTrend() {
       c ? `${c.diff >= 0 ? '+' : ''}${fmt(c.diff)}${c.pct == null ? '' : ` (${c.diff >= 0 ? '+' : ''}${c.pct.toFixed(1)}%)`}` : '–',
     ];
   });
+  // 기준 연도(가장 최근 해)와 견줘 몇 % 자랐는지도 같이 낸다
+  const base = YC_YEARS[YC_YEARS.length - 1];
+  rows.forEach((r, i) => {
+    const y = YC_YEARS[i];
+    if (y === base) { r.push('기준'); return; }
+    const c = ycCompare(m.fn, base, y);
+    r.push(c ? `${c.diff >= 0 ? '+' : ''}${fmt(c.diff)}${c.pct == null ? '' : ` (${c.diff >= 0 ? '+' : ''}${c.pct.toFixed(1)}%)`}` : '–');
+  });
   setText('yc-year-title', `${m.label} 연도별 요약`);
-  mkTable('t-yc-year', ['연도', '집계 주수', '평균', '최고', '최저', '전년 대비'], rows);
+  mkTable('t-yc-year', ['연도', '집계 주수', '평균', '최고', '최저', '전년 대비', `${base}년 대비`], rows);
 }
 
 /* ─── 특정 주일 비교 ─── */
@@ -4244,11 +4275,95 @@ function initYCPointControls() {
   }
 }
 
+/* 주일 하나만이 아니라 기간으로도 견준다. 예를 들어 '3월 1일 ~ 5월 31일'을
+   해마다 같은 구간으로 모아 평균·합계를 비교한다. */
+let YC_POINT_MODE = 'one';
+
+function setYCPointMode(mode) {
+  YC_POINT_MODE = mode;
+  document.getElementById('yc-pm-one')?.classList.toggle('on', mode === 'one');
+  document.getElementById('yc-pm-span')?.classList.toggle('on', mode === 'span');
+  const one = mode === 'one';
+  const el = id => document.getElementById(id);
+  if (el('yc-point-date')) el('yc-point-date').style.display = one ? '' : 'none';
+  if (el('yc-point-date-lbl')) el('yc-point-date-lbl').style.display = one ? '' : 'none';
+  if (el('yc-span-box')) el('yc-span-box').style.display = one ? 'none' : '';
+  buildYCSpanSelects();
+  updateYCPoint();
+}
+
+function buildYCSpanSelects() {
+  const opt = (v, sel, txt) => `<option value="${v}"${v === sel ? ' selected' : ''}>${txt}</option>`;
+  [['ycs', '01', '01'], ['yce', '12', '31']].forEach(([id, dm, dd]) => {
+    const box = document.getElementById('dsel-' + id);
+    if (!box || box.dataset.built) return;
+    box.dataset.built = '1';
+    box.innerHTML =
+      `<select class="dsel-m" onchange="updateYCPoint()">` +
+        Array.from({length:12}, (_, i) => String(i+1).padStart(2,'0'))
+             .map(m => opt(m, dm, Number(m) + '월')).join('') + '</select>' +
+      `<select class="dsel-d" onchange="updateYCPoint()">` +
+        Array.from({length:31}, (_, i) => String(i+1).padStart(2,'0'))
+             .map(d => opt(d, dd, Number(d) + '일')).join('') + '</select>';
+  });
+}
+
+function ycSpanMD(id) {
+  const box = document.getElementById('dsel-' + id);
+  if (!box) return null;
+  return `${box.querySelector('.dsel-m').value}-${box.querySelector('.dsel-d').value}`;
+}
+
+function updateYCPointSpan(item) {
+  const from = ycSpanMD('ycs'), to = ycSpanMD('yce');
+  if (!from || !to) return;
+  const inSpan = d => { const md = d.slice(5); return from <= to ? (md >= from && md <= to) : (md >= from || md <= to); };
+  const rows = YC_YEARS.map(y => {
+    const ds = (YC_BY_YEAR[y] || []).filter(inSpan);
+    const vals = ds.map(d => item.fn(d)).filter(v => v != null);
+    return { year: y, n: vals.length,
+             avg: vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : null,
+             sum: vals.length ? vals.reduce((a,b)=>a+b,0) : null };
+  });
+  const lbl = `${Number(from.slice(0,2))}/${Number(from.slice(3))} ~ ${Number(to.slice(0,2))}/${Number(to.slice(3))}`;
+  setText('yc-point-title', `${item.label} — ${lbl} 연도별 비교`);
+
+  const cur = rows[rows.length-1], prv = rows[rows.length-2];
+  const banner = document.getElementById('yc-point-banner');
+  if (banner) {
+    banner.innerHTML = (cur?.avg != null && prv?.avg != null)
+      ? `<div><b>${cur.year}년 ${lbl}</b> 주 평균 ${fmt(cur.avg)}명(${cur.n}주) —
+         ${prv.year}년 같은 기간 ${fmt(prv.avg)}명 대비
+         <b>${cur.avg - prv.avg >= 0 ? '+' : ''}${fmt(cur.avg - prv.avg)}명
+         (${prv.avg ? ((cur.avg-prv.avg)/prv.avg*100).toFixed(1) : '–'}%)</b></div>`
+      : '<div>선택한 기간에 비교할 자료가 없습니다.</div>';
+  }
+
+  mkChart('c-yc-point', 'bar', rows.map(r => `${r.year}년`),
+    [{ label: `${item.label} 주 평균`, data: rows.map(r => r.avg),
+       backgroundColor: rows.map(r => (YC_COLORS[r.year] || C.b) + 'cc'),
+       borderColor: rows.map(r => YC_COLORS[r.year] || C.b), borderWidth: 1, borderRadius: 6 }], {});
+
+  const base = rows[rows.length-1];
+  mkTable('t-yc-point', ['연도', '주수', '주 평균', '합계', '전년 대비', `${base.year}년 대비`],
+    rows.map((r, i) => {
+      const p2 = rows[i-1];
+      const d = (r.avg != null && p2?.avg != null) ? r.avg - p2.avg : null;
+      const bd = (base.avg != null && r.avg != null && r.year !== base.year) ? base.avg - r.avg : null;
+      return [`${r.year}년`, r.n ? `${r.n}주` : '–', fmtOr(r.avg), fmtOr(r.sum),
+              d == null ? '–' : `${d>=0?'+':''}${fmt(d)} (${p2.avg?((d/p2.avg)*100).toFixed(1):'–'}%)`,
+              r.year === base.year ? '기준'
+                : bd == null ? '–' : `${bd>=0?'+':''}${fmt(bd)} (${r.avg?((bd/r.avg)*100).toFixed(1):'–'}%)`];
+    }));
+}
+
 function updateYCPoint() {
   const base = document.getElementById('yc-point-date')?.value;
   const id = document.getElementById('yc-point-dept')?.value;
   const item = YC_POINT_ITEMS.find(i => i.id === id);
-  if (!base || !item) return;
+  if (!item) return;
+  if (YC_POINT_MODE === 'span') { updateYCPointSpan(item); return; }
+  if (!base) return;
 
   const wk = ycWeekNo(base);
   const rows = YC_YEARS.map(y => {
@@ -4635,7 +4750,8 @@ function renderSpecial(key) {
 }
 
 // ── 탭 내비게이션 ──
-const TABS=['home','sunday','youth','school','wd','district','newfam','special','yearcomp'];
+/* 화면 위 탭과 같은 순서여야 한다 — 자리 번호로 짝을 맞춘다 */
+const TABS=['home','district','youth','school','sunday','wd','newfam','special','yearcomp'];
 const INITS={home:initHome,sunday:initSunday,youth:initYouth,school:initSchool,wd:initWD,district:initDistrict,newfam:initNewFam,special:initSpecial,yearcomp:initYearComp};
 const DONE={};
 

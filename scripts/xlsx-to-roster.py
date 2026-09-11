@@ -4,8 +4,8 @@ import sys
 from openpyxl import load_workbook
 
 TABS = [('sunday','주일예배'), ('youth','청년교구'), ('school','주일학교'),
-        ('wd','주중예배'), ('district','교구'), ('newfam','새가족'),
-        ('special','특별예배'), ('yearcomp','연도비교')]
+        ('wd','주중예배'), ('district','장년교구'), ('newfam','새가족'),
+        ('special','특별예배'), ('yearcomp','연도별비교')]
 
 def main(src, dst):
     ws = load_workbook(src, data_only=True)['계정']
