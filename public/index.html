@@ -1046,7 +1046,8 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
     <div class="kg" id="kk-district"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-dist-trend">다락방 · 순장반 출석 추이</div><div class="cs">주별 합계</div></div></div><canvas id="c-dist-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">교구별 출석 현황</div><div class="cs">최근 주 · 다락방+순장반</div></div></div><canvas id="c-dist-bar"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">교구별 출석 현황</div><div class="cs" id="cs-dist-bar">최근 주 · 다락방+순장반</div></div></div>
+        <div class="fw share-bars" id="fw-dist-bar"></div></div>
     </div>
     <div class="cc"><div class="ch"><div><div class="ct" id="ct-dist-table">교구별 상세 (최근 주)</div></div></div>
       <div style="overflow-x:auto"><table id="t-district"></table></div>
@@ -3726,10 +3727,34 @@ function renderDistrict() {
   const names = pick ? [pick] : districtNames();
   const lastCell = [...rows].reverse().find(r => r.cell)?.cell;
   const lastLead = [...rows].reverse().find(r => r.leader)?.leader;
-  mkChart('c-dist-bar', 'bar', names, [
-    bds('다락방', names.map(n => lastCell?.dists?.[n]?.chul ?? null), C.b),
-    bds('순장반', names.map(n => lastLead?.dists?.[n]?.chul ?? null), C.p),
-  ], { horiz: true, stack: true, total: true });
+  // 막대만 있으면 인원도 비율도 짚어 봐야 알 수 있다. 한 줄에 다 낸다.
+  const distRows = names.map(n => {
+    const c = lastCell?.dists?.[n]?.chul ?? 0, l = lastLead?.dists?.[n]?.chul ?? 0;
+    return { n, c, l, t: c + l };
+  });
+  const distTot = distRows.reduce((a, r) => a + r.t, 0);
+  const distMax = Math.max(...distRows.map(r => r.t), 1);
+  setText('cs-dist-bar', distTot
+    ? `최근 주 · 전체 ${fmt(distTot)}명 (다락방 ${fmt(distRows.reduce((a,r)=>a+r.c,0))} · 순장반 ${fmt(distRows.reduce((a,r)=>a+r.l,0))})`
+    : '최근 주 · 다락방+순장반');
+  const fwDist = document.getElementById('fw-dist-bar');
+  if (fwDist) {
+    fwDist.innerHTML = [...distRows].sort((a, b) => b.t - a.t).map(r => {
+      const w = Math.round(r.t / distMax * 100);
+      const cw = r.t ? Math.round(r.c / r.t * 100) : 0;
+      return `<div class="fr"><div class="fl">${r.n}</div>
+        <div class="fbo"><div style="height:100%;width:${w}%;display:flex;border-radius:6px;overflow:hidden">
+          <div style="width:${cw}%;background:${C.b};display:flex;align-items:center;padding-left:10px;font-size:12px;font-weight:700;color:#fff">${r.c || ''}</div>
+          <div style="width:${100-cw}%;background:${C.p};display:flex;align-items:center;padding-left:8px;font-size:12px;font-weight:700;color:#fff">${r.l || ''}</div>
+        </div></div>
+        <div class="fp" style="width:78px;text-align:right">${fmt(r.t)} · ${distTot ? Math.round(r.t / distTot * 100) : 0}%</div></div>`;
+    }).join('')
+      + `<div class="fr" style="margin-top:4px"><div class="fl"></div>
+         <div class="fbo" style="background:transparent;display:flex;align-items:center;gap:14px;font-size:11px;color:var(--text3)">
+           <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${C.b};margin-right:4px"></span>다락방</span>
+           <span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${C.p};margin-right:4px"></span>순장반</span>
+         </div><div class="fp" style="width:78px"></div></div>`;
+  }
 
   setText('ct-dist-table', `교구별 상세 (다락방 ${lastCell?.date || '–'} · 순장반 ${lastLead?.date || '–'})`);
   mkTable('t-district', ['교구', ...CELL_KINDS, '다락방 계', '화요순장반', '직장순장반', '순장반 계'],
