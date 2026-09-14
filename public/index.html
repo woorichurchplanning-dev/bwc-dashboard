@@ -939,6 +939,10 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
       <div class="cc"><div class="ch"><div><div class="ct">청년부별 예배 출석 추이</div></div></div><canvas id="c-youth-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-youth-pie">청년부별 인원</div></div></div><canvas id="c-youth-pie"></canvas></div>
     </div>
+    <div class="cc" id="card-youth-fri"><div class="ch"><div><div class="ct">청년금요집회</div>
+      <div class="cs" id="cs-youth-fri">현장 · 온라인</div></div></div>
+      <canvas id="c-youth-fri"></canvas>
+    </div>
     <div class="cc"><div class="ch"><div><div class="ct">주별 출석 상세</div><div class="cs">청년부별 예배 출석</div></div></div>
       <div style="overflow-x:auto"><table id="t-youth"></table></div>
     </div>
@@ -3162,6 +3166,24 @@ function initYouth() {
   trendOf(fw);
   addCardPeriod('c-youth-trend', trendOf, kpiOf);
 
+  // 청년금요집회 — 값이 하나도 없으면 카드를 감춘다
+  const friOn2 = w => nn(D.youth[w]?.금요집회?.온라인);
+  const friOff2 = w => nn(D.youth[w]?.금요집회?.현장);
+  const friWeeks = fw.filter(w => friOff2(w) != null || friOn2(w) != null);
+  const friCard = document.getElementById('card-youth-fri');
+  if (friCard) friCard.style.display = friWeeks.length ? '' : 'none';
+  if (friWeeks.length) {
+    const wl2 = getWL(friWeeks);
+    const off = friWeeks.map(friOff2), on = friWeeks.map(friOn2);
+    const lastOff = off.filter(x => x != null).slice(-1)[0];
+    const sumOff = off.reduce((a, b) => a + (b || 0), 0);
+    setText('cs-youth-fri', `최근 ${fmtOr(lastOff)}명 · ${friWeeks.length}주 평균 ${fmt(Math.round(sumOff / friWeeks.length))}명`);
+    mkChart('c-youth-fri', 'bar', wl2, [
+      bds('현장', off, C.or),
+      ...(on.some(x => x != null) ? [bds('온라인', on, C.b)] : []),
+    ], { fw: friWeeks, stack: true, total: true });
+  }
+
   mkTable('t-youth', ['날짜', ...DEPTS, '합계'],
     fw.map((w, i) => [w, ...DEPTS.map(d => fmtOr(series[d][i])),
       fmtOr(DEPTS.reduce((a, d) => a + (series[d][i] || 0), 0) || null)]));
@@ -5281,6 +5303,7 @@ function applyNewData(data) {
       Object.entries(youth).forEach(([sub, val]) => {
         if (!val || typeof val !== 'object') return;
         if (RETIRED_YOUTH_DEPTS.some(r => sub.startsWith(r))) return;  // 폐지 조직
+        if (sub === '청년금요집회') return;                              // 부서가 아니라 집회
         // "1청년부" / "1청년부 (예배)" / "3청년부" 등 → 예배 + 3/4청년부 직접 필드
         const worshipM = sub.match(/^([1-4]청년부)\s*(?:\(예배\))?$/);
         if (worshipM) {
@@ -5306,6 +5329,16 @@ function applyNewData(data) {
         }
         // 그 외("106 (예배)" 등 구형 키) → 무시
       });
+      // 청년금요집회 — 부서가 아니라 청년교구 전체가 함께 모이는 집회
+      const fri = youth['청년금요집회'] || {};
+      if (Object.keys(fri).length) {
+        D.youth[date].금요집회 = {
+          현장:   fri['현장 인원'] != null ? Number(fri['현장 인원']) || 0 : null,
+          온라인: fri['온라인']   != null ? Number(fri['온라인'])   || 0 : null,
+          note:   fri['비고'] || '',
+        };
+      }
+
       const youthSum = ['1청년부','2청년부','3청년부','4청년부']
         .reduce((sum, dept) => sum + (Number(D.youth[date]?.[dept]?.예배) || 0), 0);
       if (youthSum > 0) {
