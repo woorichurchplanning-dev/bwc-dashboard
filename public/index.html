@@ -1448,12 +1448,14 @@ function updateHomeWeekControls(fw, weekKey) {
   }
 }
 
+/* 주차는 '주일 기준 지난 한 주', 즉 그 주가 끝나는 주일로 묶는다.
+   9/23(수)을 고르면 9/27 주차다. 입력앱·교구 시트와 같은 규칙. */
 function toWeekKeyFromDate(dateStr) {
   if (!dateStr) return '';
   const [y, m, day] = dateStr.split('-').map(Number);
   const d = new Date(y, m - 1, day);
   if (Number.isNaN(d.getTime())) return '';
-  d.setDate(d.getDate() - d.getDay());
+  d.setDate(d.getDate() + (d.getDay() === 0 ? 0 : 7 - d.getDay()));
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
