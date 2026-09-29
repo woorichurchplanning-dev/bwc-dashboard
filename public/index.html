@@ -901,6 +901,10 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
       <div class="cc"><div class="ch"><div><div class="ct" id="sun-chart-title">서현·송림 장년 출석 추이 (지난 12주)</div></div></div><canvas id="c-sun-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">온라인 예배 추이</div><div class="cs">현장 인원만 제외</div></div></div><canvas id="c-sun-grand"></canvas></div>
     </div>
+    <div class="cc" id="card-sun-online-bu"><div class="ch"><div><div class="ct">주일 온라인 부별 추이</div>
+      <div class="cs" id="cs-sun-online-bu">실시간 접속 PC · 1~5부</div></div></div>
+      <canvas id="c-sun-online-bu"></canvas>
+    </div>
     <div class="cc"><div class="ch"><div><div class="ct">주별 출석 상세</div><div class="cs">서현·송림 부별 현장 출석</div></div></div>
       <div style="overflow-x:auto"><table id="t-sun"></table></div>
     </div>
@@ -2851,6 +2855,25 @@ function initSunday() {
   // 온라인 데이터만 표시
   const online=fw.map(w=>nn(D.sunday[w]?.online));
   mkChart('c-sun-grand','line',wl,[lds('온라인',online,C.g,true)],{fw});
+
+  // 주일 온라인 부별 — 부별로 센 주차가 하나도 없으면 카드를 감춘다
+  const SUN_ON_BU = ['1부','2부','3부','4부','5부'];
+  const onBuOf = (w,bu) => nn(D.sunday[w]?.online_bu?.[bu]);
+  const onBuWeeks = fw.filter(w => SUN_ON_BU.some(bu => onBuOf(w,bu) != null));
+  const onBuCard = document.getElementById('card-sun-online-bu');
+  if (onBuCard) onBuCard.style.display = onBuWeeks.length ? '' : 'none';
+  if (onBuWeeks.length) {
+    // 한 주도 값이 없는 부는 뺀다 (4·5부가 없는 기간이 있다)
+    const live = SUN_ON_BU.filter(bu => onBuWeeks.some(w => onBuOf(w,bu) != null));
+    const buColors = [C.b, C.id, C.p, C.t, C.or];
+    const lastW = onBuWeeks[onBuWeeks.length-1];
+    const lastTot = live.reduce((a,bu)=>a+(onBuOf(lastW,bu)||0),0);
+    setText('cs-sun-online-bu',
+      `실시간 접속 PC · 최근 ${new Date(lastW).getMonth()+1}/${new Date(lastW).getDate()} 합계 ${fmt(lastTot)}`);
+    mkChart('c-sun-online-bu','bar',getWL(onBuWeeks),
+      live.map((bu,i) => bds(bu, onBuWeeks.map(w=>onBuOf(w,bu)), buColors[SUN_ON_BU.indexOf(bu)] || buColors[i])),
+      { fw: onBuWeeks, stack: true, total: true });
+  }
 
   const sh1=buSeries('장년','1부',fw),sh2=buSeries('장년','2부',fw),sh3=buSeries('장년','3부',fw);
   const renderShTrend = (fw2) => {
@@ -5392,10 +5415,24 @@ function applyNewData(data) {
     }
 
     // 주일 온라인 → D.sunday
-    const jOnline = online['주일 온라인'];
+    // 2026-09-29 부터 부별(1~5부)로 센다. '주일 온라인'은 입력앱이 채워 주는
+    // 합계지만, 부별만 들어온 주차도 받아 낼 수 있게 직접 더해서 메운다.
+    const SUN_ON_BU = ['1부', '2부', '3부', '4부', '5부'];
+    const onBu = {};
+    SUN_ON_BU.forEach(bu => {
+      const v2 = online['주일 ' + bu];
+      if (v2 != null && v2 !== '') onBu[bu] = Number(v2) || 0;
+    });
+    const jOnline = online['주일 온라인'] != null
+      ? online['주일 온라인']
+      : (Object.keys(onBu).length ? SUN_ON_BU.reduce((a, bu) => a + (onBu[bu] || 0), 0) : null);
     if (jOnline != null) {
       if (!D.sunday[date]) D.sunday[date] = {};
       D.sunday[date].online = jOnline;
+    }
+    if (Object.keys(onBu).length) {
+      if (!D.sunday[date]) D.sunday[date] = {};
+      D.sunday[date].online_bu = onBu;
     }
 
     // ── 교구 다락방 → D.cell ──
