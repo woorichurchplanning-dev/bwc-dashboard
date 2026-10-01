@@ -14,6 +14,17 @@
 - `scripts/` — 계정·자료 관리 도구
 - 계정과 출석 자료는 레포가 아니라 **Vercel Blob** 에 암호화되어 있다
 
+## 고친 뒤 확인
+
+```bash
+npm run preview        # http://localhost:4321 · 로그인·자료를 흉내 낸다
+```
+
+`scripts/preview.mjs` 가 `/api/me` 와 `/api/data` 를 대신 답해 준다. 비밀값이 필요 없다.
+`public/data.json` 이 있으면 그 진짜 자료를, 없으면 지어낸 20주를 쓴다.
+**`/api/me` 는 평평한 객체**(`{id,name,admin,tabs,…}`)다 — `{user:…}` 로 감싸면
+탭이 주간현황 하나만 보인다.
+
 ## ⚠️ 배포 — 반드시 이 스크립트로
 
 ```bash

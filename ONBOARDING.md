@@ -56,8 +56,25 @@ clasp login          # 권한 받은 구글 계정으로
 
 ### 대시보드 (`bwc-dashboard`)
 
-`public/index.html` 과 `api/`. push 하면 GitHub Action 이 배포한다 (2~3분).
+`public/index.html` 과 `api/`.
+
+**먼저 내 컴퓨터에서 확인한다.** 56명이 보는 화면이라 깨진 채로 올리면 바로 티가 난다.
+
+```bash
+npm run preview        # http://localhost:4321
+```
+
+로그인과 자료를 흉내 내 주므로 Vercel 계정도 비밀값도 필요 없다.
+보이는 숫자는 **지어낸 것**이고 모양과 동작만 본다. 고치고 새로고침하면 바로 반영된다.
+
+괜찮으면 push 한다. GitHub Action 이 배포한다 (2~3분).
 진행 상황은 레포의 **Actions** 탭에서 본다.
+
+> 크게 고칠 때는 `main` 에 바로 올리지 말고 브랜치에 올린 뒤 합치는 편이 안전하다.
+> ```bash
+> git switch -c 고칠것
+> git push -u origin 고칠것      # 운영은 안 건드린다
+> ```
 
 > 로컬에서 `vercel deploy` 를 직접 치지 말 것. 내 폴더의 `public/data.json` 이
 > 낡아서, 그걸 올리면 그 사이 들어온 입력이 **지워진다.** 실제로 두 번 겪었다.

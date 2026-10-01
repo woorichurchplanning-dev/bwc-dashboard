@@ -34,8 +34,23 @@ jobs:
           STORE_KEY: ${{ secrets.STORE_KEY }}
         run: node scripts/pull-data.mjs
 
+      # 토큰이 비어 있으면 여기서 멈춘다. 예전에는 vercel CLI 가
+      # "--token 에 값이 없다"고만 해서 무엇이 문제인지 알기 어려웠다.
+      - name: 토큰 확인
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN 이 비어 있습니다."
+            echo "Settings → Secrets and variables → Actions 에서 VERCEL_TOKEN 을 넣어 주세요."
+            echo "토큰은 https://vercel.com/account/tokens 에서 만듭니다."
+            exit 1
+          fi
+          echo "토큰 있음 (${#VERCEL_TOKEN}자)"
+
       - name: 배포
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN"
