@@ -35,8 +35,8 @@ npm install -g @anthropic-ai/claude-code
 
 # 세 레포 받기
 git clone https://github.com/woorichurchplanning-dev/bwc-dashboard.git
-git clone https://github.com/barnabas4409-tech/bwc-input.git
-git clone https://github.com/barnabas4409-tech/bwc-gas.git
+git clone https://github.com/woorichurchplanning-dev/bwc-input.git
+git clone https://github.com/woorichurchplanning-dev/bwc-gas.git
 
 # Apps Script 를 고치려면
 npm install -g @google/clasp
