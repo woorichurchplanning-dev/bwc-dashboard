@@ -1,0 +1,41 @@
+# main 에 push 하면 대시보드를 배포한다.
+#
+# 이게 있어야 Vercel 계정이 없는 사람도 코드를 고쳐 올릴 수 있다.
+# 배포 직전에 저장소(Blob)의 최신 자료를 내려받아 넣는다 — 체크아웃에는
+# public/data.json 이 없고(.gitignore), 누군가의 낡은 사본을 올리면
+# 그 사이 들어온 입력이 지워지기 때문이다.
+name: 대시보드 배포
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/refresh-data.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dashboard
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 최신 자료 내려받기
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+          STORE_KEY: ${{ secrets.STORE_KEY }}
+        run: node scripts/pull-data.mjs
+
+      - name: 배포
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: npx vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
