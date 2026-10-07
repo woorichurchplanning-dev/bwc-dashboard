@@ -5344,9 +5344,19 @@ const EXPECTED_INPUTS = [
 
 function inputStatus(week) {
   const rec = RAW[week] || {};
+  const off = rec['_휴강'] || {};   // 교구 시트에서 휴강으로 확인된 모임 (Apps Script 가 표시)
   return EXPECTED_INPUTS.map(({ group, items }) => {
+    if (off[group]) return { group, all: items.length, miss: [], off: off[group] };
     const got = rec[group] || {};
-    const miss = items.filter(it => !got[it] || typeof got[it] !== 'object');
+    const miss = [];
+    items.forEach(it => {
+      if (group === '주일학교' && it === '사랑부') {
+        // 2026년 남은 기간 사랑부는 1부·2부를 따로 낸다 (Apps Script 가 '사랑부'로 합쳐 줌)
+        const o = got[it] || {};
+        if (o['1부 학생'] == null) miss.push('사랑부 1부');
+        if (o['2부 학생'] == null) miss.push('사랑부 2부');
+      } else if (!got[it] || typeof got[it] !== 'object') miss.push(it);
+    });
     return { group, all: items.length, miss };
   });
 }
@@ -5366,8 +5376,9 @@ function renderInputStatus(week) {
     </div>
     <div class="sub-grid">${rows.map(r => `
       <div class="sub-g ${r.miss.length ? 'miss' : ''}">
-        <div class="sub-g-hd">${r.group}<span>${r.all - r.miss.length}/${r.all}</span></div>
-        ${r.miss.length ? `<div class="sub-g-miss">${r.miss.length === r.all ? '전체 미입력' : r.miss.join(', ')}</div>` : ''}
+        <div class="sub-g-hd">${r.group}<span>${r.off ? '휴강' : `${Math.max(0, r.all - r.miss.length)}/${r.all}`}</span></div>
+        ${r.off ? `<div class="sub-g-miss">${esc(r.off)}</div>` : ''}
+        ${r.miss.length ? `<div class="sub-g-miss">${r.miss.length >= r.all ? '전체 미입력' : r.miss.join(', ')}</div>` : ''}
       </div>`).join('')}
     </div>
     ${notes.length ? `<div class="sub-notes"><div class="sub-notes-hd">이번 주 메모</div>${
@@ -5736,7 +5747,7 @@ function updateSyncStatus(prefix, tone) {
   // 주간현황의 '입력 현황' 칸과 같은 기준으로 센다 — 기준이 다르면 숫자가 어긋나 헷갈린다
   const latest = [...D.weeks].sort().pop();
   const gaps = latest && RAW[latest]
-    ? inputStatus(latest).flatMap(r => r.miss.length === r.all ? [`${r.group} 전체`] : r.miss.map(m => `${r.group} ${m}`))
+    ? inputStatus(latest).flatMap(r => r.miss.length >= r.all ? [`${r.group} 전체`] : r.miss.map(m => `${r.group} ${m}`))
     : getLatestInputGaps();
   const gapCount = latest && RAW[latest]
     ? inputStatus(latest).reduce((n, r) => n + r.miss.length, 0) : gaps.length;
