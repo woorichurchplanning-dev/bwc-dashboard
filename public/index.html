@@ -5552,7 +5552,9 @@ function applyNewData(data) {
     if (Object.keys(dawn).length > 0) {
       D.dawn[date] = {
         offline: { 월:dawn['월']??0, 화:dawn['화']??0, 수:dawn['수']??0, 목:dawn['목']??0, 금:dawn['금']??0, 토:dawn['토']??0 },
-        online:  { 월:0, 화:0, 수:0, 목:0, 금:0, 토:0 },
+        // 2026-10-07 부터 입력앱에 요일별 온라인 칸('월 온라인' …)이 생겼다
+        online:  { 월:dawn['월 온라인']??0, 화:dawn['화 온라인']??0, 수:dawn['수 온라인']??0,
+                   목:dawn['목 온라인']??0, 금:dawn['금 온라인']??0, 토:dawn['토 온라인']??0 },
       };
     }
 
