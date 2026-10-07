@@ -84,6 +84,22 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 .grp-body{overflow-x:auto}
 .grp-body table{margin:0}
 .grp-body th{background:#fff}
+/* ── 주간 데이터 보고 메일 ── */
+.rp-status{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.rp-pill{font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--subtle);color:var(--text2)}
+.rp-pill.on{background:var(--pos-bg);color:var(--pos)}
+.rp-pill.off{background:var(--warn-bg);color:var(--warn)}
+.rp-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:30px}
+.rp-chip{display:inline-flex;align-items:center;gap:6px;background:var(--accent-light);color:var(--accent-dark);
+  border-radius:20px;padding:5px 6px 5px 12px;font-size:12.5px;font-weight:600}
+.rp-chip button{border:0;background:transparent;padding:0 6px;font-size:15px;line-height:1;color:var(--accent-dark)}
+.rp-add{display:flex;gap:8px;margin-bottom:18px}
+.rp-add input{flex:1}
+.rp-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px;align-items:end}
+.rp-toggle{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin:0;padding:9px 0}
+.rp-actions{display:flex;flex-wrap:wrap;gap:8px}
+#rp-preview{margin-top:16px;display:none}
+#rp-preview iframe{width:100%;height:900px;border:1px solid var(--border);border-radius:12px;background:#efefec}
 #q{padding:9px 12px;border:1px solid var(--line,rgba(0,0,0,.15));border-radius:9px;font:inherit;font-size:13px}
 </style>
 </head>
@@ -98,6 +114,36 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 
 <main>
   <div class="msg" id="msg"></div>
+
+  <div class="card" id="rp-card">
+    <h2>주간 데이터 보고 메일</h2>
+    <div class="desc">지난주(월~주일) 요약을 교회 계정(woorichurchplanning@gmail.com)이 정해진 요일·시각에 보냅니다.
+      여기서 바꾼 내용은 입력 시트의 「보고설정」 탭에도 그대로 저장됩니다.</div>
+    <div class="rp-status" id="rp-status"><span class="rp-pill">불러오는 중…</span></div>
+
+    <label>받는 사람</label>
+    <div class="rp-chips" id="rp-chips"></div>
+    <div class="rp-add">
+      <input type="text" id="rp-email" placeholder="이메일 주소 (쉼표로 여러 개 가능)" autocapitalize="off" spellcheck="false"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();rpAdd()}">
+      <button type="button" onclick="rpAdd()">추가</button>
+    </div>
+
+    <div class="rp-row">
+      <div><label for="rp-day">보내는 요일</label>
+        <select id="rp-day"></select></div>
+      <div><label for="rp-hour">보내는 시각</label>
+        <select id="rp-hour"></select></div>
+      <div><label class="rp-toggle"><input type="checkbox" id="rp-on"> 매주 자동으로 보내기</label></div>
+    </div>
+
+    <div class="rp-actions">
+      <button type="button" class="primary" id="rp-save" onclick="rpSave()">저장</button>
+      <button type="button" id="rp-prev" onclick="rpPreview()">미리보기</button>
+      <button type="button" id="rp-send" onclick="rpSend()">지금 보내기</button>
+    </div>
+    <div id="rp-preview"><iframe id="rp-frame" title="보고 메일 미리보기" sandbox></iframe></div>
+  </div>
 
   <div class="card">
     <h2>계정 목록</h2>
@@ -355,6 +401,83 @@ $('form').addEventListener('submit', async (e) => {
   } catch (e) { show('err', e.message); }
   finally { $('f-submit').disabled = false; }
 });
+
+/* ── 주간 데이터 보고 메일 ── */
+const RP = { to: [], on: true, day: '수', hour: 13, trigger: false };
+const escH = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hourLabel = (h) => (h < 12 ? '오전 ' : '오후 ') + (h % 12 === 0 ? 12 : h % 12) + '시';
+
+async function rpApi(method, body) {
+  const res = await fetch('/api/report', {
+    method, cache: 'no-store',
+    headers: body ? { 'content-type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (res.status === 401) { location.replace('/login.html'); throw new Error('unauthorized'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || ('HTTP ' + res.status));
+  return data;
+}
+/* 화면에서 고르던 요일·시각·켜기를 먼저 담아 둔다 — 다시 그릴 때 되돌아가지 않게 */
+function rpSync() {
+  if ($('rp-day').value) RP.day = $('rp-day').value;
+  if ($('rp-hour').value !== '') RP.hour = Number($('rp-hour').value);
+  RP.on = $('rp-on').checked;
+}
+function rpRender() {
+  $('rp-chips').innerHTML = RP.to.length
+    ? RP.to.map((m, i) => `<span class="rp-chip">${escH(m)}<button type="button" title="빼기" onclick="rpRemove(${i})">×</button></span>`).join('')
+    : '<span style="font-size:12.5px;color:var(--warn)">받는 사람이 없습니다 — 아래에 추가하세요.</span>';
+  $('rp-day').value = RP.day; $('rp-hour').value = String(RP.hour); $('rp-on').checked = RP.on;
+  $('rp-status').innerHTML =
+    `<span class="rp-pill ${RP.on ? 'on' : 'off'}">${RP.on ? '자동 발송 켜짐' : '자동 발송 꺼짐'}</span>` +
+    `<span class="rp-pill">매주 ${RP.day}요일 ${hourLabel(RP.hour)}</span>` +
+    `<span class="rp-pill">받는 사람 ${RP.to.length}명</span>` +
+    (RP.trigger ? '' : '<span class="rp-pill off">예약이 아직 없음 — 저장하면 만들어집니다</span>');
+}
+function rpAdd() {
+  const raw = $('rp-email').value.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
+  const bad = raw.filter(x => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+  raw.filter(x => !bad.includes(x) && !RP.to.includes(x)).forEach(x => RP.to.push(x));
+  $('rp-email').value = bad.join(', ');
+  if (bad.length) show('err', '이메일 형식이 아닙니다: ' + bad.join(', '));
+  rpSync(); rpRender();
+}
+function rpRemove(i) { RP.to.splice(i, 1); rpSync(); rpRender(); }
+async function rpSave() {
+  if ($('rp-email').value.trim()) rpAdd();
+  rpSync();
+  $('rp-save').disabled = true;
+  try {
+    const r = await rpApi('POST', { action: 'save', to: RP.to, on: RP.on, day: RP.day, hour: RP.hour });
+    Object.assign(RP, r); rpRender();
+    show('ok', `저장했습니다 — 매주 ${RP.day}요일 ${hourLabel(RP.hour)}, ${RP.to.length}명에게 ${RP.on ? '보냅니다' : '보내지 않습니다(꺼짐)'}.`);
+  } catch (e) { show('err', '저장하지 못했습니다: ' + e.message); }
+  finally { $('rp-save').disabled = false; }
+}
+async function rpPreview() {
+  $('rp-prev').disabled = true; $('rp-prev').textContent = '만드는 중… (30초쯤)';
+  try {
+    const r = await rpApi('POST', { action: 'preview' });
+    $('rp-frame').srcdoc = '<meta charset="utf-8"><meta name="viewport" content="width=device-width"><body style="margin:0">' + r.html;
+    $('rp-preview').style.display = 'block';
+  } catch (e) { show('err', '미리보기를 만들지 못했습니다: ' + e.message); }
+  finally { $('rp-prev').disabled = false; $('rp-prev').textContent = '미리보기'; }
+}
+async function rpSend() {
+  if (!RP.to.length) return show('err', '받는 사람이 없습니다.');
+  if (!confirm(`지금 ${RP.to.length}명에게 지난주 보고를 보낼까요?\n\n${RP.to.join('\n')}\n\n(저장하지 않은 변경은 반영되지 않습니다)`)) return;
+  $('rp-send').disabled = true; $('rp-send').textContent = '보내는 중…';
+  try { const r = await rpApi('POST', { action: 'send' }); show('ok', `${r.sent}명에게 보냈습니다.`); }
+  catch (e) { show('err', '보내지 못했습니다: ' + e.message); }
+  finally { $('rp-send').disabled = false; $('rp-send').textContent = '지금 보내기'; }
+}
+(async () => {
+  $('rp-day').innerHTML = ['월','화','수','목','금','토','일'].map(d => `<option value="${d}">${d}요일</option>`).join('');
+  $('rp-hour').innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${hourLabel(h)}</option>`).join('');
+  try { Object.assign(RP, await rpApi('GET')); rpRender(); }
+  catch (e) { $('rp-status').innerHTML = `<span class="rp-pill off">설정을 불러오지 못했습니다: ${escH(e.message)}</span>`; }
+})();
 
 async function logout() {
   try { await fetch('/api/logout', { method: 'POST' }); } catch {}

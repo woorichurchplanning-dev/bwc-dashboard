@@ -77,3 +77,9 @@ bash scripts/deploy.sh                     # 자료까지 새로 수집해 올�
 
 입력 항목을 더하거나 이름을 바꾸면 **세 곳을 같이** 고쳐야 한다.
 주차 규칙은 셋이 같다 — 그 한 주가 **끝나는 주일**.
+
+## 주간 데이터 보고 메일
+
+`admin.html` 의 '주간 데이터 보고 메일' 칸 → `api/report.js`(관리자만) → Apps Script
+(`mode=report-settings` / `report-settings-save` / `report` / `report-send`).
+설정은 교회 시트 「보고설정」 탭, 메일은 교회 계정이 보낸다. 본문은 `bwc-gas/src/WeeklyReport.js`.

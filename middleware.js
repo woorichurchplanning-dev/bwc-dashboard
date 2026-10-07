@@ -64,7 +64,7 @@ export default async function middleware(request) {
     }
     // 관리자 전용 경로는 서버에서 한 번 더 막는다 (API는 403으로 이미 막혀 있지만
     // 화면 자체가 열리면 혼선이 생긴다)
-    const adminOnly = url.pathname === '/admin.html' || url.pathname.startsWith('/api/users');
+    const adminOnly = url.pathname === '/admin.html' || url.pathname.startsWith('/api/users') || url.pathname.startsWith('/api/report');
     if (adminOnly && session.a !== 1) {
       if (url.pathname.startsWith('/api/')) {
         return new Response(JSON.stringify({ error: 'forbidden' }), {
