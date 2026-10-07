@@ -5348,15 +5348,7 @@ function inputStatus(week) {
   return EXPECTED_INPUTS.map(({ group, items }) => {
     if (off[group]) return { group, all: items.length, miss: [], off: off[group] };
     const got = rec[group] || {};
-    const miss = [];
-    items.forEach(it => {
-      if (group === '주일학교' && it === '사랑부') {
-        // 2026년 남은 기간 사랑부는 1부·2부를 따로 낸다 (Apps Script 가 '사랑부'로 합쳐 줌)
-        const o = got[it] || {};
-        if (o['1부 학생'] == null) miss.push('사랑부 1부');
-        if (o['2부 학생'] == null) miss.push('사랑부 2부');
-      } else if (!got[it] || typeof got[it] !== 'object') miss.push(it);
-    });
+    const miss = items.filter(it => !got[it] || typeof got[it] !== 'object');
     return { group, all: items.length, miss };
   });
 }
