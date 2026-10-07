@@ -85,6 +85,15 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 .grp-body table{margin:0}
 .grp-body th{background:#fff}
 /* ── 주간 데이터 보고 메일 ── */
+/* ── 탭 ── */
+.ptabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin:0 0 18px;overflow-x:auto}
+.ptab{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:10px 14px;
+  font-size:14px;font-weight:600;color:var(--text3);white-space:nowrap}
+.ptab:hover:not(:disabled){background:transparent;color:var(--text)}
+.ptab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.ptab .n{font-size:11.5px;font-weight:700;background:var(--subtle);color:var(--text2);border-radius:10px;padding:1px 7px;margin-left:4px}
+.card[data-pane]{display:none}
+.card[data-pane].on{display:block}
 .rp-status{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
 .rp-pill{font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--subtle);color:var(--text2)}
 .rp-pill.on{background:var(--pos-bg);color:var(--pos)}
@@ -113,9 +122,14 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 </header>
 
 <main>
+  <div class="ptabs" role="tablist">
+    <button class="ptab" data-tab="list" onclick="showPane('list')">계정 목록 <span class="n" id="tab-n">–</span></button>
+    <button class="ptab" data-tab="form" onclick="showPane('form')" id="tab-form-btn">계정 추가</button>
+    <button class="ptab" data-tab="mail" onclick="showPane('mail')">보고 메일</button>
+  </div>
   <div class="msg" id="msg"></div>
 
-  <div class="card" id="rp-card">
+  <div class="card" id="rp-card" data-pane="mail">
     <h2>주간 데이터 보고 메일</h2>
     <div class="desc">지난주(월~주일) 요약을 교회 계정(woorichurchplanning@gmail.com)이 정해진 요일·시각에 보냅니다.</div>
     <div class="rp-status" id="rp-status"><span class="rp-pill">불러오는 중…</span></div>
@@ -144,7 +158,7 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
     <div id="rp-preview"><iframe id="rp-frame" title="보고 메일 미리보기" sandbox></iframe></div>
   </div>
 
-  <div class="card">
+  <div class="card" data-pane="list">
     <h2>계정 목록</h2>
     <div class="desc">교역자별로 볼 수 있는 탭을 지정합니다. 주간현황도 지정한 사람만 볼 수 있습니다.
       <b>초기 비밀번호</b> 표시가 있는 계정은 아직 본인이 비밀번호를 바꾸지 않은 상태입니다.</div>
@@ -154,7 +168,7 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
     <div id="groups"><div style="color:var(--text3);font-size:13px">불러오는 중…</div></div>
   </div>
 
-  <div class="card">
+  <div class="card" data-pane="form">
     <h2 id="form-title">계정 추가</h2>
     <div class="desc" id="form-desc">아이디는 교역자 이름을 그대로 쓰면 됩니다. 비밀번호는 전화번호 뒷자리 같은 <b>초기 비밀번호</b>를 넣어 전달하세요 — 본인이 첫 로그인에서 반드시 바꾸게 됩니다.</div>
     <form id="form">
@@ -187,7 +201,7 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 
       <div style="display:flex;gap:8px">
         <button type="submit" class="primary" id="f-submit">추가</button>
-        <button type="button" id="f-cancel" style="display:none" onclick="resetForm()">취소</button>
+        <button type="button" id="f-cancel" style="display:none" onclick="resetForm(); showPane('list')">취소</button>
       </div>
     </form>
   </div>
@@ -253,6 +267,7 @@ function renderSummary() {
     ['비밀번호 미변경', init, init ? 'warn' : ''],
     ['부서', new Set(us.map(deptOf)).size, ''],
   ].map(([k, v, cls]) => `<div class="stat ${cls}"><b>${v}</b>${k}</div>`).join('');
+  $('tab-n').textContent = us.length;
 }
 
 const CLOSED = new Set();
@@ -325,6 +340,17 @@ function rowHtml(u) {
     </tr>`;
 }
 
+/* 탭 — 주소 끝(#list/#form/#mail)에 남겨 새로고침해도 그 탭으로 */
+function showPane(name) {
+  if (!['list', 'form', 'mail'].includes(name)) name = 'list';
+  document.querySelectorAll('.card[data-pane]').forEach(c => c.classList.toggle('on', c.dataset.pane === name));
+  document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
+  window.scrollTo({ top: 0 });
+}
+window.addEventListener('hashchange', () => showPane(location.hash.slice(1)));
+showPane(location.hash.slice(1));
+
 function resetForm() {
   STATE.editing = null;
   $('form').reset();
@@ -333,6 +359,7 @@ function resetForm() {
   $('form-desc').innerHTML = '아이디는 교역자 이름을 그대로 쓰면 됩니다. 비밀번호는 전화번호 뒷자리 같은 <b>초기 비밀번호</b>를 넣어 전달하세요 — 본인이 첫 로그인에서 반드시 바꾸게 됩니다.';
   $('f-submit').textContent = '추가';
   $('f-cancel').style.display = 'none';
+  $('tab-form-btn').textContent = '계정 추가';
   document.querySelectorAll('#f-tabs input, #f-school input, #f-youth input, #f-youthteams input, #f-districts input')
     .forEach(c => { if (!c.disabled) c.checked = false; });
   toggleRole();
@@ -358,7 +385,8 @@ function edit(id) {
   $('f-submit').textContent = '저장';
   $('f-cancel').style.display = '';
   toggleRole();
-  $('form-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('tab-form-btn').textContent = '계정 수정';
+  showPane('form');
 }
 
 async function remove(id) {
@@ -395,7 +423,7 @@ $('form').addEventListener('submit', async (e) => {
   $('f-submit').disabled = true;
   try {
     const r = await api(STATE.editing ? 'PUT' : 'POST', payload);
-    STATE.users = r.users; renderRows(); resetForm();
+    STATE.users = r.users; renderRows(); resetForm(); showPane('list');
     show('ok', '저장되었습니다. 변경된 권한은 해당 사용자가 다시 로그인하면 적용됩니다.');
   } catch (e) { show('err', e.message); }
   finally { $('f-submit').disabled = false; }
