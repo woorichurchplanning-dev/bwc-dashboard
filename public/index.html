@@ -655,6 +655,25 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 .pill.kind { font-weight:500; }
 .pill.kind.on { background:var(--color-text-primary); border-color:var(--color-text-primary); }
 
+/* ── 입력 현황 ── */
+.sub-card .ch { margin-bottom:var(--s3); }
+.sub-sum { font-size:13px; font-weight:700; padding:3px 10px; border-radius:20px;
+  background:var(--color-warning-bg); color:var(--color-warning); }
+.sub-sum.done { background:var(--color-positive-bg); color:var(--color-positive); }
+.sub-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px; }
+.sub-g { border:1px solid var(--color-border-default); border-radius:10px; padding:10px 12px; }
+.sub-g.miss { border-color:var(--color-warning); background:var(--color-warning-bg); }
+.sub-g-hd { display:flex; justify-content:space-between; font-size:13px; font-weight:600;
+  color:var(--color-text-primary); }
+.sub-g-hd span { font-variant-numeric:tabular-nums; color:var(--color-text-tertiary); }
+.sub-g.miss .sub-g-hd span { color:var(--color-warning); font-weight:700; }
+.sub-g-miss { margin-top:4px; font-size:12px; line-height:1.55; color:var(--color-text-secondary); }
+
+.sub-notes { margin-top:var(--s3); padding-top:var(--s3); border-top:1px solid var(--color-border-default); }
+.sub-notes-hd { font-size:12px; font-weight:700; color:var(--color-text-tertiary); margin-bottom:4px; }
+.sub-note { font-size:12.5px; line-height:1.65; color:var(--color-text-secondary); }
+.sub-note b { font-weight:600; color:var(--color-text-primary); margin-right:4px; }
+
 /* ── WEEKLY REPORT ── */
 .wk-report { margin-bottom:var(--s6); }
 .wk-report-hdr { padding:4px 0 16px; display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:8px; }
@@ -848,6 +867,9 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <!-- 주간 현황 카드 -->
   <div class="wk-report" id="wk-report"></div>
 
+  <!-- 입력 현황 — 그 주에 아직 안 들어온 곳 -->
+  <div class="cc sub-card" id="hm-submit"></div>
+
   <!-- 추이 차트 (6개) -->
   <div class="cg">
     <div class="cc"><div class="ch"><div><div class="ct">주일예배 장년 추이</div><div class="cs">서현+송림 1–3부 합산</div></div><div class="cpf"><button class="cpb" onclick="sw('sunday')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-adult',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-adult">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-adult',1)">▲</button></div></div></div><canvas id="c-hm-adult"></canvas></div>
@@ -884,6 +906,12 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 
     <!-- 선택된 주의 세부 비교 정보 -->
     <div id="sun-comparison-info" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:var(--s3); margin-bottom:var(--s5);"></div>
+
+    <!-- 장소(호실)별 — 입력앱 표 화면에서 '1부|302호' 꼴로 들어온다 -->
+    <div class="cc" id="card-sun-rooms" style="display:none"><div class="ch"><div><div class="ct">장소별 출석</div>
+      <div class="cs" id="cs-sun-rooms">선택한 주 · 호실별 현장 인원</div></div></div>
+      <div class="cg" id="sun-rooms" style="margin:0"></div>
+    </div>
 
     <!-- Drill-down 배지 선택 UI -->
     <div style="display:flex; gap:var(--s2); margin-bottom:var(--s5); flex-wrap:wrap; align-items:center;">
@@ -2524,6 +2552,7 @@ function initHome() {
   const yW  = yoyKey(lW);
   const lDt = parseWeekDate(lW);
   updateHomeWeekControls(fw, lW);
+  renderInputStatus(lW);
 
   // 기간 계산 (월~일)
   const monDt = new Date(lDt); monDt.setDate(lDt.getDate() - 6);
@@ -2640,7 +2669,13 @@ function initHome() {
             const n = v(D.youth[lW]?.[d]?.예배);
             return n ? `<div class="wk-bd-item"><span class="wk-bd-name">${d.replace('청년부','청년')}</span><span class="wk-bd-num">${fmt(n)}</span></div>` : '';
           }).join('');
-          return items ? `<div class="wk-breakdown">${items}</div>` : '';
+          // 청년금요집회 — 부서가 아니라 함께 모이는 집회라 따로 한 줄
+          const fri = D.youth[lW]?.금요집회;
+          const friOff = v(fri?.현장), friOn = v(fri?.온라인);
+          const friHtml = fri ? `<div class="wk-bd-item" style="grid-column:1/-1"><span class="wk-bd-name">금요집회</span><span class="wk-bd-num">${
+            friOff || friOn ? `${fmt(friOff)}${friOn ? ` <span style="font-weight:500;color:var(--text3)">+온라인 ${fmt(friOn)}</span>` : ''}`
+                            : esc(fri.note || '–')}</span></div>` : '';
+          return items || friHtml ? `<div class="wk-breakdown">${items}${friHtml}</div>` : '';
         })(),
       },
       { cls:'sc', label:'주일학교', dateStr:`${fmtDate(lDt)} (${fmtDay(lDt)})`,
@@ -2926,6 +2961,38 @@ function hasSundayData(week) {
   return ['1부','2부','3부'].some(p => bu[p]?.['장년'] != null || bu[p]?.['송림'] != null);
 }
 
+/* 장소별 출석 — 원자료의 '1부|302호' 칸을 장소 × 부 표로 */
+function renderSunRooms(week) {
+  const card = document.getElementById('card-sun-rooms');
+  const box = document.getElementById('sun-rooms');
+  if (!card || !box) return;
+  const sun = RAW[week]?.['주일예배'] || {};
+  const tables = ['서현', '송림'].map(site => {
+    const rooms = {};
+    Object.entries(sun[site] || {}).forEach(([k, val]) => {
+      if (!k.includes('|')) return;
+      const [part, room] = k.split('|').map(x => x.trim());
+      const n = Number(val);
+      if (!room || !Number.isFinite(n)) return;
+      (rooms[room] = rooms[room] || {})[part] = n;
+    });
+    const names = Object.keys(rooms);
+    if (!names.length) return '';
+    const parts = ['1부', '2부', '3부'];
+    const sum = r => parts.reduce((a, p) => a + (rooms[r][p] || 0), 0);
+    const colTot = p => names.reduce((a, r) => a + (rooms[r][p] || 0), 0);
+    const cell = n => n == null ? '–' : fmt(n);
+    return `<div style="min-width:0"><div class="ct" style="margin-bottom:8px">${site}</div>
+      <div style="overflow-x:auto"><table><thead><tr><th>장소</th>${parts.map(p => `<th class="nr">${p}</th>`).join('')}<th class="nr">계</th></tr></thead><tbody>
+      ${names.map(r => `<tr><td>${esc(r)}</td>${parts.map(p => `<td class="nr">${cell(rooms[r][p])}</td>`).join('')}<td class="nr"><b>${fmt(sum(r))}</b></td></tr>`).join('')}
+      <tr style="font-weight:700"><td>합계</td>${parts.map(p => `<td class="nr">${fmt(colTot(p))}</td>`).join('')}<td class="nr">${fmt(names.reduce((a, r) => a + sum(r), 0))}</td></tr>
+      </tbody></table></div></div>`;
+  }).filter(Boolean);
+  card.style.display = tables.length ? '' : 'none';
+  box.innerHTML = tables.join('');
+  setText('cs-sun-rooms', `${week.replace(/-/g, '.')} 주 · 호실별 현장 인원`);
+}
+
 // ── SUNDAY WEEK NAVIGATION ──
 let sunWeekState = { fw: [], weekIndex: -1 };
 
@@ -2945,13 +3012,15 @@ function renderSunWeekComparison() {
   if (idx < 0 || idx >= fw.length) return;
 
   const week = fw[idx];
-  const wd = new Date(week);
-  const weekEnd = new Date(wd);
-  weekEnd.setDate(weekEnd.getDate() + 6);
+  // 주차 키는 그 주가 '끝나는' 주일이다 → 월요일(6일 전)부터 그 주일까지
+  const weekEnd = parseWeekDate(week);
+  const wd = new Date(weekEnd);
+  wd.setDate(wd.getDate() - 6);
   const weekLabel = wd.getMonth() === weekEnd.getMonth()
     ? `${wd.getFullYear()}년 ${wd.getMonth()+1}월 ${wd.getDate()}–${weekEnd.getDate()}일`
     : `${wd.getFullYear()}년 ${wd.getMonth()+1}월 ${wd.getDate()}일 – ${weekEnd.getMonth()+1}월 ${weekEnd.getDate()}일`;
   const filled = hasSundayData(week);
+  renderSunRooms(week);
   document.getElementById('sun-week-label').innerHTML =
     weekLabel + (filled ? '' : ' <span style="color:var(--color-warning);font-weight:700">· 미입력</span>');
 
@@ -3202,7 +3271,10 @@ function initYouth() {
     const off = friWeeks.map(friOff2), on = friWeeks.map(friOn2);
     const lastOff = off.filter(x => x != null).slice(-1)[0];
     const sumOff = off.reduce((a, b) => a + (b || 0), 0);
-    setText('cs-youth-fri', `최근 ${fmtOr(lastOff)}명 · ${friWeeks.length}주 평균 ${fmt(Math.round(sumOff / friWeeks.length))}명`);
+    const lastW = friWeeks[friWeeks.length - 1];
+    const lastNote = D.youth[lastW]?.금요집회?.note;
+    setText('cs-youth-fri', `최근 ${fmtOr(lastOff)}명 · ${friWeeks.length}주 평균 ${fmt(Math.round(sumOff / friWeeks.length))}명`
+      + (lastNote ? ` · ${lastW.slice(5).replace('-', '/')} ${lastNote}` : ''));
     mkChart('c-youth-fri', 'bar', wl2, [
       bds('현장', off, C.or),
       ...(on.some(x => x != null) ? [bds('온라인', on, C.b)] : []),
@@ -4954,7 +5026,7 @@ function renderSpecial(key) {
       <div class="yc-seg-group">
         ${years.map(y => `<button class="yc-seg${y === cur ? ' on' : ''}" onclick="setSpecialYear('${key}',${y})">${y}년</button>`).join('')}
       </div>
-      ${curRec.note ? `<span class="yc-ctl-lbl" style="font-weight:500">${curRec.note}</span>` : ''}
+      ${curRec.note ? `<span class="yc-ctl-lbl" style="font-weight:500">${esc(curRec.note)}</span>` : ''}
     </div>
     <div class="cc">
       <div class="ch"><div><div class="ct">${cur}년 ${meta.title} — ${meta.byDay ? '일자별' : '부별'} 출석</div>
@@ -5248,9 +5320,77 @@ const SCHOOL_DEPT_MAP = {
 };
 
 /* 새 GAS 응답을 D 오브젝트에 반영 */
+/* 입력 현황용 원자료 — 주차 → { 그룹: { 항목: 값 } }.
+   가공된 D 에서는 '안 냄'과 '0을 냄'이 구분되지 않아서 따로 둔다. */
+const RAW = {};
+/* 시트에 사람이 적은 글(비고)을 화면에 넣을 때 쓴다 */
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* 입력앱이 받는 단위. 입력앱 DEPARTMENTS 와 이름이 같아야 한다.
+   특별예배는 집회가 있는 주에만 내므로 넣지 않는다. */
+const DISTRICT_14 = Array.from({ length: 14 }, (_, i) => `${i + 1}교구`);
+const EXPECTED_INPUTS = [
+  { group: '주일예배', items: ['서현', '송림'] },
+  { group: '주중예배/새벽기도', items: ['수요예배', '금요기도회', '새벽기도', '온라인예배'] },
+  { group: '교구 다락방', items: DISTRICT_14 },
+  { group: '화요순장반', items: DISTRICT_14 },
+  { group: '직장순장반', items: DISTRICT_14 },
+  { group: '청년교구', items: ['청년금요집회', '1청년부 (예배)', '1청년부 1팀', '1청년부 2팀', '1청년부 3팀',
+      '1청년부 4팀', '2청년부 (예배)', '2청년부 1팀', '2청년부 2팀', '2청년부 3팀', '3청년부', '4청년부'] },
+  { group: '주일학교', items: ['사랑부', '영아부', '유아부', '유치부', '송림유년부', '서현유년부', '송림초등부',
+      '서현초등부', '송림소년부', '서현소년부', '송림청소년부', '서현중등부', '서현고등부'] },
+  { group: '새가족', items: ['장년 새가족', '장년등록자', '청년 새가족'] },
+];
+
+function inputStatus(week) {
+  const rec = RAW[week] || {};
+  return EXPECTED_INPUTS.map(({ group, items }) => {
+    const got = rec[group] || {};
+    const miss = items.filter(it => !got[it] || typeof got[it] !== 'object');
+    return { group, all: items.length, miss };
+  });
+}
+
+function renderInputStatus(week) {
+  const el = document.getElementById('hm-submit');
+  if (!el) return;
+  const rows = inputStatus(week);
+  const total = rows.reduce((n, r) => n + r.all, 0);
+  const missing = rows.reduce((n, r) => n + r.miss.length, 0);
+  const notes = weekNotes(week);
+  el.innerHTML = `
+    <div class="ch">
+      <div><div class="ct">입력 현황</div>
+        <div class="cs">${week.replace(/-/g, '.')} 주 · 입력앱 기준 ${total}곳 (특별예배 제외)</div></div>
+      <span class="sub-sum ${missing ? '' : 'done'}">${missing ? `미입력 ${missing}곳` : '모두 입력됨'}</span>
+    </div>
+    <div class="sub-grid">${rows.map(r => `
+      <div class="sub-g ${r.miss.length ? 'miss' : ''}">
+        <div class="sub-g-hd">${r.group}<span>${r.all - r.miss.length}/${r.all}</span></div>
+        ${r.miss.length ? `<div class="sub-g-miss">${r.miss.length === r.all ? '전체 미입력' : r.miss.join(', ')}</div>` : ''}
+      </div>`).join('')}
+    </div>
+    ${notes.length ? `<div class="sub-notes"><div class="sub-notes-hd">이번 주 메모</div>${
+      notes.map(n => `<div class="sub-note"><b>${esc(n.where)}</b> ${esc(n.text)}</div>`).join('')}</div>` : ''}`;
+}
+
+/* 그 주에 적힌 비고 — '추석 휴회'처럼 숫자를 읽는 데 필요한 맥락 */
+function weekNotes(week) {
+  const out = [];
+  Object.entries(RAW[week] || {}).forEach(([group, items]) => {
+    if (!items || typeof items !== 'object') return;
+    Object.entries(items).forEach(([item, val]) => {
+      const text = val && typeof val === 'object' ? String(val['비고'] || val['note'] || '').trim() : '';
+      if (text) out.push({ where: `${group} · ${item}`, text });
+    });
+  });
+  return out;
+}
+
 function applyNewData(data) {
   Object.entries(data).forEach(([date, rec]) => {
     if (!rec || typeof rec !== 'object') return;
+    RAW[date] = { ...(RAW[date] || {}), ...rec };
     if (!D.weeks.includes(date)) D.weeks.push(date);
 
     // ── 주일예배 ──
@@ -5271,7 +5411,7 @@ function applyNewData(data) {
         offline_total: (shTotal||0)+(srTotal||0) || null,
         grand_total:   (shTotal||0)+(srTotal||0) || null,
         online:        D.sunday[date]?.online ?? null,
-        note:          sh['note'] ?? sr['note'] ?? null,
+        note:          sh['note'] || sh['비고'] || sr['note'] || sr['비고'] || null,
         bu: {
           '1부': { 장년: sh['1부']??null, 송림: sr['1부']??null },
           '2부': { 장년: sh['2부']??null, 송림: sr['2부']??null },
@@ -5383,11 +5523,11 @@ function applyNewData(data) {
         if (!val || typeof val !== 'object') return;
         const bucket = D.special[date][meeting] || (D.special[date][meeting] = {});
         Object.entries(val).forEach(([f, raw]) => {
-          if (f === 'note') return;
+          if (f === 'note' || f === '비고') return;
           const n = Number(raw);
           if (Number.isFinite(n) && n > 0) bucket[f] = n;
         });
-        if (val['note']) bucket._note = val['note'];
+        if (val['note'] || val['비고']) bucket._note = val['note'] || val['비고'];
       });
     }
 
@@ -5591,8 +5731,14 @@ function fmtStamp(iso) {
 function updateSyncStatus(prefix, tone) {
   const status = document.getElementById('sync-status');
   if (!status) return;
-  const gaps = getLatestInputGaps();
-  const gapText = gaps.length ? ` · 미입력 ${gaps.length}건` : ' · 입력 완료';
+  // 주간현황의 '입력 현황' 칸과 같은 기준으로 센다 — 기준이 다르면 숫자가 어긋나 헷갈린다
+  const latest = [...D.weeks].sort().pop();
+  const gaps = latest && RAW[latest]
+    ? inputStatus(latest).flatMap(r => r.miss.length === r.all ? [`${r.group} 전체`] : r.miss.map(m => `${r.group} ${m}`))
+    : getLatestInputGaps();
+  const gapCount = latest && RAW[latest]
+    ? inputStatus(latest).reduce((n, r) => n + r.miss.length, 0) : gaps.length;
+  const gapText = gapCount ? ` · 미입력 ${gapCount}곳` : ' · 입력 완료';
   status.textContent = prefix + gapText;
   status.title = gaps.length ? `누락 항목: ${gaps.join(', ')}` : '최신 주차 주요 항목 입력 완료';
   status.style.color = tone || (gaps.length ? '#a16207' : '#059669');
