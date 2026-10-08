@@ -5,7 +5,7 @@
 set -euo pipefail
 
 URL="${APPS_SCRIPT_URL:-https://script.google.com/macros/s/AKfycbxJ1NDZxTpDsaVkb7GqlesBvlM_9lBBv2s4f53chZdqbHVnLZqOfVT1qzXVfsXW7qxA/exec}"
-WEEKS_BACK="${WEEKS_BACK:-130}"
+WEEKS_BACK="${WEEKS_BACK:-140}"
 READ_KEY="${SHEET_READ_KEY:-}"        # Apps Script 조회 키 (없으면 그냥 호출)
 
 cd "$(dirname "$0")/.."
@@ -15,7 +15,7 @@ trap 'rm -rf "$TMP"' EXIT
 
 # 1) 오늘 기준으로 과거 N주 일요일을 <=12주 배치로 분할
 WEEKS_BACK="$WEEKS_BACK" node -e '
-const wb = Number(process.env.WEEKS_BACK || 130);
+const wb = Number(process.env.WEEKS_BACK || 140);
 // 이번 주가 끝나는 일요일(한국 날짜)부터 — 진행 중인 주도 담는다. refresh-recent.mjs 와 같은 규칙
 const b = new Date(Date.now() + 9 * 3600 * 1000); b.setUTCHours(0, 0, 0, 0);
 b.setUTCDate(b.getUTCDate() + (7 - b.getUTCDay()) % 7);

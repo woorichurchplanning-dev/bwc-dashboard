@@ -673,7 +673,9 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 /* ── 특별예배 기록표 ── */
 table.sp-matrix td, table.sp-matrix th { font-variant-numeric:tabular-nums; }
 table.sp-matrix tr.sp-row-total td { background:var(--color-bg-subtle, #f4f6f8); font-weight:700; }
-table.sp-matrix tr.sp-row-site td { font-weight:600; border-bottom:1.5px solid var(--color-border-default); }
+table.sp-matrix tr.sp-row-site td { font-weight:600; }
+table.sp-matrix tr.sp-row-online td { color:var(--color-accent, #635bff); border-bottom:1.5px solid var(--color-border-default); }
+table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; font-size:13px; border-bottom:1px solid var(--color-border-default); }
 
 /* ── WEEKLY REPORT ── */
 .wk-report { margin-bottom:var(--s6); }
@@ -4922,6 +4924,7 @@ function specialAgg(meta) {
       const y = Number(weekKey.slice(0, 4));
       const rec = years[y] || (years[y] = {
         total: 0, byDay: {}, byPart: {}, byRoom: {}, byZone: {}, byPlace: {}, byDayRoom: {},
+        online: {}, onlineTotal: 0,   // 온라인 실시간 접속 — 현장 합계와 따로
         places: new Set(), rooms: new Set(), zones: new Set(), days: new Set(), dates: [], note: '',
       });
       if (!rec.dates.includes(weekKey)) rec.dates.push(weekKey);
@@ -4930,13 +4933,19 @@ function specialAgg(meta) {
         if (f.startsWith('_')) return;
         const { day, place, part, room } = parseSpecialField(f);
         const dayKey = day || '당일';
+        if (place === '온라인') {   // 현장 인원·장소·호실 집계에 섞지 않는다
+          rec.online[dayKey] = (rec.online[dayKey] || 0) + val; rec.onlineTotal += val;
+          return;
+        }
         rec.total += val;
         rec.days.add(dayKey);
         rec.places.add(place);
-        rec.rooms.add(room);
         rec.byPlace[place] = (rec.byPlace[place] || 0) + val;
         (rec.byDay[dayKey] = rec.byDay[dayKey] || {})[place] = (rec.byDay[dayKey][place] || 0) + val;
         (rec.byPart[part]  = rec.byPart[part]  || {})[place] = (rec.byPart[part][place]  || 0) + val;
+        // 실별 숫자가 없는 옛 기록은 '전체' 한 줄로 들어온다 — 실별 표에는 넣지 않는다
+        if (room === '전체') return;
+        rec.rooms.add(room);
         (rec.byRoom[room]  = rec.byRoom[room]  || {})[place] = (rec.byRoom[room][place]  || 0) + val;
         // 일자 × 장소 × 실 — 기록표용
         const dr = ((rec.byDayRoom[dayKey] = rec.byDayRoom[dayKey] || {})[place] = rec.byDayRoom[dayKey][place] || {});
@@ -4981,8 +4990,11 @@ function renderSpecialDayTables(key, meta, agg, years, cur, PL0) {
       `<td class="nr"><b>${n(tot)}</b></td><td class="nr">${cnt ? fmt(Math.round(tot / cnt)) : n(null)}</td></tr>`;
   };
   const dayTot = d => sum(PL.map(pl => rec.byDay[d]?.[pl]));
-  let body = line('<b>총계</b>', days.map(dayTot), 'sp-row-total');
+  // 송림 계 → 서현 계 → 합계(현장) → 온라인 → 실별
+  let body = '';
   PL.forEach(pl => { body += line(`<b>${esc(pl)} 계</b>`, days.map(d => rec.byDay[d]?.[pl] || 0), 'sp-row-site'); });
+  body += line('<b>합계</b> <span style="font-weight:500;color:var(--color-text-tertiary)">현장</span>', days.map(dayTot), 'sp-row-total');
+  body += line('<b>온라인</b> <span style="font-weight:500;color:var(--color-text-tertiary)">실시간 접속</span>', days.map(d => rec.online[d] || 0), 'sp-row-online');
   PL.forEach(pl => {
     const rooms = [...new Set(days.flatMap(d => Object.keys(rec.byDayRoom[d]?.[pl] || {})))]
       .sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }));
@@ -4992,19 +5004,23 @@ function renderSpecialDayTables(key, meta, agg, years, cur, PL0) {
   if (m) m.innerHTML = `<table class="sp-matrix">${head}${body}</table>`;
 
   // 연도별 일자 비교 — 해마다 총계·장소 계
-  const yh = `<tr><th ${th1}>연도</th>${days.map(d => `<th ${TH}>${d}</th>`).join('')}<th ${TH}>합계</th><th ${TH}>일평균</th><th ${TH}>전년 대비</th></tr>`;
+  const yh = `<tr><th ${th1}>구분</th>${days.map(d => `<th ${TH}>${d}</th>`).join('')}<th ${TH}>합계</th><th ${TH}>일평균</th><th ${TH}>전년 대비</th></tr>`;
   let yb = '', prevTot = null;
   years.forEach(y => {
     const r = agg[y];
     const tots = days.map(d => sum(PL.map(pl => r.byDay[d]?.[pl])));
     const tot = sum(tots), cnt = tots.filter(v => v > 0).length, avg = cnt ? Math.round(tot / cnt) : null;
     const dl = prevTot ? `${avg - prevTot >= 0 ? '▲' : '▼'} ${fmt(Math.abs(avg - prevTot))}` : '–';
-    yb += `<tr class="sp-row-total"><td style="white-space:nowrap"><b>${y}년</b></td>${days.map((d, i) => `<td class="nr">${n(tots[i])}<br><span style="font-size:11px;color:var(--color-text-tertiary)">${dateOf(r, d)}</span></td>`).join('')}` +
+    const sub = (label, vs, cls) => {
+      const t = sum(vs), c = vs.filter(v => v > 0).length;
+      return `<tr class="${cls || ''}"><td style="white-space:nowrap;color:var(--color-text-secondary)">${label}</td>${vs.map(v => `<td class="nr">${n(v)}</td>`).join('')}<td class="nr">${n(t)}</td><td class="nr">${c ? fmt(Math.round(t / c)) : n(null)}</td><td></td></tr>`;
+    };
+    // 연도 줄(날짜) → 송림 → 서현 → 합계(현장) → 온라인
+    yb += `<tr class="sp-row-year"><td colspan="${days.length + 4}"><b>${y}년</b> <span style="color:var(--color-text-tertiary)">${days.map(d => dateOf(r, d)).filter(Boolean).length ? days.map(d => dateOf(r, d)).filter(Boolean)[0] + ' ~ ' + days.map(d => dateOf(r, d)).filter(Boolean).slice(-1)[0] : ''}</span></td></tr>`;
+    PL.forEach(pl => { yb += sub(esc(pl), days.map(d => r.byDay[d]?.[pl] || 0)); });
+    yb += `<tr class="sp-row-total"><td style="white-space:nowrap"><b>합계</b></td>${tots.map(v => `<td class="nr">${n(v)}</td>`).join('')}` +
       `<td class="nr"><b>${n(tot)}</b></td><td class="nr"><b>${avg ? fmt(avg) : n(null)}</b></td><td class="nr">${dl}</td></tr>`;
-    PL.forEach(pl => {
-      const vs = days.map(d => r.byDay[d]?.[pl] || 0), t = sum(vs), c = vs.filter(v => v > 0).length;
-      yb += `<tr><td style="white-space:nowrap;color:var(--color-text-secondary)">└ ${esc(pl)}</td>${vs.map(v => `<td class="nr">${n(v)}</td>`).join('')}<td class="nr">${n(t)}</td><td class="nr">${c ? fmt(Math.round(t / c)) : n(null)}</td><td></td></tr>`;
-    });
+    yb += sub('온라인', days.map(d => r.online[d] || 0), 'sp-row-online');
     prevTot = avg;
   });
   const ydEl = document.getElementById(`yd-sp-${key}`);
@@ -5258,7 +5274,7 @@ function renderSpecial(key) {
       return [
         `${y}년`,
         meta.byDay ? `${r.days.size}일` : `${Object.keys(r.byPart).length}개`,
-        `${r.rooms.size}개`,
+        r.rooms.size ? `${r.rooms.size}개` : '–',   // 옛 기록은 실별 숫자가 없다
         fmt(r.total),
         ...(meta.byDay ? [fmt(Math.round(r.total / (r.days.size || 1)))] : []),
         ...PL.map(pl => fmtOr(r.byPlace[pl] ?? null)),
