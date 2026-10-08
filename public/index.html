@@ -683,6 +683,9 @@ table.sp-sum th, table.sp-sum td, table.sp-matrix th, table.sp-matrix td { white
 .sp-down { color:#c0392b; font-weight:700; }
 .sp-pct { font-size:11px; color:var(--color-text-tertiary); margin-left:4px; }
 .sp-hol { color:#dc2626 !important; }
+td.sp-cell { vertical-align:top; line-height:1.35; }
+.sp-v { font-size:14px; font-weight:700; }
+.sp-dl { font-size:11.5px; margin-top:1px; }
 .sp-sat { color:#2563eb !important; }
 .sp-3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:var(--s3, 12px); margin-bottom:var(--s3, 12px); }
 .sp-3 .cc { margin-bottom:0; }
@@ -4861,6 +4864,8 @@ const SPECIAL_META = {
 };
 
 const SP_YEAR = {};        // 탭별로 선택된 연도
+const SP_METRIC = {};     // 탭별 꺾은선 지표 ('site' 현장 합계 / 장소 이름 / 'online' / 'all')
+function setSpecialMetric(key, m) { SP_METRIC[key] = m; renderSpecial(key); }
 const SP_SPACEVIEW = {};  // 탭별 공간 보기 ('room' 호실별 / 'zone' 구역별)
 function setSpaceView(key, mode) { SP_SPACEVIEW[key] = mode; renderSpecial(key); }
 
@@ -5004,6 +5009,39 @@ function setSpecialYear(key, year) {
   renderSpecial(key);
 }
 
+/* 연도 막대 — 막대 위에 인원과 전년 대비 %를 적는다 */
+function spYearBars(id, years, labels, values, colors, onPick, pctIn) {
+  const ctx = document.getElementById(id); if (!ctx) return;
+  const ex = Chart.getChart(ctx); if (ex) ex.destroy();
+  const pct = pctIn || values.map((v, i) => (i && v && values[i - 1] ? Math.round((v - values[i - 1]) / values[i - 1] * 100) : null));
+  new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 6, maxBarThickness: 90 }] },
+    options: {
+      responsive: true, maintainAspectRatio: true, layout: { padding: { top: 34 } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${fmt(c.parsed.y)}명` } } },
+      scales: { x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 12 } } },
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => fmt(v) } } },
+      onClick: (e, els) => { if (els.length) onPick(String(years[els[0].index])); },
+    },
+    plugins: [{ id: 'spBarLabels', afterDatasetsDraw(chart) {
+      const { ctx: g } = chart; const meta0 = chart.getDatasetMeta(0);
+      g.save(); g.textAlign = 'center';
+      meta0.data.forEach((bar, i) => {
+        if (values[i] == null) return;
+        g.fillStyle = '#0b0b0b'; g.font = '700 13px Pretendard, sans-serif';
+        g.fillText(fmt(values[i]), bar.x, bar.y - (pct[i] != null ? 20 : 6));
+        if (pct[i] != null) {
+          g.font = '700 11px Pretendard, sans-serif';
+          g.fillStyle = pct[i] > 0 ? '#0a7a3e' : pct[i] < 0 ? '#c0392b' : '#64748b';
+          g.fillText(`${pct[i] > 0 ? '▲ +' : pct[i] < 0 ? '▼ ' : ''}${pct[i]}%`, bar.x, bar.y - 6);
+        }
+      });
+      g.restore();
+    } }],
+  });
+}
+
 /* 연도 색 — 해마다 고정. 표 머리·차트·버튼이 같은 색을 쓴다 (2024 주황 · 2025 초록 · 2026 파랑 …) */
 const SP_YEAR_COLORS = ['#eb6834', '#1baf7a', '#2a78d6', '#7c3aed', '#c98500'];
 /* 공휴일 — 해마다 같은 날은 규칙으로, 대체공휴일·음력 공휴일은 날짜를 적어 둔다 */
@@ -5084,26 +5122,29 @@ function renderSpecial(key) {
   };
   const yh = y => `<span class="sp-ychip" style="background:${yearColor(y)}"></span>${y}`;
 
-  // ① 연도별 요약표
+  // ① 연도별 요약표 — 칸마다 날짜 / 인원 / 전년 같은 요일 대비
   const head1 = `<tr><th rowspan="2" class="sp-l">${meta.byDay ? '요일' : '부'}</th>
-      <th colspan="${years.length + 1}" class="sp-grp">현장</th>
-      ${meta.byDay ? `<th colspan="${years.length + 1}" class="sp-grp sp-grp-onl">온라인 실시간</th>` : ''}</tr>
-    <tr>${years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('')}<th class="sp-n">${prev ? `${cur} vs ${prev}` : '전년 대비'}</th>
-      ${meta.byDay ? years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('') + `<th class="sp-n">${prev ? `${cur} vs ${prev}` : '전년 대비'}</th>` : ''}</tr>`;
-  const cell = (y, v, u) => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(v)}${u ? dateTag(agg[y], u) : ''}</td>`;
+      <th colspan="${years.length}" class="sp-grp">현장</th>
+      ${meta.byDay ? `<th colspan="${years.length}" class="sp-grp sp-grp-onl">온라인 실시간</th>` : ''}</tr>
+    <tr>${years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('')}
+      ${meta.byDay ? years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('') : ''}</tr>`;
+  const vcell = (y, v, pv, u, extra) => `<td class="nr sp-cell${y === cur ? ' sp-cur' : ''}">${u ? dateTag(agg[y], u) : ''}` +
+    `<div class="sp-v">${n(v)}</div>${pv !== undefined && v ? `<div class="sp-dl">${dl(v, pv)}</div>` : ''}${extra || ''}</td>`;
+  const prevOf = y => years[years.indexOf(y) - 1];
   let body1 = units.map(u => `<tr><td class="sp-l"><b>${dayHead(u)}</b></td>
-      ${years.map(y => cell(y, siteOf(agg[y], u), u)).join('')}<td class="nr">${prev ? dl(siteOf(R, u), siteOf(agg[prev], u)) : n(null)}</td>
-      ${meta.byDay ? years.map(y => cell(y, onlOf(agg[y], u))).join('') + `<td class="nr">${prev ? dl(onlOf(R, u), onlOf(agg[prev], u)) : n(null)}</td>` : ''}</tr>`).join('');
-  body1 += `<tr class="sp-row-total"><td class="sp-l">일 평균</td>${years.map(y => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(avg(agg[y]))}</td>`).join('')}<td class="nr">${prev ? dl(avg(R), avg(agg[prev])) : n(null)}</td>
-      ${meta.byDay ? years.map(y => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(onlAvg(agg[y]))}</td>`).join('') + `<td class="nr">${prev ? dl(onlAvg(R), onlAvg(agg[prev])) : n(null)}</td>` : ''}</tr>`;
-  // 진행 중인 해는 들어온 요일만 있다 — 합계는 같은 요일끼리만 견준다
-  const sameU = units.filter(u => siteOf(R, u) > 0), sameO = units.filter(u => onlOf(R, u) > 0);
-  const partial = prev && sameU.length < days(agg[prev]);
-  const pSite = prev ? sum(sameU.map(u => siteOf(agg[prev], u))) : 0;
-  const pOnl = prev ? sum(sameO.map(u => onlOf(agg[prev], u))) : 0;
-  const sameNote = partial ? `<div class="sp-date">같은 ${sameU.length}일끼리</div>` : '';
-  body1 += `<tr class="sp-row-total"><td class="sp-l">합계</td>${years.map(y => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(siteTot(agg[y]))}</td>`).join('')}<td class="nr">${prev ? dl(siteTot(R), pSite) + sameNote : n(null)}</td>
-      ${meta.byDay ? years.map(y => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(onlTot(agg[y]))}</td>`).join('') + `<td class="nr">${prev ? dl(onlTot(R), pOnl) : n(null)}</td>` : ''}</tr>`;
+      ${years.map(y => vcell(y, siteOf(agg[y], u), prevOf(y) ? siteOf(agg[prevOf(y)], u) : undefined, u)).join('')}
+      ${meta.byDay ? years.map(y => vcell(y, onlOf(agg[y], u), prevOf(y) ? onlOf(agg[prevOf(y)], u) : undefined, u)).join('') : ''}</tr>`).join('');
+  body1 += `<tr class="sp-row-total"><td class="sp-l">일 평균</td>${years.map(y => vcell(y, avg(agg[y]), prevOf(y) ? avg(agg[prevOf(y)]) : undefined)).join('')}
+      ${meta.byDay ? years.map(y => vcell(y, onlAvg(agg[y]), prevOf(y) ? onlAvg(agg[prevOf(y)]) : undefined)).join('') : ''}</tr>`;
+  // 합계 — 진행 중인 해는 들어온 요일만 있으니 같은 요일끼리만 견준다
+  const sameTot = (y, get) => {
+    const p0 = prevOf(y); if (!p0) return undefined;
+    const us = units.filter(u => get(agg[y], u) > 0);
+    return sum(us.map(u => get(agg[p0], u)));
+  };
+  const partialNote = y => { const p0 = prevOf(y); return p0 && days(agg[y]) < days(agg[p0]) ? `<div class="sp-date">같은 ${days(agg[y])}일끼리</div>` : ''; };
+  body1 += `<tr class="sp-row-total"><td class="sp-l">합계</td>${years.map(y => vcell(y, siteTot(agg[y]), sameTot(y, siteOf), null, partialNote(y))).join('')}
+      ${meta.byDay ? years.map(y => vcell(y, onlTot(agg[y]), sameTot(y, onlOf))).join('') : ''}</tr>`;
 
   // ③ 고른 해 기록표 — 송림 계 · 서현 계 · 합계 · 온라인 · 실별
   const line = (label, vals, cls) => {
@@ -5120,9 +5161,14 @@ function renderSpecial(key) {
   });
   const noRooms = meta.byDay && !R.rooms.size;
 
-  // 비교 묶음 — 송림 · 서현 (· 온라인)
-  const CMP = PL.map(pl => ({ title: esc(pl), get: (r, u) => src(r)[u]?.[pl] || 0 }))
-    .concat(meta.byDay && years.some(y => onlTot(agg[y])) ? [{ title: '온라인 실시간', get: (r, u) => onlOf(r, u) }] : []);
+  // 꺾은선 지표 — 현장 합계 / 장소별 / 온라인 / 전체(현장+온라인)
+  const hasOnl = meta.byDay && years.some(y => onlTot(agg[y]));
+  const METRICS = [{ id: 'site', title: '현장 합계', get: (r, u) => siteOf(r, u) }]
+    .concat(PL.map(pl => ({ id: pl, title: esc(pl), get: (r, u) => src(r)[u]?.[pl] || 0 })))
+    .concat(hasOnl ? [{ id: 'online', title: '온라인 실시간', get: (r, u) => onlOf(r, u) },
+                      { id: 'all', title: '전체 (현장+온라인)', get: (r, u) => siteOf(r, u) + onlOf(r, u) }] : []);
+  const M = METRICS.find(m => m.id === SP_METRIC[key]) || METRICS[0];
+  const CMP = [M];
   const cmpTable = c => `<table class="sp-mini"><tr><th class="sp-l"></th>${units.map(u => `<th class="sp-n">${dayHead(u)}</th>`).join('')}</tr>` +
     years.map(y => `<tr><td class="sp-l"><span class="sp-ychip" style="background:${yearColor(y)}"></span>${y}</td>${units.map(u => {
       const v = c.get(agg[y], u), h = holOf(agg[y], u);
@@ -5135,7 +5181,7 @@ function renderSpecial(key) {
       <div style="overflow-x:auto"><table class="sp-sum">${head1}${body1}</table></div>
     </div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">연도별 현장 ${meta.byDay ? '연인원' : '인원'}</div><div class="cs">막대를 누르면 그 해 상세</div></div></div>
+      <div class="cc"><div class="ch"><div><div class="ct">연도별 현장 ${meta.byDay ? '연인원' : '인원'}</div><div class="cs">막대를 누르면 그 해 상세 · %는 전년 같은 요일 대비</div></div></div>
         <canvas id="c-sp-${key}-year" style="max-height:190px"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">연도별 일 평균</div><div class="cs">현장 · 숫자가 들어온 날로 나눔</div></div></div>
         <canvas id="c-sp-${key}-avg" style="max-height:190px"></canvas></div>
@@ -5147,11 +5193,12 @@ function renderSpecial(key) {
       </div>
       ${R.note ? `<span class="yc-ctl-lbl" style="font-weight:500">${esc(R.note)}</span>` : ''}
     </div>
-    <div class="sp-3">
-      ${CMP.map((c, i) => `<div class="cc"><div class="ch"><div><div class="ct">${c.title} — ${meta.byDay ? '요일별' : '부별'} 연도 비교</div>
-        <div class="cs">해마다 색이 다릅니다 · <span class="sp-hol">●</span> 공휴일</div></div></div>
-        <canvas id="c-sp-${key}-cmp${i}" style="max-height:220px"></canvas>
-        <div style="overflow-x:auto;margin-top:8px">${cmpTable(c)}</div></div>`).join('')}
+    <div class="cc">
+      <div class="ch"><div><div class="ct">${meta.byDay ? '요일별' : '부별'} 연도 비교 — ${M.title}</div>
+        <div class="cs">해마다 색이 다릅니다 · <span class="sp-hol">●</span> 공휴일</div></div>
+        <div class="yc-seg-group">${METRICS.map(m => `<button class="yc-seg${m.id === M.id ? ' on' : ''}" onclick="setSpecialMetric('${key}','${m.id}')">${m.title}</button>`).join('')}</div></div>
+      <canvas id="c-sp-${key}-cmp0" style="max-height:280px"></canvas>
+      <div style="overflow-x:auto;margin-top:10px">${cmpTable(M)}</div>
     </div>
     <div class="cc">
       <div class="ch"><div><div class="ct"><span class="sp-ychip" style="background:${yearColor(cur)}"></span>${cur}년 ${meta.title} 기록표</div>
@@ -5164,10 +5211,10 @@ function renderSpecial(key) {
   const drill = lbl => setSpecialYear(key, parseInt(lbl));
   const maxDays = Math.max(...years.map(y => days(agg[y])));
   const yLabel = y => `${y}년${days(agg[y]) < maxDays ? ` (${days(agg[y])}일)` : ''}`;
-  mkChart(`c-sp-${key}-year`, 'bar', years.map(yLabel),
-    [{ label: '현장', data: years.map(y => siteTot(agg[y]) || null), backgroundColor: yc, borderRadius: 6 }], { drill });
-  mkChart(`c-sp-${key}-avg`, 'bar', years.map(yLabel),
-    [{ label: '일 평균', data: years.map(y => avg(agg[y])), backgroundColor: yc, borderRadius: 6 }], { drill });
+  // 연인원 % — 진행 중인 해는 같은 요일끼리 (일 평균은 원래 견줄 수 있다)
+  const totPct = years.map(y => { const pv = sameTot(y, siteOf); const v = siteTot(agg[y]); return pv && v ? Math.round((v - pv) / pv * 100) : null; });
+  spYearBars(`c-sp-${key}-year`, years, years.map(yLabel), years.map(y => siteTot(agg[y]) || null), yc, drill, totPct);
+  spYearBars(`c-sp-${key}-avg`, years, years.map(yLabel), years.map(y => avg(agg[y])), yc, drill);
   // 요일별 꺾은선 — 해마다 한 줄, 공휴일 점은 빨갛고 크게
   CMP.forEach((c, i) => {
     mkChart(`c-sp-${key}-cmp${i}`, 'line', units,
