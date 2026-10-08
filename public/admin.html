@@ -457,31 +457,51 @@ function rpRender() {
     : '<span style="font-size:12.5px;color:var(--warn)">받는 사람이 없습니다 — 아래에 추가하세요.</span>';
   $('rp-day').value = RP.day; $('rp-hour').value = String(RP.hour); $('rp-on').checked = RP.on;
   $('rp-status').innerHTML =
-    `<span class="rp-pill ${RP.on ? 'on' : 'off'}">${RP.on ? '자동 발송 켜짐' : '자동 발송 꺼짐'}</span>` +
-    `<span class="rp-pill">매주 ${RP.day}요일 ${hourLabel(RP.hour)}</span>` +
-    `<span class="rp-pill">받는 사람 ${RP.to.length}명</span>` +
+    // 위쪽 상태는 '저장된' 설정 — 고르는 중인 값이 아니다
+    `<span class="rp-pill ${(RP.savedOn ?? RP.on) ? 'on' : 'off'}">${(RP.savedOn ?? RP.on) ? '자동 발송 켜짐' : '자동 발송 꺼짐'}</span>` +
+    `<span class="rp-pill">매주 ${RP.savedDay ?? RP.day}요일 ${hourLabel(RP.savedHour ?? RP.hour)}</span>` +
+    `<span class="rp-pill">받는 사람 ${(RP.savedTo || RP.to).length}명</span>` +
     (RP.trigger ? '' : '<span class="rp-pill off">예약이 아직 없음 — 저장하면 만들어집니다</span>');
 }
-function rpAdd() {
+/* 받는 사람을 더하거나 빼면 바로 저장한다.
+   예전에는 [저장]을 따로 눌러야 해서, 추가만 하고 [지금 보내기]를 누르면
+   화면에는 4명이 보이는데 실제로는 저장된 1명에게만 가는 일이 있었다. */
+async function rpAdd() {
   const raw = $('rp-email').value.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
   const bad = raw.filter(x => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
-  raw.filter(x => !bad.includes(x) && !RP.to.includes(x)).forEach(x => RP.to.push(x));
+  const added = raw.filter(x => !bad.includes(x) && !RP.to.includes(x));
+  added.forEach(x => RP.to.push(x));
   $('rp-email').value = bad.join(', ');
   if (bad.length) show('err', '이메일 형식이 아닙니다: ' + bad.join(', '));
   rpSync(); rpRender();
+  if (added.length) await rpSave(`${added.join(', ')} 추가 — 저장했습니다.`);
 }
-function rpRemove(i) { RP.to.splice(i, 1); rpSync(); rpRender(); }
-async function rpSave() {
-  if ($('rp-email').value.trim()) rpAdd();
+async function rpRemove(i) {
+  const [gone] = RP.to.splice(i, 1); rpSync(); rpRender();
+  await rpSave(`${gone} 뺐습니다 — 저장했습니다.`);
+}
+/* 요일·시각·켜기를 바꾸고 아직 저장하지 않았는지 */
+function rpDirty() {
+  return $('rp-day').value !== RP.savedDay || Number($('rp-hour').value) !== RP.savedHour || $('rp-on').checked !== RP.savedOn;
+}
+function rpMarkDirty() {
+  const d = rpDirty();
+  $('rp-save').textContent = d ? '저장 (바뀐 내용 있음)' : '저장';
+}
+async function rpSave(okText) {
+  if (typeof okText !== 'string') okText = '';
+  if (!okText && $('rp-email').value.trim()) return rpAdd();
   rpSync();
   $('rp-save').disabled = true;
   try {
     const r = await rpApi('POST', { action: 'save', to: RP.to, on: RP.on, day: RP.day, hour: RP.hour });
-    Object.assign(RP, r); rpRender();
-    show('ok', `저장했습니다 — 매주 ${RP.day}요일 ${hourLabel(RP.hour)}, ${RP.to.length}명에게 ${RP.on ? '보냅니다' : '보내지 않습니다(꺼짐)'}.`);
-  } catch (e) { show('err', '저장하지 못했습니다: ' + e.message); }
+    Object.assign(RP, r); rpRemember(); rpRender(); rpMarkDirty();
+    show('ok', (okText ? okText + ' ' : '저장했습니다 — ') + `매주 ${RP.day}요일 ${hourLabel(RP.hour)}, ${RP.to.length}명에게 ${RP.on ? '보냅니다' : '보내지 않습니다(꺼짐)'}.`);
+    return true;
+  } catch (e) { show('err', '저장하지 못했습니다: ' + e.message); return false; }
   finally { $('rp-save').disabled = false; }
 }
+function rpRemember() { RP.savedDay = RP.day; RP.savedHour = RP.hour; RP.savedOn = RP.on; RP.savedTo = [...RP.to]; }
 async function rpPreview() {
   $('rp-prev').disabled = true; $('rp-prev').textContent = '만드는 중… (30초쯤)';
   try {
@@ -492,17 +512,22 @@ async function rpPreview() {
   finally { $('rp-prev').disabled = false; $('rp-prev').textContent = '미리보기'; }
 }
 async function rpSend() {
-  if (!RP.to.length) return show('err', '받는 사람이 없습니다.');
-  if (!confirm(`지금 ${RP.to.length}명에게 지난주 보고를 보낼까요?\n\n${RP.to.join('\n')}\n\n(저장하지 않은 변경은 반영되지 않습니다)`)) return;
+  // 입력칸에 남은 주소나 저장 안 한 변경이 있으면 먼저 저장한다 — 보내는 건 늘 저장된 목록이다
+  if ($('rp-email').value.trim()) await rpAdd();
+  if (rpDirty() && !(await rpSave('바뀐 설정을 먼저'))) return;
+  const to = RP.savedTo || RP.to;
+  if (!to.length) return show('err', '받는 사람이 없습니다.');
+  if (!confirm(`지금 아래 ${to.length}명에게 지난주 보고를 보낼까요?\n\n${to.join('\n')}`)) return;
   $('rp-send').disabled = true; $('rp-send').textContent = '보내는 중…';
-  try { const r = await rpApi('POST', { action: 'send' }); show('ok', `${r.sent}명에게 보냈습니다.`); }
+  try { const r = await rpApi('POST', { action: 'send' }); show('ok', `${r.sent}명에게 보냈습니다: ${to.join(', ')}`); }
   catch (e) { show('err', '보내지 못했습니다: ' + e.message); }
   finally { $('rp-send').disabled = false; $('rp-send').textContent = '지금 보내기'; }
 }
 (async () => {
   $('rp-day').innerHTML = ['월','화','수','목','금','토','일'].map(d => `<option value="${d}">${d}요일</option>`).join('');
   $('rp-hour').innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${hourLabel(h)}</option>`).join('');
-  try { Object.assign(RP, await rpApi('GET')); rpRender(); }
+  ['rp-day', 'rp-hour', 'rp-on'].forEach(id => $(id).addEventListener('change', () => { rpSync(); rpMarkDirty(); rpRender(); }));
+  try { Object.assign(RP, await rpApi('GET')); rpRemember(); rpRender(); }
   catch (e) { $('rp-status').innerHTML = `<span class="rp-pill off">설정을 불러오지 못했습니다: ${escH(e.message)}</span>`; }
 })();
 
