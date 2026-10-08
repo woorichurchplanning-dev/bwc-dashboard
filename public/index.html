@@ -684,6 +684,16 @@ table.sp-sum th, table.sp-sum td, table.sp-matrix th, table.sp-matrix td { white
 .sp-pct { font-size:11px; color:var(--color-text-tertiary); margin-left:4px; }
 .sp-hol { color:#dc2626 !important; }
 td.sp-cell { vertical-align:top; line-height:1.35; }
+/* 특별예배 표 — 열 너비를 똑같이 고정하고 머리글·숫자를 모두 오른쪽에 맞춘다
+   (전체 표 규칙은 숫자를 가운데에 두어, 오른쪽 머리글과 어긋나 보였다) */
+table.sp-sum, table.sp-matrix, table.sp-mini { table-layout:fixed; width:100%; }
+table.sp-sum .nr, table.sp-sum th.sp-n,
+table.sp-matrix .nr, table.sp-matrix th.sp-n,
+table.sp-mini .nr, table.sp-mini th.sp-n { text-align:right !important; padding-left:6px; padding-right:12px; }
+table.sp-sum th.sp-grp { text-align:center !important; }
+table.sp-sum th.sp-l, table.sp-matrix th.sp-l, table.sp-mini th.sp-l,
+table.sp-sum td.sp-l, table.sp-matrix td.sp-l, table.sp-mini td.sp-l { width:84px; }
+table.sp-matrix th.sp-l, table.sp-matrix td.sp-l { width:150px; }
 .sp-v { font-size:14px; font-weight:600; }
 td.sp-strong .sp-v { font-weight:800; }
 .sp-onl-card { opacity:.92; }
@@ -5189,13 +5199,12 @@ function renderSpecial(key) {
 
   el.innerHTML = `
     <div class="cc">
-      <div class="ch"><div><div class="ct">${meta.title} 연도별 요약 — 현장</div>
-        <div class="cs">${meta.byDay ? '요일마다' : '부마다'} 해마다의 현장 인원 · 칸 아래는 전년 같은 ${meta.byDay ? '요일' : '부'} 대비</div></div>
+      <div class="ch"><div><div class="ct">${meta.title} 연도별 요약 — 현장</div></div>
         <div class="yc-seg-group">
           <button class="yc-seg${sumView === 'total' ? ' on' : ''}" onclick="setSpecialSumView('${key}','total')">현장 합계</button>
           <button class="yc-seg${sumView === 'site' ? ' on' : ''}" onclick="setSpecialSumView('${key}','site')">송림 · 서현 · 합계</button>
         </div></div>
-      <div style="overflow-x:auto"><table class="sp-sum">${head1}${body1}</table></div>
+      <div style="overflow-x:auto"><table class="sp-sum" style="min-width:${84 + years.length * COLS.length * 92}px">${head1}${body1}</table></div>
     </div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">연도별 현장 ${meta.byDay ? '연인원' : '인원'}</div><div class="cs">막대를 누르면 그 해 상세 · %는 전년 같은 요일 대비</div></div></div>
@@ -5224,8 +5233,8 @@ function renderSpecial(key) {
     </div>
     ${hasOnl ? `<div class="cc sp-onl-card">
       <div class="ch"><div><div class="ct">참고 · 온라인 실시간 접속</div>
-        <div class="cs">현장 인원에는 넣지 않습니다 · 칸 아래는 전년 같은 요일 대비</div></div></div>
-      <div style="overflow-x:auto"><table class="sp-sum">${onlHead}${onlBody}</table></div>
+        <div class="cs">현장 인원에는 넣지 않습니다</div></div></div>
+      <div style="overflow-x:auto"><table class="sp-sum" style="min-width:${84 + years.length * 110}px">${onlHead}${onlBody}</table></div>
     </div>` : ''}`;
 
   // 차트 — 해마다 고정 색, 고른 해는 진하게(나머지는 약간 옅게)
