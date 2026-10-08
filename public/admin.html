@@ -134,7 +134,7 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
     <div class="desc">지난주(월~주일) 요약을 교회 계정(woorichurchplanning@gmail.com)이 정해진 요일·시각에 보냅니다.</div>
     <div class="rp-status" id="rp-status"><span class="rp-pill">불러오는 중…</span></div>
 
-    <label>받는 사람</label>
+    <label>받는 사람 <span style="font-weight:500;color:var(--text3)">— 추가하거나 ×로 빼면 바로 저장됩니다</span></label>
     <div class="rp-chips" id="rp-chips"></div>
     <div class="rp-add">
       <input type="text" id="rp-email" placeholder="이메일 주소 (쉼표로 여러 개 가능)" autocapitalize="off" spellcheck="false"
@@ -148,10 +148,10 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
       <div><label for="rp-hour">보내는 시각</label>
         <select id="rp-hour"></select></div>
       <div><label class="rp-toggle"><input type="checkbox" id="rp-on"> 매주 자동으로 보내기</label></div>
+      <div><button type="button" class="primary" id="rp-save" onclick="rpSave()" style="width:100%">발송 시간 저장</button></div>
     </div>
 
-    <div class="rp-actions">
-      <button type="button" class="primary" id="rp-save" onclick="rpSave()">저장</button>
+    <div class="rp-actions" style="border-top:1px solid var(--border);padding-top:16px">
       <button type="button" id="rp-prev" onclick="rpPreview()">미리보기</button>
       <button type="button" id="rp-send" onclick="rpSend()">지금 보내기</button>
     </div>
@@ -486,7 +486,7 @@ function rpDirty() {
 }
 function rpMarkDirty() {
   const d = rpDirty();
-  $('rp-save').textContent = d ? '저장 (바뀐 내용 있음)' : '저장';
+  $('rp-save').textContent = d ? '발송 시간 저장 (바뀐 내용 있음)' : '발송 시간 저장';
 }
 async function rpSave(okText) {
   if (typeof okText !== 'string') okText = '';
