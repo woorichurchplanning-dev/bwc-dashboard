@@ -12,6 +12,11 @@ on:
     # 하루 한 번 전체를 다시 만든다 — UTC 19:30 = KST 04:30
     - cron: '30 19 * * *'
   workflow_dispatch:       # 수동 실행 버튼
+    inputs:
+      full:
+        description: '전체 다시 수집 (지난 기록을 넣었을 때)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -33,26 +38,26 @@ jobs:
       # 어떤 일정으로 깨어났는지에 따라 하는 일이 다르다.
       # 전체 재수집은 Apps Script 실행시간을 8분쯤 쓰므로 하루 한 번만 한다.
       - name: 최근 주차만 반영
-        if: github.event_name != 'schedule' || github.event.schedule == '*/15 * * * *'
+        if: (github.event_name != 'schedule' && github.event.inputs.full != 'true') || github.event.schedule == '*/15 * * * *'
         env:
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
           SHEET_READ_KEY: ${{ secrets.SHEET_READ_KEY }}
         run: node scripts/refresh-recent.mjs 3
 
       - name: 전체 다시 수집
-        if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
+        if: (github.event_name == 'schedule' && github.event.schedule == '30 19 * * *') || github.event.inputs.full == 'true'
         env:
           SHEET_READ_KEY: ${{ secrets.SHEET_READ_KEY }}
         run: bash scripts/refresh-data.sh
 
       - name: 형식 확인
-        if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
+        if: (github.event_name == 'schedule' && github.event.schedule == '30 19 * * *') || github.event.inputs.full == 'true'
         run: |
           test -s public/data.json || { echo "data.json이 비어 있음 — 중단"; exit 1; }
           node -e "const d=require('./public/data.json'); if(!d.weekCount) throw new Error('weekCount 없음'); console.log('주차:', d.weekCount, d.weekRange.join(' ~ '))"
 
       - name: 전체 스냅샷 올리기
-        if: github.event_name == 'schedule' && github.event.schedule == '30 19 * * *'
+        if: (github.event_name == 'schedule' && github.event.schedule == '30 19 * * *') || github.event.inputs.full == 'true'
         env:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
           STORE_KEY: ${{ secrets.STORE_KEY }}
