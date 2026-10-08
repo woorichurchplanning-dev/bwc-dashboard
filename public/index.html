@@ -671,6 +671,18 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 .sub-miss-line { margin-top:6px; font-size:12px; color:var(--color-text-secondary); line-height:1.5; }
 
 /* ── 특별예배 기록표 ── */
+table.sp-sum th, table.sp-sum td, table.sp-matrix th, table.sp-matrix td { white-space:nowrap; }
+.sp-l { text-align:left !important; }
+.sp-n { text-align:right !important; }
+.sp-grp { text-align:center !important; border-bottom:2px solid var(--color-text-primary, #111); }
+.sp-grp-onl { border-bottom-color:var(--color-accent, #635bff); }
+.sp-cur { background:rgba(42,120,214,0.06); font-weight:700; }
+.sp-date { font-size:10.5px; font-weight:500; color:var(--color-text-tertiary); }
+.sp-dash { color:var(--color-text-tertiary); font-weight:500; }
+.sp-up { color:#0a7a3e; font-weight:700; }
+.sp-down { color:#c0392b; font-weight:700; }
+.sp-pct { font-size:11px; color:var(--color-text-tertiary); margin-left:4px; }
+.sp-ychip { display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:5px; vertical-align:0; }
 table.sp-matrix td, table.sp-matrix th { font-variant-numeric:tabular-nums; }
 table.sp-matrix tr.sp-row-total td { background:var(--color-bg-subtle, #f4f6f8); font-weight:700; }
 table.sp-matrix tr.sp-row-site td { font-weight:600; }
@@ -4959,75 +4971,6 @@ function specialAgg(meta) {
   return years;
 }
 
-/* 특새처럼 요일마다 모이는 집회의 기록표.
-   열 = 월~토(그 해 날짜), 행 = 총계 / 장소 계 / 장소별 실. 연도 비교는 같은 요일끼리. */
-function renderSpecialDayTables(key, meta, agg, years, cur, PL0) {
-  // 송림을 먼저 — 기획팀이 쓰는 표 순서(총계 → 송림 계 → 서현 계)
-  const PL = [...PL0].sort((a, b) => (a === '송림' ? -1 : b === '송림' ? 1 : a.localeCompare(b, 'ko')));
-  const allDays = new Set();
-  years.forEach(y => Object.keys(agg[y].byDay).forEach(d => allDays.add(d)));
-  let idx = [...allDays].map(d => SP_DAYS.indexOf(d)).filter(i => i >= 0);
-  if (key === 'dawn') idx = idx.concat([0, 5]);                 // 특새는 월~토를 늘 다 보인다
-  const lo = Math.min(...idx), hi = Math.max(...idx);
-  const days = Number.isFinite(lo) ? SP_DAYS.slice(lo, hi + 1) : [...allDays];
-  const dateOf = (rec, d) => {
-    const i = SP_DAYS.indexOf(d);
-    if (i < 0 || rec.dates.length !== 1) return '';
-    const dt = parseWeekDate(rec.dates[0]); dt.setDate(dt.getDate() - 6 + i);
-    return `${dt.getMonth() + 1}/${dt.getDate()}`;
-  };
-  const n = v => (v == null || v === 0) ? '<span style="color:var(--color-text-tertiary)">–</span>' : fmt(v);
-  const sum = arr => arr.reduce((a, b) => a + (b || 0), 0);
-  const TH = 'style="text-align:right;white-space:nowrap"';
-  const th1 = 'style="text-align:left;white-space:nowrap"';
-
-  // 그 해 기록표
-  const rec = agg[cur];
-  const head = `<tr><th ${th1}>구분</th>${days.map(d => `<th ${TH}>${d}<br><span style="font-weight:500;color:var(--color-text-tertiary)">${dateOf(rec, d)}</span></th>`).join('')}<th ${TH}>합계</th><th ${TH}>일평균</th></tr>`;
-  const line = (label, vals, cls) => {
-    const tot = sum(vals), cnt = vals.filter(v => v > 0).length;
-    return `<tr class="${cls || ''}"><td style="white-space:nowrap">${label}</td>${vals.map(v => `<td class="nr">${n(v)}</td>`).join('')}` +
-      `<td class="nr"><b>${n(tot)}</b></td><td class="nr">${cnt ? fmt(Math.round(tot / cnt)) : n(null)}</td></tr>`;
-  };
-  const dayTot = d => sum(PL.map(pl => rec.byDay[d]?.[pl]));
-  // 송림 계 → 서현 계 → 합계(현장) → 온라인 → 실별
-  let body = '';
-  PL.forEach(pl => { body += line(`<b>${esc(pl)} 계</b>`, days.map(d => rec.byDay[d]?.[pl] || 0), 'sp-row-site'); });
-  body += line('<b>합계</b> <span style="font-weight:500;color:var(--color-text-tertiary)">현장</span>', days.map(dayTot), 'sp-row-total');
-  body += line('<b>온라인</b> <span style="font-weight:500;color:var(--color-text-tertiary)">실시간 접속</span>', days.map(d => rec.online[d] || 0), 'sp-row-online');
-  PL.forEach(pl => {
-    const rooms = [...new Set(days.flatMap(d => Object.keys(rec.byDayRoom[d]?.[pl] || {})))]
-      .sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }));
-    rooms.forEach(rm => { body += line(`<span style="color:var(--color-text-tertiary)">${esc(pl)} ·</span> ${esc(rm)}`, days.map(d => rec.byDayRoom[d]?.[pl]?.[rm] || 0)); });
-  });
-  const m = document.getElementById(`m-sp-${key}`);
-  if (m) m.innerHTML = `<table class="sp-matrix">${head}${body}</table>`;
-
-  // 연도별 일자 비교 — 해마다 총계·장소 계
-  const yh = `<tr><th ${th1}>구분</th>${days.map(d => `<th ${TH}>${d}</th>`).join('')}<th ${TH}>합계</th><th ${TH}>일평균</th><th ${TH}>전년 대비</th></tr>`;
-  let yb = '', prevTot = null;
-  years.forEach(y => {
-    const r = agg[y];
-    const tots = days.map(d => sum(PL.map(pl => r.byDay[d]?.[pl])));
-    const tot = sum(tots), cnt = tots.filter(v => v > 0).length, avg = cnt ? Math.round(tot / cnt) : null;
-    const dl = prevTot ? `${avg - prevTot >= 0 ? '▲' : '▼'} ${fmt(Math.abs(avg - prevTot))}` : '–';
-    const sub = (label, vs, cls) => {
-      const t = sum(vs), c = vs.filter(v => v > 0).length;
-      return `<tr class="${cls || ''}"><td style="white-space:nowrap;color:var(--color-text-secondary)">${label}</td>${vs.map(v => `<td class="nr">${n(v)}</td>`).join('')}<td class="nr">${n(t)}</td><td class="nr">${c ? fmt(Math.round(t / c)) : n(null)}</td><td></td></tr>`;
-    };
-    // 연도 줄(날짜) → 송림 → 서현 → 합계(현장) → 온라인
-    yb += `<tr class="sp-row-year"><td colspan="${days.length + 4}"><b>${y}년</b> <span style="color:var(--color-text-tertiary)">${days.map(d => dateOf(r, d)).filter(Boolean).length ? days.map(d => dateOf(r, d)).filter(Boolean)[0] + ' ~ ' + days.map(d => dateOf(r, d)).filter(Boolean).slice(-1)[0] : ''}</span></td></tr>`;
-    PL.forEach(pl => { yb += sub(esc(pl), days.map(d => r.byDay[d]?.[pl] || 0)); });
-    yb += `<tr class="sp-row-total"><td style="white-space:nowrap"><b>합계</b></td>${tots.map(v => `<td class="nr">${n(v)}</td>`).join('')}` +
-      `<td class="nr"><b>${n(tot)}</b></td><td class="nr"><b>${avg ? fmt(avg) : n(null)}</b></td><td class="nr">${dl}</td></tr>`;
-    yb += sub('온라인', days.map(d => r.online[d] || 0), 'sp-row-online');
-    prevTot = avg;
-  });
-  const ydEl = document.getElementById(`yd-sp-${key}`);
-  if (ydEl) ydEl.innerHTML = `<table class="sp-matrix">${yh}${yb}</table>` +
-    (years.length < 2 ? `<div style="font-size:12px;color:var(--color-text-tertiary);margin-top:8px">지난해 자료가 들어오면 이 표에 해마다 한 줄씩 쌓입니다.</div>` : '');
-}
-
 /* 그 해에 실제로 등장한 장소 목록 (서현/송림 하드코딩 대신 데이터에서 뽑는다 —
    특별예배는 송림·드림처럼 주일예배와 장소 구성이 다르다) */
 function specialPlaces(agg, years) {
@@ -5055,6 +4998,14 @@ function setSpecialYear(key, year) {
   renderSpecial(key);
 }
 
+/* 연도 색 — 해마다 고정. 표 머리·차트·버튼이 같은 색을 쓴다 (2024 주황 · 2025 초록 · 2026 파랑 …) */
+const SP_YEAR_COLORS = ['#eb6834', '#1baf7a', '#2a78d6', '#7c3aed', '#c98500'];
+const yearColor = y => SP_YEAR_COLORS[(((y - 2024) % SP_YEAR_COLORS.length) + SP_YEAR_COLORS.length) % SP_YEAR_COLORS.length];
+
+/* 특별예배 한 집회 — 위에서부터
+   ① 연도별 요약표: 요일(또는 부)마다 해마다의 현장·온라인, 고른 해의 전년 대비
+   ② 작은 차트 둘: 연도별 현장 연인원 · 일 평균 (막대를 누르면 그 해로)
+   ③ 고른 해 상세: 송림·서현을 해마다 색으로 견주는 차트 + 날짜별 기록표(실별 포함) */
 function renderSpecial(key) {
   const meta = SPECIAL_META[key];
   const el = document.getElementById('special-' + key);
@@ -5062,225 +5013,131 @@ function renderSpecial(key) {
 
   const agg = specialAgg(meta);
   const years = Object.keys(agg).map(Number).sort((a, b) => a - b);
-
   if (!years.length) {
-    el.innerHTML = `<div class="kg"><div class="kc bl" style="grid-column:1/-1;animation-delay:0s">
-      <div class="kc-accent-bar"></div><div class="kl">데이터 연동 필요</div>
-      <div class="kv" style="font-size:18px;color:var(--text2)">${meta.title} 데이터 없음</div>
-      <div class="ks" style="margin-top:8px;line-height:1.7">
-        ${meta.desc}<br>
-        구글 시트에 <b>특별예배 &gt; ${meta.title}</b> 항목을 만들고
-        필드명을 <b>일자|부|장소|호실</b> 형식으로 넣으면 자동으로 표시됩니다.<br>
-        예) <code>${meta.byDay ? '월|1부|송림|본당1층' : '|1부|송림|본당1층'}</code> ·
-            <code>${meta.byDay ? '월|1부|드림|305호' : '|2부|드림|7층'}</code>
-      </div></div></div>`;
+    el.innerHTML = `<div class="cc"><div class="ct">${meta.title} 자료 없음</div>
+      <div class="cs" style="margin-top:6px;line-height:1.7">${meta.desc || ''}<br>
+      입력앱 <b>특별예배 → ${meta.title}</b>에 숫자를 넣으면 여기에 나옵니다.</div></div>`;
     return;
   }
 
-  const PL = specialPlaces(agg, years);
+  const PL = specialPlaces(agg, years).sort((a, b) => (a === '송림' ? -1 : b === '송림' ? 1 : a.localeCompare(b, 'ko')));
   const cur = SP_YEAR[key] && agg[SP_YEAR[key]] ? SP_YEAR[key] : years[years.length - 1];
   SP_YEAR[key] = cur;
   const prev = years[years.indexOf(cur) - 1];
-  const curRec = agg[cur];
-  const dayCount = curRec.days.size || 1;
-  const partCount = Object.keys(curRec.byPart).length || 1;
-  const unitCount = meta.byDay ? dayCount : partCount;
-  const diff = prev != null ? curRec.total - agg[prev].total : null;
-  const pct = prev != null && agg[prev].total ? (diff / agg[prev].total * 100) : null;
-  const roomKeys = [...curRec.rooms].sort(roomSort);
-  const hasRooms = roomKeys.length > 1 || roomKeys[0] !== '본당';
-  const spaceView = SP_SPACEVIEW[key] || 'room';
-  const spaceLabel = spaceView === 'zone' ? '구역별' : '호실별';
-  const spaceKeys = (spaceView === 'zone' ? [...curRec.zones] : roomKeys).sort(roomSort);
+  const R = agg[cur];
+
+  // 열 단위 — 요일 집회는 요일(특새는 월~토 늘 전부), 부 집회는 부
+  let units;
+  if (meta.byDay) {
+    const idx = years.flatMap(y => Object.keys(agg[y].byDay).concat(Object.keys(agg[y].online)))
+      .map(d => SP_DAYS.indexOf(d)).filter(i => i >= 0).concat(key === 'dawn' ? [0, 5] : []);
+    units = idx.length ? SP_DAYS.slice(Math.min(...idx), Math.max(...idx) + 1) : ['당일'];
+  } else {
+    units = [...new Set(years.flatMap(y => Object.keys(agg[y].byPart)))].sort();
+  }
+  const src = r => (meta.byDay ? r.byDay : r.byPart);
+  const sum = arr => arr.reduce((x, v) => x + (v || 0), 0);
+  const siteOf = (r, u) => sum(PL.map(pl => src(r)[u]?.[pl]));
+  const onlOf = (r, u) => (meta.byDay ? r.online[u] || 0 : 0);
+  const days = r => units.filter(u => siteOf(r, u) > 0).length;
+  const siteTot = r => sum(units.map(u => siteOf(r, u)));
+  const onlTot = r => r.onlineTotal || 0;
+  const avg = r => (days(r) ? Math.round(siteTot(r) / days(r)) : null);
+  const onlAvg = r => { const c = units.filter(u => onlOf(r, u) > 0).length; return c ? Math.round(onlTot(r) / c) : null; };
+  const dateOf = (r, u) => {
+    const i = SP_DAYS.indexOf(u);
+    if (!meta.byDay || i < 0 || r.dates.length !== 1) return '';
+    const dt = parseWeekDate(r.dates[0]); dt.setDate(dt.getDate() - 6 + i);
+    return `${dt.getMonth() + 1}/${dt.getDate()}`;
+  };
+  const n = v => (v == null || v === 0) ? '<span class="sp-dash">–</span>' : fmt(v);
+  const dl = (a, b) => {
+    if (!a || !b) return '<span class="sp-dash">–</span>';
+    const d = a - b, pc = Math.round(d / b * 100);
+    return `<span class="${d > 0 ? 'sp-up' : d < 0 ? 'sp-down' : ''}">${d > 0 ? '▲' : d < 0 ? '▼' : ''} ${fmt(Math.abs(d))}</span>` +
+      `<span class="sp-pct">${pc > 0 ? '+' : ''}${pc}%</span>`;
+  };
+  const yh = y => `<span class="sp-ychip" style="background:${yearColor(y)}"></span>${y}`;
+
+  // ① 연도별 요약표
+  const head1 = `<tr><th rowspan="2" class="sp-l">${meta.byDay ? '요일' : '부'}</th>
+      <th colspan="${years.length + 1}" class="sp-grp">현장</th>
+      ${meta.byDay ? `<th colspan="${years.length + 1}" class="sp-grp sp-grp-onl">온라인 실시간</th>` : ''}</tr>
+    <tr>${years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('')}<th class="sp-n">${prev ? `${cur} vs ${prev}` : '전년 대비'}</th>
+      ${meta.byDay ? years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('') + `<th class="sp-n">${prev ? `${cur} vs ${prev}` : '전년 대비'}</th>` : ''}</tr>`;
+  const cell = (y, v, u) => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(v)}${u && dateOf(agg[y], u) ? `<div class="sp-date">${dateOf(agg[y], u)}</div>` : ''}</td>`;
+  let body1 = units.map(u => `<tr><td class="sp-l"><b>${u}</b></td>
+      ${years.map(y => cell(y, siteOf(agg[y], u), u)).join('')}<td class="nr">${prev ? dl(siteOf(R, u), siteOf(agg[prev], u)) : n(null)}</td>
+      ${meta.byDay ? years.map(y => cell(y, onlOf(agg[y], u))).join('') + `<td class="nr">${prev ? dl(onlOf(R, u), onlOf(agg[prev], u)) : n(null)}</td>` : ''}</tr>`).join('');
+  body1 += `<tr class="sp-row-total"><td class="sp-l">일 평균</td>${years.map(y => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(avg(agg[y]))}</td>`).join('')}<td class="nr">${prev ? dl(avg(R), avg(agg[prev])) : n(null)}</td>
+      ${meta.byDay ? years.map(y => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(onlAvg(agg[y]))}</td>`).join('') + `<td class="nr">${prev ? dl(onlAvg(R), onlAvg(agg[prev])) : n(null)}</td>` : ''}</tr>`;
+  // 진행 중인 해는 들어온 요일만 있다 — 합계는 같은 요일끼리만 견준다
+  const sameU = units.filter(u => siteOf(R, u) > 0), sameO = units.filter(u => onlOf(R, u) > 0);
+  const partial = prev && sameU.length < days(agg[prev]);
+  const pSite = prev ? sum(sameU.map(u => siteOf(agg[prev], u))) : 0;
+  const pOnl = prev ? sum(sameO.map(u => onlOf(agg[prev], u))) : 0;
+  const sameNote = partial ? `<div class="sp-date">같은 ${sameU.length}일끼리</div>` : '';
+  body1 += `<tr class="sp-row-total"><td class="sp-l">합계</td>${years.map(y => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(siteTot(agg[y]))}</td>`).join('')}<td class="nr">${prev ? dl(siteTot(R), pSite) + sameNote : n(null)}</td>
+      ${meta.byDay ? years.map(y => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(onlTot(agg[y]))}</td>`).join('') + `<td class="nr">${prev ? dl(onlTot(R), pOnl) : n(null)}</td>` : ''}</tr>`;
+
+  // ③ 고른 해 기록표 — 송림 계 · 서현 계 · 합계 · 온라인 · 실별
+  const line = (label, vals, cls) => {
+    const t = sum(vals), c = vals.filter(v => v > 0).length;
+    return `<tr class="${cls || ''}"><td class="sp-l">${label}</td>${vals.map(v => `<td class="nr">${n(v)}</td>`).join('')}<td class="nr"><b>${n(t)}</b></td><td class="nr">${c ? fmt(Math.round(t / c)) : n(null)}</td></tr>`;
+  };
+  let body3 = '';
+  PL.forEach(pl => { body3 += line(`<b>${esc(pl)} 계</b>`, units.map(u => src(R)[u]?.[pl] || 0), 'sp-row-site'); });
+  body3 += line('<b>합계</b> <span class="sp-dash">현장</span>', units.map(u => siteOf(R, u)), 'sp-row-total');
+  if (meta.byDay) body3 += line('<b>온라인</b> <span class="sp-dash">실시간</span>', units.map(u => onlOf(R, u)), 'sp-row-online');
+  if (meta.byDay) PL.forEach(pl => {
+    const rooms = [...new Set(units.flatMap(u => Object.keys(R.byDayRoom[u]?.[pl] || {})))].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }));
+    rooms.forEach(rm => { body3 += line(`<span class="sp-dash">${esc(pl)} ·</span> ${esc(rm)}`, units.map(u => R.byDayRoom[u]?.[pl]?.[rm] || 0)); });
+  });
+  const noRooms = meta.byDay && !R.rooms.size;
 
   el.innerHTML = `
-    <div class="kg" id="kk-sp-${key}"></div>
-    <div id="sp-${key}-warn"></div>
     <div class="cc">
-      <div class="ch"><div><div class="ct">연도별 ${meta.byDay ? '총 연인원' : '총 출석'}</div>
-        <div class="cs">막대를 누르면 그 해 세부로 이동합니다</div></div></div>
-      <canvas id="c-sp-${key}-year" style="max-height:300px"></canvas>
+      <div class="ch"><div><div class="ct">${meta.title} 연도별 요약</div>
+        <div class="cs">${meta.byDay ? '요일마다' : '부마다'} 해마다의 인원 · 전년 대비는 ${cur}년과 ${prev || '전년'}년 비교 · 연도 버튼이나 아래 막대를 누르면 기준 연도가 바뀝니다</div></div></div>
+      <div style="overflow-x:auto"><table class="sp-sum">${head1}${body1}</table></div>
     </div>
-    ${meta.byDay ? `<div class="cc">
-      <div class="ch"><div><div class="ct">연도별 일 평균</div><div class="cs">총 연인원 ÷ 집회 일수 — 일수가 다른 해끼리도 비교됩니다</div></div></div>
-      <canvas id="c-sp-${key}-avg" style="max-height:260px"></canvas>
-    </div>` : ''}
+    <div class="cg">
+      <div class="cc"><div class="ch"><div><div class="ct">연도별 현장 ${meta.byDay ? '연인원' : '인원'}</div><div class="cs">막대를 누르면 그 해 상세</div></div></div>
+        <canvas id="c-sp-${key}-year" style="max-height:190px"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">연도별 일 평균</div><div class="cs">현장 · 숫자가 들어온 날로 나눔</div></div></div>
+        <canvas id="c-sp-${key}-avg" style="max-height:190px"></canvas></div>
+    </div>
     <div class="yc-ctl">
-      <span class="yc-ctl-lbl">세부 연도</span>
+      <span class="yc-ctl-lbl">상세 연도</span>
       <div class="yc-seg-group">
-        ${years.map(y => `<button class="yc-seg${y === cur ? ' on' : ''}" onclick="setSpecialYear('${key}',${y})">${y}년</button>`).join('')}
+        ${years.map(y => `<button class="yc-seg${y === cur ? ' on' : ''}" onclick="setSpecialYear('${key}',${y})" style="${y === cur ? `background:${yearColor(y)};border-color:${yearColor(y)};color:#fff` : ''}"><span class="sp-ychip" style="background:${y === cur ? '#fff' : yearColor(y)}"></span>${y}년</button>`).join('')}
       </div>
-      ${curRec.note ? `<span class="yc-ctl-lbl" style="font-weight:500">${esc(curRec.note)}</span>` : ''}
+      ${R.note ? `<span class="yc-ctl-lbl" style="font-weight:500">${esc(R.note)}</span>` : ''}
+    </div>
+    <div class="cg">
+      ${PL.map((pl, i) => `<div class="cc"><div class="ch"><div><div class="ct">${esc(pl)} — ${meta.byDay ? '요일별' : '부별'} 연도 비교</div>
+        <div class="cs">해마다 색이 다릅니다 · ${cur}년이 기준</div></div></div><canvas id="c-sp-${key}-pl${i}" style="max-height:230px"></canvas></div>`).join('')}
     </div>
     <div class="cc">
-      <div class="ch"><div><div class="ct">${cur}년 ${meta.title} — ${meta.byDay ? '일자별' : '부별'} 출석</div>
-        <div class="cs">${PL.join('·')} 누적 · ${curRec.dates.join(', ')}</div></div></div>
-      <canvas id="c-sp-${key}-detail" style="max-height:320px"></canvas>
-    </div>
-    ${hasRooms ? `
-    <div class="yc-ctl">
-      <span class="yc-ctl-lbl">공간 보기</span>
-      <div class="yc-seg-group">
-        <button class="yc-seg${spaceView === 'room' ? ' on' : ''}" onclick="setSpaceView('${key}','room')">호실별</button>
-        <button class="yc-seg${spaceView === 'zone' ? ' on' : ''}" onclick="setSpaceView('${key}','zone')">구역별</button>
-      </div>
-      <span class="yc-ctl-lbl" style="font-weight:500">구역 = 본당·체육관처럼 층을 묶은 단위 — 여는 층이 해마다 달라져도 비교가 흔들리지 않습니다</span>
-    </div>
-    <div class="cc">
-      <div class="ch"><div><div class="ct">${cur}년 ${spaceLabel} 수용 현황</div>
-        <div class="cs">어느 공간에 몇 명이 들어갔는지 — 합계는 자동 취합</div></div></div>
-      <canvas id="c-sp-${key}-room" style="max-height:${Math.max(260, spaceKeys.length * 28)}px"></canvas>
-    </div>
-    <div class="cc">
-      <div class="ch"><div><div class="ct">${spaceLabel} 연도 비교</div>
-        <div class="cs">그 해 열지 않은 공간은 <b>미개방</b>으로 구분됩니다 — 0명과 다릅니다</div></div></div>
-      <div style="overflow-x:auto"><table id="t-sp-${key}-room"></table></div>
-    </div>` : ''}
-    ${meta.byDay ? `
-    <div class="cc">
-      <div class="ch"><div><div class="ct">${cur}년 ${meta.title} 일자별 기록표</div>
-        <div class="cs">날짜마다 총계 · 장소 계 · 실별 인원. 아직 숫자가 없는 날은 –</div></div></div>
-      <div style="overflow-x:auto" id="m-sp-${key}"></div>
-    </div>
-    <div class="cc">
-      <div class="ch"><div><div class="ct">${meta.title} 연도별 일자 비교</div>
-        <div class="cs">같은 요일끼리 해마다 견줍니다 — 날짜는 그 해 집회 날짜</div></div></div>
-      <div style="overflow-x:auto" id="yd-sp-${key}"></div>
-    </div>` : `
-    <div class="cc">
-      <div class="ch"><div><div class="ct">${cur}년 부별 상세</div></div></div>
-      <div style="overflow-x:auto"><table id="t-sp-${key}-detail"></table></div>
-    </div>`}
-    <div class="cc">
-      <div class="ch"><div><div class="ct">연도별 요약</div></div></div>
-      <div style="overflow-x:auto"><table id="t-sp-${key}-year"></table></div>
+      <div class="ch"><div><div class="ct"><span class="sp-ychip" style="background:${yearColor(cur)}"></span>${cur}년 ${meta.title} 기록표</div>
+        <div class="cs">${R.dates.length === 1 ? `${R.dates[0]} 주 · ` : ''}${noRooms ? '이 해는 실별 숫자 없이 장소 합계만 있습니다' : '날짜마다 송림 · 서현 · 합계 · 온라인 · 실별'}</div></div></div>
+      <div style="overflow-x:auto"><table class="sp-matrix"><tr><th class="sp-l">구분</th>${units.map(u => `<th class="sp-n">${u}${dateOf(R, u) ? `<div class="sp-date">${dateOf(R, u)}</div>` : ''}</th>`).join('')}<th class="sp-n">합계</th><th class="sp-n">${meta.byDay ? '일평균' : '평균'}</th></tr>${body3}</table></div>
     </div>`;
 
-  const placeColor = i => [C.b, C.t, C.p, C.or, C.gr, C.pk][i % 6];
-
-  // ── KPI ──
-  mkKPI(`kk-sp-${key}`, [
-    { label: `${cur}년 ${meta.byDay ? '총 연인원' : '총 출석'}`, value: fmt(curRec.total),
-      sub: meta.byDay ? `${dayCount}일 집회 · ${roomKeys.length}개 공간` : `${partCount}개 부 · ${roomKeys.length}개 공간`,
-      color: 'blue',
-      trend: diff == null ? '' : `${diff >= 0 ? '▲' : '▼'} 전년 ${diff >= 0 ? '+' : ''}${fmt(diff)}${pct == null ? '' : ` (${diff >= 0 ? '+' : ''}${pct.toFixed(1)}%)`}`,
-      td: diff >= 0 ? 'up' : 'dn' },
-    { label: meta.byDay ? '일 평균' : '부 평균', value: fmt(Math.round(curRec.total / unitCount)),
-      sub: meta.byDay ? `연인원 ÷ ${dayCount}일` : `총 출석 ÷ ${partCount}개 부`, color: 'purple' },
-    ...PL.slice(0, 4).map((pl, i) => ({
-      label: pl, value: fmt(curRec.byPlace[pl] || 0),
-      sub: curRec.total ? `전체의 ${Math.round((curRec.byPlace[pl] || 0) / curRec.total * 100)}%` : '',
-      color: ['teal', 'gold', 'green', 'orange'][i % 4],
-    })),
-  ]);
-
-  // ── 연도별 총계 ──
-  const yearLabels = years.map(y => `${y}년`);
-  if (meta.byDay) {
-    mkChart(`c-sp-${key}-year`, 'bar', yearLabels,
-      [{ label: '총 연인원', data: years.map(y => agg[y].total),
-         backgroundColor: years.map(y => (y === cur ? C.b : '#cbd5e1')),
-         borderColor: years.map(y => (y === cur ? C.b : '#94a3b8')), borderWidth: 1, borderRadius: 6 }],
-      { drill: (lbl) => setSpecialYear(key, parseInt(lbl)) });
-  } else {
-    const allParts = [...new Set(years.flatMap(y => Object.keys(agg[y].byPart)))].sort();
-    mkChart(`c-sp-${key}-year`, 'bar', yearLabels,
-      allParts.map((pt, i) => bds(pt, years.map(y => {
-        const o = agg[y].byPart[pt];
-        return o ? Object.values(o).reduce((a, b2) => a + b2, 0) : null;
-      }), placeColor(i))),
-      { stack: true, total: true, drill: (lbl) => setSpecialYear(key, parseInt(lbl)) });
-  }
-
-  // ── 연도별 일 평균 — 칸만 있고 그리는 줄이 빠져 있어 비어 보였다 ──
-  if (meta.byDay) {
-    mkChart(`c-sp-${key}-avg`, 'bar', yearLabels,
-      [{ label: '일 평균', data: years.map(y => agg[y].days.size ? Math.round(agg[y].total / agg[y].days.size) : null),
-         backgroundColor: years.map(y => (y === cur ? C.p : '#cbd5e1')),
-         borderColor: years.map(y => (y === cur ? C.p : '#94a3b8')), borderWidth: 1, borderRadius: 6 }],
-      { drill: (lbl) => setSpecialYear(key, parseInt(lbl)) });
-  }
-
-  // ── 비교 주의 안내 ──
-  const warn = document.getElementById(`sp-${key}-warn`);
-  const notes = [];
-  if (!meta.byDay && new Set(years.map(y => Object.keys(agg[y].byPart).length)).size > 1) {
-    notes.push(`이 집회는 해마다 <b>부 구성이 다릅니다</b> (${years.map(y => `${y}년 ${Object.keys(agg[y].byPart).length}부`).join(' · ')}). 총계만 비교하면 부가 늘어난 해가 크게 증가한 것처럼 보이니 <b>부별 상세</b>를 함께 보세요.`);
-  }
-  if (meta.byDay && new Set(years.map(y => agg[y].days.size)).size > 1) {
-    notes.push(`집회 <b>일수가 해마다 다릅니다</b> (${years.map(y => `${y}년 ${agg[y].days.size}일`).join(' · ')}). 총 연인원 대신 <b>일 평균</b>으로 비교하세요.`);
-  }
-  if (new Set(years.map(y => [...agg[y].places].sort().join(','))).size > 1) {
-    notes.push(`해마다 <b>집계 장소가 다릅니다</b> (${years.map(y => `${y}년 ${[...agg[y].places].sort().join('·')}`).join(' / ')}).`);
-  }
-  if (warn && notes.length) warn.innerHTML = notes.map(n => `<div class="yc-banner"><div>${n}</div></div>`).join('');
-
-  // ── 그 해 일자/부별 세부 ──
-  const detailKeys = meta.byDay
-    ? (SP_DAYS.filter(d => curRec.byDay[d]).concat(curRec.byDay['당일'] ? ['당일'] : []))
-    : Object.keys(curRec.byPart).sort();
-  const detailSrc = meta.byDay ? curRec.byDay : curRec.byPart;
-  // 요일에 실제 날짜를 붙인다 — 집회가 한 주 안에 있으면 '10/5(월)'
-  const dayLabel = (d) => {
-    const i = SP_DAYS.indexOf(d);
-    if (!meta.byDay || i < 0 || curRec.dates.length !== 1) return d;
-    const dt = parseWeekDate(curRec.dates[0]); dt.setDate(dt.getDate() - 6 + i);
-    return `${dt.getMonth() + 1}/${dt.getDate()}(${d})`;
-  };
-  mkChart(`c-sp-${key}-detail`, 'bar', detailKeys.map(dayLabel),
-    PL.map((pl, i) => bds(pl, detailKeys.map(k2 => detailSrc[k2]?.[pl] ?? null), placeColor(i))),
-    { stack: true, total: true });
-  mkTable(`t-sp-${key}-detail`, [meta.byDay ? '일자' : '부', ...PL, '합계'],
-    detailKeys.map(k2 => {
-      const row = detailSrc[k2] || {};
-      return [meta.byDay ? dayLabel(k2) : k2, ...PL.map(pl => fmtOr(row[pl] ?? null)), fmt(PL.reduce((a, pl) => a + (row[pl] || 0), 0))];
-    }));
-
-  // ── 일자별 기록표 · 연도별 일자 비교 (요일로 나뉘는 집회) ──
-  if (meta.byDay) renderSpecialDayTables(key, meta, agg, years, cur, PL);
-
-  // ── 공간(호실/구역)별 ──
-  if (hasRooms) {
-    const srcOf = rec => (spaceView === 'zone' ? rec.byZone : rec.byRoom);
-    const curSrc = srcOf(curRec);
-
-    mkChart(`c-sp-${key}-room`, 'bar', spaceKeys,
-      PL.map((pl, i) => bds(pl, spaceKeys.map(r => curSrc[r]?.[pl] ?? null), placeColor(i))),
-      { stack: true, horiz: true, total: true });
-
-    // 연도 매트릭스 — 해마다 여는 공간이 달라지는 게 바로 보이도록 '미개방'을 따로 표기
-    const allKeys = [...new Set(years.flatMap(y => Object.keys(srcOf(agg[y]))))].sort(roomSort);
-    mkTable(`t-sp-${key}-room`,
-      [spaceView === 'zone' ? '구역' : '호실', ...years.map(y => `${y}년`), `${cur}년 비중`],
-      allKeys.map(r => {
-        const cells = years.map(y => {
-          const row = srcOf(agg[y])[r];
-          if (!row) return '<span style="color:var(--color-text-disabled)">미개방</span>';
-          return fmt(Object.values(row).reduce((a, b2) => a + b2, 0));
-        });
-        const curRow = curSrc[r];
-        const curTot = curRow ? Object.values(curRow).reduce((a, b2) => a + b2, 0) : 0;
-        return [r, ...cells, curRec.total && curTot ? `${(curTot / curRec.total * 100).toFixed(1)}%` : '–'];
-      }));
-  }
-
-  // ── 연도별 요약표 ──
-  mkTable(`t-sp-${key}-year`,
-    [...(meta.byDay ? ['연도', '집회 일수'] : ['연도', '부 수']), '공간 수', meta.byDay ? '총 연인원' : '총 출석',
-     ...(meta.byDay ? ['일 평균'] : []), ...PL, '전년 대비'],
-    years.map(y => {
-      const r = agg[y], py = years[years.indexOf(y) - 1];
-      const d = py != null ? r.total - agg[py].total : null;
-      return [
-        `${y}년`,
-        meta.byDay ? `${r.days.size}일` : `${Object.keys(r.byPart).length}개`,
-        r.rooms.size ? `${r.rooms.size}개` : '–',   // 옛 기록은 실별 숫자가 없다
-        fmt(r.total),
-        ...(meta.byDay ? [fmt(Math.round(r.total / (r.days.size || 1)))] : []),
-        ...PL.map(pl => fmtOr(r.byPlace[pl] ?? null)),
-        d == null ? '–' : `${d >= 0 ? '+' : ''}${fmt(d)}`,
-      ];
-    }));
+  // 차트 — 해마다 고정 색, 고른 해는 진하게(나머지는 약간 옅게)
+  const yc = years.map(y => (y === cur ? yearColor(y) : yearColor(y) + 'aa'));
+  const drill = lbl => setSpecialYear(key, parseInt(lbl));
+  const maxDays = Math.max(...years.map(y => days(agg[y])));
+  const yLabel = y => `${y}년${days(agg[y]) < maxDays ? ` (${days(agg[y])}일)` : ''}`;
+  mkChart(`c-sp-${key}-year`, 'bar', years.map(yLabel),
+    [{ label: '현장', data: years.map(y => siteTot(agg[y]) || null), backgroundColor: yc, borderRadius: 6 }], { drill });
+  mkChart(`c-sp-${key}-avg`, 'bar', years.map(yLabel),
+    [{ label: '일 평균', data: years.map(y => avg(agg[y])), backgroundColor: yc, borderRadius: 6 }], { drill });
+  PL.forEach((pl, i) => {
+    mkChart(`c-sp-${key}-pl${i}`, 'bar', units,
+      years.map(y => ({ label: `${y}년`, data: units.map(u => src(agg[y])[u]?.[pl] || null),
+        backgroundColor: y === cur ? yearColor(y) : yearColor(y) + '99', borderRadius: 4 })));
+  });
 }
 
 // ── 탭 내비게이션 ──
