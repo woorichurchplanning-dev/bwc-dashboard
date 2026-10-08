@@ -682,6 +682,12 @@ table.sp-sum th, table.sp-sum td, table.sp-matrix th, table.sp-matrix td { white
 .sp-up { color:#0a7a3e; font-weight:700; }
 .sp-down { color:#c0392b; font-weight:700; }
 .sp-pct { font-size:11px; color:var(--color-text-tertiary); margin-left:4px; }
+.sp-hol { color:#dc2626 !important; }
+.sp-sat { color:#2563eb !important; }
+.sp-3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:var(--s3, 12px); margin-bottom:var(--s3, 12px); }
+.sp-3 .cc { margin-bottom:0; }
+table.sp-mini { font-size:12px; }
+table.sp-mini th, table.sp-mini td { padding:5px 6px; white-space:nowrap; }
 .sp-ychip { display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:5px; vertical-align:0; }
 table.sp-matrix td, table.sp-matrix th { font-variant-numeric:tabular-nums; }
 table.sp-matrix tr.sp-row-total td { background:var(--color-bg-subtle, #f4f6f8); font-weight:700; }
@@ -5000,6 +5006,16 @@ function setSpecialYear(key, year) {
 
 /* 연도 색 — 해마다 고정. 표 머리·차트·버튼이 같은 색을 쓴다 (2024 주황 · 2025 초록 · 2026 파랑 …) */
 const SP_YEAR_COLORS = ['#eb6834', '#1baf7a', '#2a78d6', '#7c3aed', '#c98500'];
+/* 공휴일 — 해마다 같은 날은 규칙으로, 대체공휴일·음력 공휴일은 날짜를 적어 둔다 */
+const SP_FIXED_HOLIDAYS = ['01-01', '03-01', '05-05', '06-06', '08-15', '10-03', '10-09', '12-25'];
+const SP_EXTRA_HOLIDAYS = { '2026-10-05': '개천절 대체공휴일' };
+const SP_HOLIDAY_NAMES = { '10-03': '개천절', '10-09': '한글날', '12-25': '성탄절', '01-01': '신정', '03-01': '삼일절', '05-05': '어린이날', '06-06': '현충일', '08-15': '광복절' };
+function spHoliday(dt) {
+  const iso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  if (SP_EXTRA_HOLIDAYS[iso]) return SP_EXTRA_HOLIDAYS[iso];
+  const md = iso.slice(5);
+  return SP_FIXED_HOLIDAYS.includes(md) ? SP_HOLIDAY_NAMES[md] : '';
+}
 const yearColor = y => SP_YEAR_COLORS[(((y - 2024) % SP_YEAR_COLORS.length) + SP_YEAR_COLORS.length) % SP_YEAR_COLORS.length];
 
 /* 특별예배 한 집회 — 위에서부터
@@ -5044,12 +5060,21 @@ function renderSpecial(key) {
   const onlTot = r => r.onlineTotal || 0;
   const avg = r => (days(r) ? Math.round(siteTot(r) / days(r)) : null);
   const onlAvg = r => { const c = units.filter(u => onlOf(r, u) > 0).length; return c ? Math.round(onlTot(r) / c) : null; };
-  const dateOf = (r, u) => {
+  const dateObj = (r, u) => {
     const i = SP_DAYS.indexOf(u);
-    if (!meta.byDay || i < 0 || r.dates.length !== 1) return '';
+    if (!meta.byDay || i < 0 || r.dates.length !== 1) return null;
     const dt = parseWeekDate(r.dates[0]); dt.setDate(dt.getDate() - 6 + i);
-    return `${dt.getMonth() + 1}/${dt.getDate()}`;
+    return dt;
   };
+  const dateOf = (r, u) => { const dt = dateObj(r, u); return dt ? `${dt.getMonth() + 1}/${dt.getDate()}` : ''; };
+  const holOf = (r, u) => { const dt = dateObj(r, u); return dt ? spHoliday(dt) : ''; };
+  // 날짜 글자 — 공휴일 빨강(이름은 마우스를 올리면), 토요일 파랑
+  const dateTag = (r, u) => {
+    const t = dateOf(r, u); if (!t) return '';
+    const h = holOf(r, u);
+    return `<div class="sp-date${h ? ' sp-hol' : u === '토' ? ' sp-sat' : ''}"${h ? ` title="${h}"` : ''}>${t}${h ? ' 휴' : ''}</div>`;
+  };
+  const dayHead = u => `<span class="${u === '토' ? 'sp-sat' : u === '일' ? 'sp-hol' : ''}">${u}</span>`;
   const n = v => (v == null || v === 0) ? '<span class="sp-dash">–</span>' : fmt(v);
   const dl = (a, b) => {
     if (!a || !b) return '<span class="sp-dash">–</span>';
@@ -5065,8 +5090,8 @@ function renderSpecial(key) {
       ${meta.byDay ? `<th colspan="${years.length + 1}" class="sp-grp sp-grp-onl">온라인 실시간</th>` : ''}</tr>
     <tr>${years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('')}<th class="sp-n">${prev ? `${cur} vs ${prev}` : '전년 대비'}</th>
       ${meta.byDay ? years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('') + `<th class="sp-n">${prev ? `${cur} vs ${prev}` : '전년 대비'}</th>` : ''}</tr>`;
-  const cell = (y, v, u) => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(v)}${u && dateOf(agg[y], u) ? `<div class="sp-date">${dateOf(agg[y], u)}</div>` : ''}</td>`;
-  let body1 = units.map(u => `<tr><td class="sp-l"><b>${u}</b></td>
+  const cell = (y, v, u) => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(v)}${u ? dateTag(agg[y], u) : ''}</td>`;
+  let body1 = units.map(u => `<tr><td class="sp-l"><b>${dayHead(u)}</b></td>
       ${years.map(y => cell(y, siteOf(agg[y], u), u)).join('')}<td class="nr">${prev ? dl(siteOf(R, u), siteOf(agg[prev], u)) : n(null)}</td>
       ${meta.byDay ? years.map(y => cell(y, onlOf(agg[y], u))).join('') + `<td class="nr">${prev ? dl(onlOf(R, u), onlOf(agg[prev], u)) : n(null)}</td>` : ''}</tr>`).join('');
   body1 += `<tr class="sp-row-total"><td class="sp-l">일 평균</td>${years.map(y => `<td class="nr${y === cur ? ' sp-cur' : ''}">${n(avg(agg[y]))}</td>`).join('')}<td class="nr">${prev ? dl(avg(R), avg(agg[prev])) : n(null)}</td>
@@ -5095,6 +5120,14 @@ function renderSpecial(key) {
   });
   const noRooms = meta.byDay && !R.rooms.size;
 
+  // 비교 묶음 — 송림 · 서현 (· 온라인)
+  const CMP = PL.map(pl => ({ title: esc(pl), get: (r, u) => src(r)[u]?.[pl] || 0 }))
+    .concat(meta.byDay && years.some(y => onlTot(agg[y])) ? [{ title: '온라인 실시간', get: (r, u) => onlOf(r, u) }] : []);
+  const cmpTable = c => `<table class="sp-mini"><tr><th class="sp-l"></th>${units.map(u => `<th class="sp-n">${dayHead(u)}</th>`).join('')}</tr>` +
+    years.map(y => `<tr><td class="sp-l"><span class="sp-ychip" style="background:${yearColor(y)}"></span>${y}</td>${units.map(u => {
+      const v = c.get(agg[y], u), h = holOf(agg[y], u);
+      return `<td class="nr${h ? ' sp-hol' : ''}"${h ? ` title="${h}"` : ''}>${n(v)}</td>`; }).join('')}</tr>`).join('') + '</table>';
+
   el.innerHTML = `
     <div class="cc">
       <div class="ch"><div><div class="ct">${meta.title} 연도별 요약</div>
@@ -5114,14 +5147,16 @@ function renderSpecial(key) {
       </div>
       ${R.note ? `<span class="yc-ctl-lbl" style="font-weight:500">${esc(R.note)}</span>` : ''}
     </div>
-    <div class="cg">
-      ${PL.map((pl, i) => `<div class="cc"><div class="ch"><div><div class="ct">${esc(pl)} — ${meta.byDay ? '요일별' : '부별'} 연도 비교</div>
-        <div class="cs">해마다 색이 다릅니다 · ${cur}년이 기준</div></div></div><canvas id="c-sp-${key}-pl${i}" style="max-height:230px"></canvas></div>`).join('')}
+    <div class="sp-3">
+      ${CMP.map((c, i) => `<div class="cc"><div class="ch"><div><div class="ct">${c.title} — ${meta.byDay ? '요일별' : '부별'} 연도 비교</div>
+        <div class="cs">해마다 색이 다릅니다 · <span class="sp-hol">●</span> 공휴일</div></div></div>
+        <canvas id="c-sp-${key}-cmp${i}" style="max-height:220px"></canvas>
+        <div style="overflow-x:auto;margin-top:8px">${cmpTable(c)}</div></div>`).join('')}
     </div>
     <div class="cc">
       <div class="ch"><div><div class="ct"><span class="sp-ychip" style="background:${yearColor(cur)}"></span>${cur}년 ${meta.title} 기록표</div>
         <div class="cs">${R.dates.length === 1 ? `${R.dates[0]} 주 · ` : ''}${noRooms ? '이 해는 실별 숫자 없이 장소 합계만 있습니다' : '날짜마다 송림 · 서현 · 합계 · 온라인 · 실별'}</div></div></div>
-      <div style="overflow-x:auto"><table class="sp-matrix"><tr><th class="sp-l">구분</th>${units.map(u => `<th class="sp-n">${u}${dateOf(R, u) ? `<div class="sp-date">${dateOf(R, u)}</div>` : ''}</th>`).join('')}<th class="sp-n">합계</th><th class="sp-n">${meta.byDay ? '일평균' : '평균'}</th></tr>${body3}</table></div>
+      <div style="overflow-x:auto"><table class="sp-matrix"><tr><th class="sp-l">구분</th>${units.map(u => `<th class="sp-n">${dayHead(u)}${dateTag(R, u)}</th>`).join('')}<th class="sp-n">합계</th><th class="sp-n">${meta.byDay ? '일평균' : '평균'}</th></tr>${body3}</table></div>
     </div>`;
 
   // 차트 — 해마다 고정 색, 고른 해는 진하게(나머지는 약간 옅게)
@@ -5133,10 +5168,17 @@ function renderSpecial(key) {
     [{ label: '현장', data: years.map(y => siteTot(agg[y]) || null), backgroundColor: yc, borderRadius: 6 }], { drill });
   mkChart(`c-sp-${key}-avg`, 'bar', years.map(yLabel),
     [{ label: '일 평균', data: years.map(y => avg(agg[y])), backgroundColor: yc, borderRadius: 6 }], { drill });
-  PL.forEach((pl, i) => {
-    mkChart(`c-sp-${key}-pl${i}`, 'bar', units,
-      years.map(y => ({ label: `${y}년`, data: units.map(u => src(agg[y])[u]?.[pl] || null),
-        backgroundColor: y === cur ? yearColor(y) : yearColor(y) + '99', borderRadius: 4 })));
+  // 요일별 꺾은선 — 해마다 한 줄, 공휴일 점은 빨갛고 크게
+  CMP.forEach((c, i) => {
+    mkChart(`c-sp-${key}-cmp${i}`, 'line', units,
+      years.map(y => {
+        const col = yearColor(y), hol = units.map(u => holOf(agg[y], u));
+        return { label: `${y}년`, data: units.map(u => c.get(agg[y], u) || null),
+          borderColor: col, backgroundColor: col, borderWidth: y === cur ? 3 : 2, tension: 0.25, spanGaps: false,
+          pointRadius: hol.map(h => (h ? 6 : 3.5)), pointHoverRadius: 7,
+          pointBackgroundColor: hol.map(h => (h ? '#dc2626' : col)), pointBorderColor: hol.map(h => (h ? '#dc2626' : col)) };
+      }),
+      { pointNote: (di, idx) => { const h = holOf(agg[years[di]], units[idx]); return h ? `(${h})` : ''; } });
   });
 }
 
