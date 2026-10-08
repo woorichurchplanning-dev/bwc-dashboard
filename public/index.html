@@ -5097,6 +5097,15 @@ function renderSpecial(key) {
       { stack: true, total: true, drill: (lbl) => setSpecialYear(key, parseInt(lbl)) });
   }
 
+  // ── 연도별 일 평균 — 칸만 있고 그리는 줄이 빠져 있어 비어 보였다 ──
+  if (meta.byDay) {
+    mkChart(`c-sp-${key}-avg`, 'bar', yearLabels,
+      [{ label: '일 평균', data: years.map(y => agg[y].days.size ? Math.round(agg[y].total / agg[y].days.size) : null),
+         backgroundColor: years.map(y => (y === cur ? C.p : '#cbd5e1')),
+         borderColor: years.map(y => (y === cur ? C.p : '#94a3b8')), borderWidth: 1, borderRadius: 6 }],
+      { drill: (lbl) => setSpecialYear(key, parseInt(lbl)) });
+  }
+
   // ── 비교 주의 안내 ──
   const warn = document.getElementById(`sp-${key}-warn`);
   const notes = [];
@@ -5116,13 +5125,20 @@ function renderSpecial(key) {
     ? (SP_DAYS.filter(d => curRec.byDay[d]).concat(curRec.byDay['당일'] ? ['당일'] : []))
     : Object.keys(curRec.byPart).sort();
   const detailSrc = meta.byDay ? curRec.byDay : curRec.byPart;
-  mkChart(`c-sp-${key}-detail`, 'bar', detailKeys,
+  // 요일에 실제 날짜를 붙인다 — 집회가 한 주 안에 있으면 '10/5(월)'
+  const dayLabel = (d) => {
+    const i = SP_DAYS.indexOf(d);
+    if (!meta.byDay || i < 0 || curRec.dates.length !== 1) return d;
+    const dt = parseWeekDate(curRec.dates[0]); dt.setDate(dt.getDate() - 6 + i);
+    return `${dt.getMonth() + 1}/${dt.getDate()}(${d})`;
+  };
+  mkChart(`c-sp-${key}-detail`, 'bar', detailKeys.map(dayLabel),
     PL.map((pl, i) => bds(pl, detailKeys.map(k2 => detailSrc[k2]?.[pl] ?? null), placeColor(i))),
     { stack: true, total: true });
   mkTable(`t-sp-${key}-detail`, [meta.byDay ? '일자' : '부', ...PL, '합계'],
     detailKeys.map(k2 => {
       const row = detailSrc[k2] || {};
-      return [k2, ...PL.map(pl => fmtOr(row[pl] ?? null)), fmt(PL.reduce((a, pl) => a + (row[pl] || 0), 0))];
+      return [meta.byDay ? dayLabel(k2) : k2, ...PL.map(pl => fmtOr(row[pl] ?? null)), fmt(PL.reduce((a, pl) => a + (row[pl] || 0), 0))];
     }));
 
   // ── 공간(호실/구역)별 ──
