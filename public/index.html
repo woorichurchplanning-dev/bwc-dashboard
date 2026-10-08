@@ -684,7 +684,10 @@ table.sp-sum th, table.sp-sum td, table.sp-matrix th, table.sp-matrix td { white
 .sp-pct { font-size:11px; color:var(--color-text-tertiary); margin-left:4px; }
 .sp-hol { color:#dc2626 !important; }
 td.sp-cell { vertical-align:top; line-height:1.35; }
-.sp-v { font-size:14px; font-weight:700; }
+.sp-v { font-size:14px; font-weight:600; }
+td.sp-strong .sp-v { font-weight:800; }
+.sp-onl-card { opacity:.92; }
+.sp-onl-card .ct { color:var(--color-text-secondary); }
 .sp-dl { font-size:11.5px; margin-top:1px; }
 .sp-sat { color:#2563eb !important; }
 .sp-3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:var(--s3, 12px); margin-bottom:var(--s3, 12px); }
@@ -4864,6 +4867,8 @@ const SPECIAL_META = {
 };
 
 const SP_YEAR = {};        // 탭별로 선택된 연도
+const SP_SUMVIEW = {};    // 탭별 요약표 보기 ('total' 현장 합계 / 'site' 송림·서현·합계)
+function setSpecialSumView(key, v) { SP_SUMVIEW[key] = v; renderSpecial(key); }
 const SP_METRIC = {};     // 탭별 꺾은선 지표 ('site' 현장 합계 / 장소 이름 / 'online' / 'all')
 function setSpecialMetric(key, m) { SP_METRIC[key] = m; renderSpecial(key); }
 const SP_SPACEVIEW = {};  // 탭별 공간 보기 ('room' 호실별 / 'zone' 구역별)
@@ -5122,29 +5127,41 @@ function renderSpecial(key) {
   };
   const yh = y => `<span class="sp-ychip" style="background:${yearColor(y)}"></span>${y}`;
 
-  // ① 연도별 요약표 — 칸마다 날짜 / 인원 / 전년 같은 요일 대비
-  const head1 = `<tr><th rowspan="2" class="sp-l">${meta.byDay ? '요일' : '부'}</th>
-      <th colspan="${years.length}" class="sp-grp">현장</th>
-      ${meta.byDay ? `<th colspan="${years.length}" class="sp-grp sp-grp-onl">온라인 실시간</th>` : ''}</tr>
-    <tr>${years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('')}
-      ${meta.byDay ? years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('') : ''}</tr>`;
-  const vcell = (y, v, pv, u, extra) => `<td class="nr sp-cell${y === cur ? ' sp-cur' : ''}">${u ? dateTag(agg[y], u) : ''}` +
-    `<div class="sp-v">${n(v)}</div>${pv !== undefined && v ? `<div class="sp-dl">${dl(v, pv)}</div>` : ''}${extra || ''}</td>`;
+  // ① 연도별 요약표 (현장) — 칸마다 날짜 / 인원 / 전년 같은 요일 대비
+  //    보기: 현장 합계만 / 송림 · 서현 · 합계
+  const sumView = SP_SUMVIEW[key] === 'site' ? 'site' : 'total';
   const prevOf = y => years[years.indexOf(y) - 1];
-  let body1 = units.map(u => `<tr><td class="sp-l"><b>${dayHead(u)}</b></td>
-      ${years.map(y => vcell(y, siteOf(agg[y], u), prevOf(y) ? siteOf(agg[prevOf(y)], u) : undefined, u)).join('')}
-      ${meta.byDay ? years.map(y => vcell(y, onlOf(agg[y], u), prevOf(y) ? onlOf(agg[prevOf(y)], u) : undefined, u)).join('') : ''}</tr>`).join('');
-  body1 += `<tr class="sp-row-total"><td class="sp-l">일 평균</td>${years.map(y => vcell(y, avg(agg[y]), prevOf(y) ? avg(agg[prevOf(y)]) : undefined)).join('')}
-      ${meta.byDay ? years.map(y => vcell(y, onlAvg(agg[y]), prevOf(y) ? onlAvg(agg[prevOf(y)]) : undefined)).join('') : ''}</tr>`;
-  // 합계 — 진행 중인 해는 들어온 요일만 있으니 같은 요일끼리만 견준다
+  const COLS = sumView === 'site'
+    ? PL.map(pl => ({ t: esc(pl), get: (r, u) => src(r)[u]?.[pl] || 0 })).concat([{ t: '합계', get: siteOf, strong: true }])
+    : [{ t: '현장', get: siteOf, strong: true }];
+  // u === '' 이면 날짜 자리만 비워 두어 같은 줄 숫자 높이를 맞춘다
+  const vcell = (y, v, pv, u, extra, strong) => `<td class="nr sp-cell${y === cur ? ' sp-cur' : ''}${strong ? ' sp-strong' : ''}">${u ? dateTag(agg[y], u) : u === '' ? '<div class="sp-date">&nbsp;</div>' : ''}` +
+    `<div class="sp-v">${n(v)}</div>${pv !== undefined && v ? `<div class="sp-dl">${dl(v, pv)}</div>` : ''}${extra || ''}</td>`;
   const sameTot = (y, get) => {
     const p0 = prevOf(y); if (!p0) return undefined;
-    const us = units.filter(u => get(agg[y], u) > 0);
-    return sum(us.map(u => get(agg[p0], u)));
+    return sum(units.filter(u => get(agg[y], u) > 0).map(u => get(agg[p0], u)));
   };
+  const totOf = (r, get) => sum(units.map(u => get(r, u)));
+  const avgOf = (r, get) => { const c = units.filter(u => get(r, u) > 0).length; return c ? Math.round(totOf(r, get) / c) : null; };
   const partialNote = y => { const p0 = prevOf(y); return p0 && days(agg[y]) < days(agg[p0]) ? `<div class="sp-date">같은 ${days(agg[y])}일끼리</div>` : ''; };
-  body1 += `<tr class="sp-row-total"><td class="sp-l">합계</td>${years.map(y => vcell(y, siteTot(agg[y]), sameTot(y, siteOf), null, partialNote(y))).join('')}
-      ${meta.byDay ? years.map(y => vcell(y, onlTot(agg[y]), sameTot(y, onlOf))).join('') : ''}</tr>`;
+  const head1 = sumView === 'site'
+    ? `<tr><th rowspan="2" class="sp-l">${meta.byDay ? '요일' : '부'}</th>${years.map(y => `<th colspan="${COLS.length}" class="sp-grp${y === cur ? ' sp-cur' : ''}" style="border-bottom-color:${yearColor(y)}">${yh(y)}</th>`).join('')}</tr>
+       <tr>${years.map(y => COLS.map(c => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${c.t}</th>`).join('')).join('')}</tr>`
+    : `<tr><th class="sp-l">${meta.byDay ? '요일' : '부'}</th>${years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('')}</tr>`;
+  let body1 = units.map(u => `<tr><td class="sp-l"><b>${dayHead(u)}</b></td>${years.map(y => COLS.map((c, ci) =>
+      vcell(y, c.get(agg[y], u), prevOf(y) ? c.get(agg[prevOf(y)], u) : undefined, ci === 0 ? u : '', '', c.strong)).join('')).join('')}</tr>`).join('');
+  body1 += `<tr class="sp-row-total"><td class="sp-l">일 평균</td>${years.map(y => COLS.map(c =>
+      vcell(y, avgOf(agg[y], c.get), prevOf(y) ? avgOf(agg[prevOf(y)], c.get) : undefined, null, '', c.strong)).join('')).join('')}</tr>`;
+  body1 += `<tr class="sp-row-total"><td class="sp-l">합계</td>${years.map(y => COLS.map((c, ci) =>
+      vcell(y, totOf(agg[y], c.get), sameTot(y, c.get), null, ci === COLS.length - 1 ? partialNote(y) : '', c.strong)).join('')).join('')}</tr>`;
+
+  // 온라인 실시간 — 참고용, 맨 아래 따로
+  const hasOnl = meta.byDay && years.some(y => onlTot(agg[y]));
+  const onlHead = `<tr><th class="sp-l">요일</th>${years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('')}</tr>`;
+  let onlBody = units.map(u => `<tr><td class="sp-l"><b>${dayHead(u)}</b></td>${years.map(y =>
+      vcell(y, onlOf(agg[y], u), prevOf(y) ? onlOf(agg[prevOf(y)], u) : undefined, u)).join('')}</tr>`).join('');
+  onlBody += `<tr class="sp-row-total"><td class="sp-l">일 평균</td>${years.map(y => vcell(y, onlAvg(agg[y]), prevOf(y) ? onlAvg(agg[prevOf(y)]) : undefined)).join('')}</tr>`;
+  onlBody += `<tr class="sp-row-total"><td class="sp-l">합계</td>${years.map(y => vcell(y, onlTot(agg[y]), sameTot(y, onlOf))).join('')}</tr>`;
 
   // ③ 고른 해 기록표 — 송림 계 · 서현 계 · 합계 · 온라인 · 실별
   const line = (label, vals, cls) => {
@@ -5154,7 +5171,6 @@ function renderSpecial(key) {
   let body3 = '';
   PL.forEach(pl => { body3 += line(`<b>${esc(pl)} 계</b>`, units.map(u => src(R)[u]?.[pl] || 0), 'sp-row-site'); });
   body3 += line('<b>합계</b> <span class="sp-dash">현장</span>', units.map(u => siteOf(R, u)), 'sp-row-total');
-  if (meta.byDay) body3 += line('<b>온라인</b> <span class="sp-dash">실시간</span>', units.map(u => onlOf(R, u)), 'sp-row-online');
   if (meta.byDay) PL.forEach(pl => {
     const rooms = [...new Set(units.flatMap(u => Object.keys(R.byDayRoom[u]?.[pl] || {})))].sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }));
     rooms.forEach(rm => { body3 += line(`<span class="sp-dash">${esc(pl)} ·</span> ${esc(rm)}`, units.map(u => R.byDayRoom[u]?.[pl]?.[rm] || 0)); });
@@ -5162,11 +5178,8 @@ function renderSpecial(key) {
   const noRooms = meta.byDay && !R.rooms.size;
 
   // 꺾은선 지표 — 현장 합계 / 장소별 / 온라인 / 전체(현장+온라인)
-  const hasOnl = meta.byDay && years.some(y => onlTot(agg[y]));
   const METRICS = [{ id: 'site', title: '현장 합계', get: (r, u) => siteOf(r, u) }]
-    .concat(PL.map(pl => ({ id: pl, title: esc(pl), get: (r, u) => src(r)[u]?.[pl] || 0 })))
-    .concat(hasOnl ? [{ id: 'online', title: '온라인 실시간', get: (r, u) => onlOf(r, u) },
-                      { id: 'all', title: '전체 (현장+온라인)', get: (r, u) => siteOf(r, u) + onlOf(r, u) }] : []);
+    .concat(PL.map(pl => ({ id: pl, title: esc(pl), get: (r, u) => src(r)[u]?.[pl] || 0 })));
   const M = METRICS.find(m => m.id === SP_METRIC[key]) || METRICS[0];
   const CMP = [M];
   const cmpTable = c => `<table class="sp-mini"><tr><th class="sp-l"></th>${units.map(u => `<th class="sp-n">${dayHead(u)}</th>`).join('')}</tr>` +
@@ -5176,8 +5189,12 @@ function renderSpecial(key) {
 
   el.innerHTML = `
     <div class="cc">
-      <div class="ch"><div><div class="ct">${meta.title} 연도별 요약</div>
-        <div class="cs">${meta.byDay ? '요일마다' : '부마다'} 해마다의 인원 · 전년 대비는 ${cur}년과 ${prev || '전년'}년 비교 · 연도 버튼이나 아래 막대를 누르면 기준 연도가 바뀝니다</div></div></div>
+      <div class="ch"><div><div class="ct">${meta.title} 연도별 요약 — 현장</div>
+        <div class="cs">${meta.byDay ? '요일마다' : '부마다'} 해마다의 현장 인원 · 칸 아래는 전년 같은 ${meta.byDay ? '요일' : '부'} 대비</div></div>
+        <div class="yc-seg-group">
+          <button class="yc-seg${sumView === 'total' ? ' on' : ''}" onclick="setSpecialSumView('${key}','total')">현장 합계</button>
+          <button class="yc-seg${sumView === 'site' ? ' on' : ''}" onclick="setSpecialSumView('${key}','site')">송림 · 서현 · 합계</button>
+        </div></div>
       <div style="overflow-x:auto"><table class="sp-sum">${head1}${body1}</table></div>
     </div>
     <div class="cg">
@@ -5202,9 +5219,14 @@ function renderSpecial(key) {
     </div>
     <div class="cc">
       <div class="ch"><div><div class="ct"><span class="sp-ychip" style="background:${yearColor(cur)}"></span>${cur}년 ${meta.title} 기록표</div>
-        <div class="cs">${R.dates.length === 1 ? `${R.dates[0]} 주 · ` : ''}${noRooms ? '이 해는 실별 숫자 없이 장소 합계만 있습니다' : '날짜마다 송림 · 서현 · 합계 · 온라인 · 실별'}</div></div></div>
+        <div class="cs">${R.dates.length === 1 ? `${R.dates[0]} 주 · ` : ''}${noRooms ? '이 해는 실별 숫자 없이 장소 합계만 있습니다' : '날짜마다 송림 · 서현 · 합계 · 실별'}</div></div></div>
       <div style="overflow-x:auto"><table class="sp-matrix"><tr><th class="sp-l">구분</th>${units.map(u => `<th class="sp-n">${dayHead(u)}${dateTag(R, u)}</th>`).join('')}<th class="sp-n">합계</th><th class="sp-n">${meta.byDay ? '일평균' : '평균'}</th></tr>${body3}</table></div>
-    </div>`;
+    </div>
+    ${hasOnl ? `<div class="cc sp-onl-card">
+      <div class="ch"><div><div class="ct">참고 · 온라인 실시간 접속</div>
+        <div class="cs">현장 인원에는 넣지 않습니다 · 칸 아래는 전년 같은 요일 대비</div></div></div>
+      <div style="overflow-x:auto"><table class="sp-sum">${onlHead}${onlBody}</table></div>
+    </div>` : ''}`;
 
   // 차트 — 해마다 고정 색, 고른 해는 진하게(나머지는 약간 옅게)
   const yc = years.map(y => (y === cur ? yearColor(y) : yearColor(y) + 'aa'));
