@@ -5139,7 +5139,8 @@ function renderSpecial(key) {
 
   // ① 연도별 요약표 (현장) — 칸마다 날짜 / 인원 / 전년 같은 요일 대비
   //    보기: 현장 합계만 / 송림 · 서현 · 합계
-  const sumView = SP_SUMVIEW[key] === 'site' ? 'site' : 'total';
+  const sumView = 'site';   // 송림 · 서현 · 합계로만 보여 준다
+  const yd = [...years].reverse();   // 표는 최신 해 먼저 (2026 → 2025 → 2024)
   const prevOf = y => years[years.indexOf(y) - 1];
   const COLS = sumView === 'site'
     ? PL.map(pl => ({ t: esc(pl), get: (r, u) => src(r)[u]?.[pl] || 0 })).concat([{ t: '합계', get: siteOf, strong: true }])
@@ -5155,23 +5156,23 @@ function renderSpecial(key) {
   const avgOf = (r, get) => { const c = units.filter(u => get(r, u) > 0).length; return c ? Math.round(totOf(r, get) / c) : null; };
   const partialNote = y => { const p0 = prevOf(y); return p0 && days(agg[y]) < days(agg[p0]) ? `<div class="sp-date">같은 ${days(agg[y])}일끼리</div>` : ''; };
   const head1 = sumView === 'site'
-    ? `<tr><th rowspan="2" class="sp-l">${meta.byDay ? '요일' : '부'}</th>${years.map(y => `<th colspan="${COLS.length}" class="sp-grp${y === cur ? ' sp-cur' : ''}" style="border-bottom-color:${yearColor(y)}">${yh(y)}</th>`).join('')}</tr>
-       <tr>${years.map(y => COLS.map(c => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${c.t}</th>`).join('')).join('')}</tr>`
+    ? `<tr><th rowspan="2" class="sp-l">${meta.byDay ? '요일' : '부'}</th>${yd.map(y => `<th colspan="${COLS.length}" class="sp-grp${y === cur ? ' sp-cur' : ''}" style="border-bottom-color:${yearColor(y)}">${yh(y)}</th>`).join('')}</tr>
+       <tr>${yd.map(y => COLS.map(c => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${c.t}</th>`).join('')).join('')}</tr>`
     : `<tr><th class="sp-l">${meta.byDay ? '요일' : '부'}</th>${years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('')}</tr>`;
-  let body1 = units.map(u => `<tr><td class="sp-l"><b>${dayHead(u)}</b></td>${years.map(y => COLS.map((c, ci) =>
+  let body1 = units.map(u => `<tr><td class="sp-l"><b>${dayHead(u)}</b></td>${yd.map(y => COLS.map((c, ci) =>
       vcell(y, c.get(agg[y], u), prevOf(y) ? c.get(agg[prevOf(y)], u) : undefined, ci === 0 ? u : '', '', c.strong)).join('')).join('')}</tr>`).join('');
-  body1 += `<tr class="sp-row-total"><td class="sp-l">일 평균</td>${years.map(y => COLS.map(c =>
+  body1 += `<tr class="sp-row-total"><td class="sp-l">일 평균</td>${yd.map(y => COLS.map(c =>
       vcell(y, avgOf(agg[y], c.get), prevOf(y) ? avgOf(agg[prevOf(y)], c.get) : undefined, null, '', c.strong)).join('')).join('')}</tr>`;
-  body1 += `<tr class="sp-row-total"><td class="sp-l">합계</td>${years.map(y => COLS.map((c, ci) =>
+  body1 += `<tr class="sp-row-total"><td class="sp-l">합계</td>${yd.map(y => COLS.map((c, ci) =>
       vcell(y, totOf(agg[y], c.get), sameTot(y, c.get), null, ci === COLS.length - 1 ? partialNote(y) : '', c.strong)).join('')).join('')}</tr>`;
 
   // 온라인 실시간 — 참고용, 맨 아래 따로
   const hasOnl = meta.byDay && years.some(y => onlTot(agg[y]));
-  const onlHead = `<tr><th class="sp-l">요일</th>${years.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('')}</tr>`;
-  let onlBody = units.map(u => `<tr><td class="sp-l"><b>${dayHead(u)}</b></td>${years.map(y =>
+  const onlHead = `<tr><th class="sp-l">요일</th>${yd.map(y => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${yh(y)}</th>`).join('')}</tr>`;
+  let onlBody = units.map(u => `<tr><td class="sp-l"><b>${dayHead(u)}</b></td>${yd.map(y =>
       vcell(y, onlOf(agg[y], u), prevOf(y) ? onlOf(agg[prevOf(y)], u) : undefined, u)).join('')}</tr>`).join('');
-  onlBody += `<tr class="sp-row-total"><td class="sp-l">일 평균</td>${years.map(y => vcell(y, onlAvg(agg[y]), prevOf(y) ? onlAvg(agg[prevOf(y)]) : undefined)).join('')}</tr>`;
-  onlBody += `<tr class="sp-row-total"><td class="sp-l">합계</td>${years.map(y => vcell(y, onlTot(agg[y]), sameTot(y, onlOf))).join('')}</tr>`;
+  onlBody += `<tr class="sp-row-total"><td class="sp-l">일 평균</td>${yd.map(y => vcell(y, onlAvg(agg[y]), prevOf(y) ? onlAvg(agg[prevOf(y)]) : undefined)).join('')}</tr>`;
+  onlBody += `<tr class="sp-row-total"><td class="sp-l">합계</td>${yd.map(y => vcell(y, onlTot(agg[y]), sameTot(y, onlOf))).join('')}</tr>`;
 
   // ③ 고른 해 기록표 — 송림 계 · 서현 계 · 합계 · 온라인 · 실별
   const line = (label, vals, cls) => {
@@ -5193,19 +5194,11 @@ function renderSpecial(key) {
   const M = METRICS.find(m => m.id === SP_METRIC[key]) || METRICS[0];
   const CMP = [M];
   const cmpTable = c => `<table class="sp-mini"><tr><th class="sp-l"></th>${units.map(u => `<th class="sp-n">${dayHead(u)}</th>`).join('')}</tr>` +
-    years.map(y => `<tr><td class="sp-l"><span class="sp-ychip" style="background:${yearColor(y)}"></span>${y}</td>${units.map(u => {
+    [...years].reverse().map(y => `<tr><td class="sp-l"><span class="sp-ychip" style="background:${yearColor(y)}"></span>${y}</td>${units.map(u => {
       const v = c.get(agg[y], u), h = holOf(agg[y], u);
       return `<td class="nr${h ? ' sp-hol' : ''}"${h ? ` title="${h}"` : ''}>${n(v)}</td>`; }).join('')}</tr>`).join('') + '</table>';
 
   el.innerHTML = `
-    <div class="cc">
-      <div class="ch"><div><div class="ct">${meta.title} 연도별 요약 — 현장</div></div>
-        <div class="yc-seg-group">
-          <button class="yc-seg${sumView === 'total' ? ' on' : ''}" onclick="setSpecialSumView('${key}','total')">현장 합계</button>
-          <button class="yc-seg${sumView === 'site' ? ' on' : ''}" onclick="setSpecialSumView('${key}','site')">송림 · 서현 · 합계</button>
-        </div></div>
-      <div style="overflow-x:auto"><table class="sp-sum" style="min-width:${84 + years.length * COLS.length * 92}px">${head1}${body1}</table></div>
-    </div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">연도별 현장 ${meta.byDay ? '연인원' : '인원'}</div><div class="cs">막대를 누르면 그 해 상세 · %는 전년 같은 요일 대비</div></div></div>
         <canvas id="c-sp-${key}-year" style="max-height:190px"></canvas></div>
@@ -5218,6 +5211,11 @@ function renderSpecial(key) {
         ${years.map(y => `<button class="yc-seg${y === cur ? ' on' : ''}" onclick="setSpecialYear('${key}',${y})" style="${y === cur ? `background:${yearColor(y)};border-color:${yearColor(y)};color:#fff` : ''}"><span class="sp-ychip" style="background:${y === cur ? '#fff' : yearColor(y)}"></span>${y}년</button>`).join('')}
       </div>
       ${R.note ? `<span class="yc-ctl-lbl" style="font-weight:500">${esc(R.note)}</span>` : ''}
+    </div>
+    <div class="cc">
+      <div class="ch"><div><div class="ct">${meta.title} 연도별 요약 — 현장</div></div>
+</div>
+      <div style="overflow-x:auto"><table class="sp-sum" style="min-width:${84 + years.length * COLS.length * 92}px">${head1}${body1}</table></div>
     </div>
     <div class="cc">
       <div class="ch"><div><div class="ct">${meta.byDay ? '요일별' : '부별'} 연도 비교 — ${M.title}</div>
