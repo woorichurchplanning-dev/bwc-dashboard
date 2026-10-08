@@ -16,14 +16,16 @@ const GAS = process.env.APPS_SCRIPT_URL ||
 
 if (!SECRET) { console.error('INGEST_SECRET 이 없습니다'); process.exit(1); }
 
-// 오늘이 속한 주의 일요일부터 거슬러 올라간다
-const base = new Date();
-base.setDate(base.getDate() - base.getDay());
+// 오늘이 속한 주의 '끝나는' 일요일부터 거슬러 올라간다 (주차 키 = 그 주가 끝나는 주일).
+// 예전에는 지난 일요일부터 세어서, 월~토에 진행 중인 주(특별새벽부흥회 등)가
+// 그 주가 끝날 때까지 대시보드에 안 들어왔다. GitHub 러너는 UTC 라 한국 날짜로 맞춘다.
+const base = new Date(Date.now() + 9 * 3600 * 1000);
+base.setUTCHours(0, 0, 0, 0);
+base.setUTCDate(base.getUTCDate() + (7 - base.getUTCDay()) % 7);
 const weeks = [];
 for (let i = 0; i < WEEKS; i++) {
-  const d = new Date(base); d.setDate(base.getDate() - i * 7);
-  weeks.push([d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'),
-              String(d.getDate()).padStart(2, '0')].join('-'));
+  const d = new Date(base); d.setUTCDate(base.getUTCDate() - i * 7);
+  weeks.push(d.toISOString().slice(0, 10));
 }
 
 const READ_KEY = process.env.SHEET_READ_KEY || '';

@@ -16,9 +16,11 @@ trap 'rm -rf "$TMP"' EXIT
 # 1) 오늘 기준으로 과거 N주 일요일을 <=12주 배치로 분할
 WEEKS_BACK="$WEEKS_BACK" node -e '
 const wb = Number(process.env.WEEKS_BACK || 130);
-const t = new Date(); const b = new Date(t); b.setDate(t.getDate() - t.getDay());
+// 이번 주가 끝나는 일요일(한국 날짜)부터 — 진행 중인 주도 담는다. refresh-recent.mjs 와 같은 규칙
+const b = new Date(Date.now() + 9 * 3600 * 1000); b.setUTCHours(0, 0, 0, 0);
+b.setUTCDate(b.getUTCDate() + (7 - b.getUTCDay()) % 7);
 const w = [];
-for (let i = 0; i < wb; i++) { const d = new Date(b); d.setDate(b.getDate() - i * 7); w.push(d.toISOString().split("T")[0]); }
+for (let i = 0; i < wb; i++) { const d = new Date(b); d.setUTCDate(b.getUTCDate() - i * 7); w.push(d.toISOString().split("T")[0]); }
 const batches = []; for (let i = 0; i < w.length; i += 12) batches.push(w.slice(i, i + 12));
 batches.forEach((x, i) => console.log(i + " " + x.join(",")));
 ' > "$TMP/batches.txt"

@@ -655,24 +655,20 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 .pill.kind { font-weight:500; }
 .pill.kind.on { background:var(--color-text-primary); border-color:var(--color-text-primary); }
 
-/* ── 입력 현황 ── */
-.sub-card .ch { margin-bottom:var(--s3); }
-.sub-sum { font-size:13px; font-weight:700; padding:3px 10px; border-radius:20px;
+/* ── 입력 현황 (한 줄 띠) ── */
+.sub-card { padding:10px 14px; }
+.sub-line { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.sub-ttl { font-size:13px; font-weight:700; color:var(--color-text-primary); margin-right:4px; }
+.sub-wk { font-weight:500; color:var(--color-text-tertiary); font-size:12px; }
+.sub-sum { font-size:12px; font-weight:700; padding:2px 9px; border-radius:20px;
   background:var(--color-warning-bg); color:var(--color-warning); }
 .sub-sum.done { background:var(--color-positive-bg); color:var(--color-positive); }
-.sub-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px; }
-.sub-g { border:1px solid var(--color-border-default); border-radius:10px; padding:10px 12px; }
-.sub-g.miss { border-color:var(--color-warning); background:var(--color-warning-bg); }
-.sub-g-hd { display:flex; justify-content:space-between; font-size:13px; font-weight:600;
-  color:var(--color-text-primary); }
-.sub-g-hd span { font-variant-numeric:tabular-nums; color:var(--color-text-tertiary); }
-.sub-g.miss .sub-g-hd span { color:var(--color-warning); font-weight:700; }
-.sub-g-miss { margin-top:4px; font-size:12px; line-height:1.55; color:var(--color-text-secondary); }
-
-.sub-notes { margin-top:var(--s3); padding-top:var(--s3); border-top:1px solid var(--color-border-default); }
-.sub-notes-hd { font-size:12px; font-weight:700; color:var(--color-text-tertiary); margin-bottom:4px; }
-.sub-note { font-size:12.5px; line-height:1.65; color:var(--color-text-secondary); }
-.sub-note b { font-weight:600; color:var(--color-text-primary); margin-right:4px; }
+.sub-chip { font-size:11.5px; padding:2px 8px; border-radius:6px; border:1px solid var(--color-border-default);
+  color:var(--color-text-secondary); white-space:nowrap; }
+.sub-chip.ok { color:var(--color-positive); }
+.sub-chip.miss { border-color:var(--color-warning); background:var(--color-warning-bg); color:var(--color-warning); font-weight:600; cursor:help; }
+.sub-chip.off { color:var(--color-text-tertiary); background:var(--color-bg-subtle, #f4f4f2); }
+.sub-miss-line { margin-top:6px; font-size:12px; color:var(--color-text-secondary); line-height:1.5; }
 
 /* ── WEEKLY REPORT ── */
 .wk-report { margin-bottom:var(--s6); }
@@ -881,7 +877,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   </div>
   <div class="cg">
     <div class="cc"><div class="ch"><div><div class="ct">교구 추이</div><div class="cs">다락방·순장반 출석</div></div><div class="cpf"><button class="cpb" onclick="sw('district')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-dist',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-dist">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-dist',1)">▲</button></div></div></div><canvas id="c-hm-dist"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct">새가족 현황</div><div class="cs" id="cs-hm-newfam">방문자·등록가능자</div></div><div class="cpf"><button class="cpb" onclick="sw('newfam')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-newfam',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-newfam">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-newfam',1)">▲</button></div></div></div><div class="nf-sum" id="nf-sum"></div><canvas id="c-hm-newfam"></canvas></div>
+    <div class="cc"><div class="ch"><div><div class="ct">새가족 현황</div><div class="cs" id="cs-hm-newfam">등록신청 = 등록 가능 + 등록 불가능</div></div><div class="cpf"><button class="cpb" onclick="sw('newfam')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-newfam',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-newfam">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-newfam',1)">▲</button></div></div></div><div class="nf-sum" id="nf-sum"></div><canvas id="c-hm-newfam"></canvas></div>
   </div>
 </section>
 
@@ -1148,7 +1144,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 <!-- ═══ NEWFAM ═══ -->
 <section class="sec" id="s-newfam">
   <div class="page-hdr">
-    <div class="page-hdr-title"><h2>새가족</h2><p>방문자 · 등록 가능 여부 · 등록 가능 사유 현황</p></div>
+    <div class="page-hdr-title"><h2>새가족</h2><p>등록신청 · 등록 가능 여부 · 사유 · 새가족교육 수료</p></div>
   </div>
   <div class="stabs">
     <button class="stab on" onclick="ss2('newfam','adult')">장년</button>
@@ -1157,20 +1153,20 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
 
   <div class="ss on" id="newfam-adult">
     <div class="kg" id="kk-newfam-adult"></div>
-    <div class="cc"><div class="ch"><div><div class="ct">장년 방문자 구성</div>
-      <div class="cs">방문자 중 등록 가능 · 등록 불가능</div></div></div>
+    <div class="cc"><div class="ch"><div><div class="ct">장년 등록신청 구성</div>
+      <div class="cs">등록신청 중 등록 가능 · 등록 불가능</div></div></div>
       <div class="fw" id="fw-adult"></div>
     </div>
 
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">장년 방문자 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-adult-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">장년 등록신청 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-adult-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">장년 등록 가능 사유 (누적)</div><div class="cs">냉담기·이사·짝믿음·결혼·초신자 등</div></div></div><canvas id="c-nf-adult-route"></canvas></div>
     </div>
     <div class="nf-split"><span>같은 사람들을 연령대·성별로 본 것</span></div>
     <div class="kg" id="kk-newfam-reg"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">연령대별 등록자</div><div class="cs">선택 기간 누계 · 남녀</div></div></div><canvas id="c-nf-reg-age"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">주차별 등록자</div><div class="cs">남녀 합산</div></div></div><canvas id="c-nf-reg-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">연령대별 새가족교육 수료</div><div class="cs">선택 기간 누계 · 남녀</div></div></div><canvas id="c-nf-reg-age"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">주차별 새가족교육 수료</div><div class="cs">남녀 합산</div></div></div><canvas id="c-nf-reg-trend"></canvas></div>
     </div>
     <div class="cc"><div class="ch"><div><div class="ct">연령대 구성</div><div class="cs">선택 기간 누계</div></div></div>
       <div class="fw" id="fw-reg"></div>
@@ -1180,7 +1176,7 @@ table.yc-heat td.yc-yr { text-align:left; font-weight:700; }
   <div class="ss" id="newfam-youth">
     <div class="kg" id="kk-newfam-youth"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">청년 방문자 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-youth-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">청년 등록신청 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-youth-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">청년 등록 가능 사유 (누적)</div><div class="cs">냉담기·이사·짝믿음·결혼·초신자 등</div></div></div><canvas id="c-nf-youth-route"></canvas></div>
     </div>
   </div>
@@ -1551,22 +1547,22 @@ function renderHomeNfSummary(ws) {
   setText('cs-hm-newfam', `${md(ws[0])} ~ ${md(lastW)} · ${ws.length}주`);
   box.innerHTML = `
     <div class="nf-sum-box">
-      <div class="nf-sum-lbl">해당 기간 방문자</div>
+      <div class="nf-sum-lbl">해당 기간 등록신청</div>
       <div><span class="nf-sum-num" style="color:${C.b}">${fmt(visit)}</span><span class="nf-sum-unit">명</span></div>
       <div class="nf-sum-this">이번 주 <b>${fmt(thisVisit)}</b>명 · ${md(lastW)}</div>
     </div>
     <div class="nf-sum-box">
-      <div class="nf-sum-lbl">등록 가능자</div>
+      <div class="nf-sum-lbl">등록 가능</div>
       <div><span class="nf-sum-num" style="color:${C.gr}">${fmt(able)}</span><span class="nf-sum-unit">명</span></div>
-      <div class="nf-sum-sub">방문자의 ${visit ? Math.round(able / visit * 100) : 0}%</div>
+      <div class="nf-sum-sub">등록신청의 ${visit ? Math.round(able / visit * 100) : 0}%</div>
     </div>
     <div class="nf-sum-box">
-      <div class="nf-sum-lbl">등록 불가능자</div>
+      <div class="nf-sum-lbl">등록 불가능</div>
       <div><span class="nf-sum-num" style="color:${C.or}">${fmt(unable)}</span><span class="nf-sum-unit">명</span></div>
-      <div class="nf-sum-sub">방문자의 ${visit ? Math.round(unable / visit * 100) : 0}%</div>
+      <div class="nf-sum-sub">등록신청의 ${visit ? Math.round(unable / visit * 100) : 0}%</div>
     </div>
     <div class="nf-sum-box">
-      <div class="nf-sum-lbl">해당 기간 등록자</div>
+      <div class="nf-sum-lbl">해당 기간 새가족교육 수료</div>
       <div><span class="nf-sum-num" style="color:${C.pk}">${fmt(reg)}</span><span class="nf-sum-unit">명</span></div>
       <div class="nf-sum-this">${lastRegW ? `이번 주 <b>${fmt(thisReg)}</b>명 · ${md(lastRegW)}` : '입력 대기'}</div>
     </div>`;
@@ -1889,7 +1885,7 @@ function exportCSV() {
   } else if (tab === 'newfam') {
     name = '새가족';
     const fd = filterByMode(D.newFamily);
-    rows.push(['날짜','구분','방문자','등록 가능','등록 불가능','냉담기','이사','짝믿음','기타(이단 등)','결혼(부부)','초신자']);
+    rows.push(['날짜','구분','등록신청','등록 가능','등록 불가능','냉담기','이사','짝믿음','기타(이단 등)','결혼(부부)','초신자']);
     fd.forEach(r => {
       ['adult','youth'].forEach(type => {
         rows.push([
@@ -2785,12 +2781,14 @@ function initHome() {
     renderHomeNfSummary(ws);
     const nfByWeek = w => D.newFamily.find(r => r.date === w);
     mkChart('c-hm-newfam', 'bar', getWL(ws), [
-      bds('방문자', ws.map(w => {
-        const r = nfByWeek(w); return nfRequestTotal(r, 'adult') + nfRequestTotal(r, 'youth');
-      }), C.b),
-      bds('등록가능자', ws.map(w => {
+      // 등록신청 = 등록 가능 + 등록 불가능. 두 몫을 쌓아 막대 전체가 등록신청 인원이 되게 한다
+      // (예전엔 '방문자'와 '등록가능자'를 쌓아 8명 중 8명 가능이 16명처럼 보였다)
+      bds('등록 가능', ws.map(w => {
         const r = nfByWeek(w); return nfVal(r, 'adult', 'available') + nfVal(r, 'youth', 'available');
       }), C.gr),
+      bds('등록 불가능', ws.map(w => {
+        const r = nfByWeek(w); return nfVal(r, 'adult', 'unavailable') + nfVal(r, 'youth', 'unavailable');
+      }), C.or),
     ], homeChartOpts(ws, { stack: true }));
   };
   nfDraw(fw8);
@@ -4086,7 +4084,7 @@ function renderNewFamReg(fwRows) {
   if (!rows.length) {
     kpiEl.innerHTML = `<div class="kc bl" style="grid-column:1/-1;animation-delay:0s">
       <div class="kc-accent-bar"></div><div class="kl">입력 대기</div>
-      <div class="kv" style="font-size:18px;color:var(--text2)">장년등록자 자료 없음</div>
+      <div class="kv" style="font-size:18px;color:var(--text2)">새가족교육 수료 자료 없음</div>
       <div class="ks" style="margin-top:8px;line-height:1.6">
         입력앱 <b>새가족 → 장년등록자</b>에 연령대·성별을 넣으면 여기에 나옵니다.
       </div></div>`;
@@ -4110,8 +4108,8 @@ function renderNewFamReg(fwRows) {
   const last = rows[rows.length - 1];
 
   mkKPI('kk-newfam-reg', [
-    { label: '이번 주 등록자', value: fmt(last.regTotal), sub: (() => { const d = new Date(last.date); return `${d.getMonth() + 1}월 ${d.getDate()}일`; })(), color: 'blue' },
-    { label: '기간 등록자', value: fmt(tot), sub: `${rows.length}주 누계`, color: 'green' },
+    { label: '이번 주 교육 수료', value: fmt(last.regTotal), sub: (() => { const d = new Date(last.date); return `${d.getMonth() + 1}월 ${d.getDate()}일`; })(), color: 'blue' },
+    { label: '기간 교육 수료', value: fmt(tot), sub: `${rows.length}주 누계`, color: 'green' },
     { label: '여성 비중', value: tot ? Math.round(totF / tot * 100) + '%' : '–', sub: `남 ${fmt(totM)} · 여 ${fmt(totF)}`, color: 'gold' },
     { label: '가장 많은 연령대', value: top.band, sub: `${fmt(top.m + top.f)}명 · ${tot ? Math.round((top.m + top.f) / tot * 100) : 0}%`, color: 'teal' },
   ]);
@@ -4173,19 +4171,19 @@ function initNewFam() {
   const latestAAv = nfVal(latestAdult,'adult','available');
 
   mkKPI('kk-newfam-adult', [
-    {label:'이번 주 방문자', value:fmt(latestAReq), sub:'등록 가능 + 등록 불가능', color:'blue'},
-    {label:'이번 주 등록가능자', value:fmt(latestAAv), sub:latestAReq>0?`${Math.round(latestAAv/latestAReq*100)}% 가능`:'', color:'green'},
-    {label:'기간 방문자', value:fmt(totAReq), sub:'선택 기간 누계', color:'gold'},
-    {label:'기간 등록불가능자', value:fmt(totAUn), sub:'선택 기간 누계', color:'teal'},
+    {label:'이번 주 등록신청', value:fmt(latestAReq), sub:'등록 가능 + 등록 불가능', color:'blue'},
+    {label:'이번 주 등록 가능', value:fmt(latestAAv), sub:latestAReq>0?`${Math.round(latestAAv/latestAReq*100)}% 가능`:'', color:'green'},
+    {label:'기간 등록신청', value:fmt(totAReq), sub:'선택 기간 누계', color:'gold'},
+    {label:'기간 등록 불가능', value:fmt(totAUn), sub:'선택 기간 누계', color:'teal'},
   ]);
 
   const renderAdultTrend = (fw2) => {
     const d2=D.newFamily.filter(r=>fw2.includes(r.date));
     const dt2=d2.map(r=>{const d=new Date(r.date);return `${d.getMonth()+1}/${d.getDate()}`;});
     mkChart('c-nf-adult-trend','line',dt2,[
-      lds('방문자',d2.map(r=>nfRequestTotal(r,'adult')),C.b),
-      lds('등록가능자',d2.map(r=>nfVal(r,'adult','available')),C.gr),
-      lds('등록불가능자',d2.map(r=>nfVal(r,'adult','unavailable')),C.or)
+      lds('등록신청',d2.map(r=>nfRequestTotal(r,'adult')),C.b),
+      lds('등록 가능',d2.map(r=>nfVal(r,'adult','available')),C.gr),
+      lds('등록 불가능',d2.map(r=>nfVal(r,'adult','unavailable')),C.or)
     ]);
   };
   renderAdultTrend(getFW());
@@ -4201,7 +4199,7 @@ function initNewFam() {
 
   const fw = document.getElementById('fw-adult');
   if (fw && totAReq > 0) {
-    fw.innerHTML = [{label:'방문자',val:totAReq,color:'#2563eb'},{label:'등록 가능',val:totAAv,color:'#059669'},{label:'등록 불가능',val:totAUn,color:'#d97706'}]
+    fw.innerHTML = [{label:'등록신청',val:totAReq,color:'#2563eb'},{label:'등록 가능',val:totAAv,color:'#059669'},{label:'등록 불가능',val:totAUn,color:'#d97706'}]
       .map(({label,val,color}) => {
         const p = Math.round(val/totAReq*100)||0;
         return `<div class="fr"><div class="fl">${label}</div><div class="fbo"><div class="fbi" style="width:${p}%;background:${color}">${fmt(val)}</div></div><div class="fp">${p}%</div></div>`;
@@ -4217,19 +4215,19 @@ function initNewFam() {
   const latestYAv = nfVal(latestYouth,'youth','available');
 
   mkKPI('kk-newfam-youth', [
-    {label:'이번 주 방문자', value:fmt(latestYReq), sub:'등록 가능 + 등록 불가능', color:'purple'},
-    {label:'이번 주 등록가능자', value:fmt(latestYAv), sub:latestYReq>0?`${Math.round(latestYAv/latestYReq*100)}% 가능`:'', color:'green'},
-    {label:'기간 방문자', value:fmt(totYReq), sub:'선택 기간 누계', color:'gold'},
-    {label:'기간 등록불가능자', value:fmt(totYUn), sub:'선택 기간 누계', color:'teal'},
+    {label:'이번 주 등록신청', value:fmt(latestYReq), sub:'등록 가능 + 등록 불가능', color:'purple'},
+    {label:'이번 주 등록 가능', value:fmt(latestYAv), sub:latestYReq>0?`${Math.round(latestYAv/latestYReq*100)}% 가능`:'', color:'green'},
+    {label:'기간 등록신청', value:fmt(totYReq), sub:'선택 기간 누계', color:'gold'},
+    {label:'기간 등록 불가능', value:fmt(totYUn), sub:'선택 기간 누계', color:'teal'},
   ]);
 
   const renderYouthFamTrend = (fw2) => {
     const d2=D.newFamily.filter(r=>fw2.includes(r.date));
     const dt2=d2.map(r=>{const d=new Date(r.date);return `${d.getMonth()+1}/${d.getDate()}`;});
     mkChart('c-nf-youth-trend','line',dt2,[
-      lds('방문자',d2.map(r=>nfRequestTotal(r,'youth')),C.p),
-      lds('등록가능자',d2.map(r=>nfVal(r,'youth','available')),C.gr),
-      lds('등록불가능자',d2.map(r=>nfVal(r,'youth','unavailable')),C.or)
+      lds('등록신청',d2.map(r=>nfRequestTotal(r,'youth')),C.p),
+      lds('등록 가능',d2.map(r=>nfVal(r,'youth','available')),C.gr),
+      lds('등록 불가능',d2.map(r=>nfVal(r,'youth','unavailable')),C.or)
     ]);
   };
   renderYouthFamTrend(getFW());
@@ -4292,7 +4290,7 @@ const YC_METRICS = [
   { key:'dawn',   label:'새벽기도',   sub:'주간 현장 합계',      color:'#7c3aed', fn: ycDawnOff },
   { key:'dist',   label:'장년교구',   sub:'다락방 출석',         color:'#0e7490',
     fn: w => { const r = D.cell.find(x => x.date === w); return r ? r.totalChul : null; } },
-  { key:'nf',     label:'새가족',     sub:'방문자',              color:'#db2777',
+  { key:'nf',     label:'새가족',     sub:'등록신청',              color:'#db2777',
     fn: w => { const r = D.newFamily.find(x => x.date === w);
                return r ? nfRequestTotal(r,'adult') + nfRequestTotal(r,'youth') : null; } },
 ];
@@ -4658,10 +4656,10 @@ function ycPointItems() {
       fn: w => { const r = D.leader.find(x => x.date === w); return r ? r.totalChul : null; } });
   }
   if (canSee('newfam')) {
-    items.push({ id:'nf:visit', label:'새가족 · 방문자',
+    items.push({ id:'nf:visit', label:'새가족 · 등록신청',
       fn: w => { const r = D.newFamily.find(x => x.date === w);
                  return r ? nfRequestTotal(r,'adult') + nfRequestTotal(r,'youth') : null; } });
-    items.push({ id:'nf:reg', label:'새가족 · 등록자',
+    items.push({ id:'nf:reg', label:'새가족 · 교육 수료',
       fn: w => { const r = D.newFamily.find(x => x.date === w); return r?.regTotal ?? null; } });
   }
   if (canSee('wd')) {
@@ -5373,24 +5371,23 @@ function renderInputStatus(week) {
   const el = document.getElementById('hm-submit');
   if (!el) return;
   const rows = inputStatus(week);
-  const total = rows.reduce((n, r) => n + r.all, 0);
   const missing = rows.reduce((n, r) => n + r.miss.length, 0);
-  const notes = weekNotes(week);
+  // 한 줄 띠: 분야마다 작은 칩(✓ / 남은 수 / 휴강). 빠진 곳 이름은 칩 위에 마우스를 올리면 보인다
+  const chip = r => {
+    if (r.off) return `<span class="sub-chip off" title="${esc(r.off)}">${r.group} · 휴강</span>`;
+    if (!r.miss.length) return `<span class="sub-chip ok">${r.group} ✓</span>`;
+    const all = r.miss.length >= r.all;
+    return `<span class="sub-chip miss" title="미입력: ${esc(r.miss.join(', '))}">${r.group} ${all ? '미입력' : `${r.miss.length}곳`}</span>`;
+  };
+  const missText = rows.filter(r => !r.off && r.miss.length)
+    .map(r => `${r.group}(${r.miss.length >= r.all ? '전체' : r.miss.join(', ')})`).join(' · ');
   el.innerHTML = `
-    <div class="ch">
-      <div><div class="ct">입력 현황</div>
-        <div class="cs">${week.replace(/-/g, '.')} 주 · 입력앱 기준 ${total}곳 (특별예배 제외)</div></div>
+    <div class="sub-line">
+      <span class="sub-ttl">입력 현황 <span class="sub-wk">${week.slice(5).replace('-', '/')} 주</span></span>
       <span class="sub-sum ${missing ? '' : 'done'}">${missing ? `미입력 ${missing}곳` : '모두 입력됨'}</span>
+      ${rows.map(chip).join('')}
     </div>
-    <div class="sub-grid">${rows.map(r => `
-      <div class="sub-g ${r.miss.length ? 'miss' : ''}">
-        <div class="sub-g-hd">${r.group}<span>${r.off ? '휴강' : `${Math.max(0, r.all - r.miss.length)}/${r.all}`}</span></div>
-        ${r.off ? `<div class="sub-g-miss">${esc(r.off)}</div>` : ''}
-        ${r.miss.length ? `<div class="sub-g-miss">${r.miss.length >= r.all ? '전체 미입력' : r.miss.join(', ')}</div>` : ''}
-      </div>`).join('')}
-    </div>
-    ${notes.length ? `<div class="sub-notes"><div class="sub-notes-hd">이번 주 메모</div>${
-      notes.map(n => `<div class="sub-note"><b>${esc(n.where)}</b> ${esc(n.text)}</div>`).join('')}</div>` : ''}`;
+    ${missText ? `<div class="sub-miss-line">${missText}</div>` : ''}`;
 }
 
 /* 그 주에 적힌 비고 — '추석 휴회'처럼 숫자를 읽는 데 필요한 맥락 */
