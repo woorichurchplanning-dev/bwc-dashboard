@@ -83,3 +83,9 @@ bash scripts/deploy.sh                     # 자료까지 새로 수집해 올�
 `admin.html` 의 '주간 데이터 보고 메일' 칸 → `api/report.js`(관리자만) → Apps Script
 (`mode=report-settings` / `report-settings-save` / `report` / `report-send`).
 설정은 교회 시트 「보고설정」 탭, 메일은 교회 계정이 보낸다. 본문은 `bwc-gas/src/WeeklyReport.js`.
+
+## 미입력 알림 메일
+
+`admin.html` 의 '미입력 알림' 탭 → `api/reminder.js`(관리자만) → Apps Script `mode=reminder-*`.
+항목별 담당 이메일(칸을 벗어나면 저장), 요일·시각(기본 화 16시), 미리보기, 지금 보내기.
+본문·발송은 `bwc-gas/src/InputReminder.js`.

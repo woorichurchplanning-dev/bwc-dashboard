@@ -107,6 +107,11 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 .rp-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px;align-items:end}
 .rp-toggle{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin:0;padding:9px 0}
 .rp-actions{display:flex;flex-wrap:wrap;gap:8px}
+.mr-tbl{width:100%;border-collapse:collapse;margin:0}
+.mr-tbl td{padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.mr-tbl td.it{width:150px;font-weight:600;font-size:13px;white-space:nowrap}
+.mr-tbl td.st{width:70px;font-size:12px;color:var(--text3);white-space:nowrap}
+.mr-tbl input{width:100%;margin:0}
 #rp-preview{margin-top:16px;display:none}
 #rp-preview iframe{width:100%;height:900px;border:1px solid var(--border);border-radius:12px;background:#efefec}
 #q{padding:9px 12px;border:1px solid var(--line,rgba(0,0,0,.15));border-radius:9px;font:inherit;font-size:13px}
@@ -126,6 +131,7 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
     <button class="ptab" data-tab="list" onclick="showPane('list')">계정 목록 <span class="n" id="tab-n">–</span></button>
     <button class="ptab" data-tab="form" onclick="showPane('form')" id="tab-form-btn">계정 추가</button>
     <button class="ptab" data-tab="mail" onclick="showPane('mail')">보고 메일</button>
+    <button class="ptab" data-tab="remind" onclick="showPane('remind')">미입력 알림</button>
   </div>
   <div class="msg" id="msg"></div>
 
@@ -156,6 +162,33 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
       <button type="button" id="rp-send" onclick="rpSend()">지금 보내기</button>
     </div>
     <div id="rp-preview"><iframe id="rp-frame" title="보고 메일 미리보기" sandbox></iframe></div>
+  </div>
+
+  <div class="card" id="mr-card" data-pane="remind">
+    <h2>미입력 알림 메일</h2>
+    <div class="desc">지난주(월~주일) 자료를 아직 안 낸 항목의 담당자에게 교회 계정이 한 번 보냅니다.
+      한 사람이 여러 항목을 맡으면 한 통에 모아 갑니다. 담당 이메일이 없는 항목은 건너뜁니다. 교구는 별도 시트로 들어오므로 빠집니다.</div>
+    <div class="rp-status" id="mr-status"><span class="rp-pill">불러오는 중…</span></div>
+
+    <div class="rp-row">
+      <div><label for="mr-day">보내는 요일</label>
+        <select id="mr-day"></select></div>
+      <div><label for="mr-hour">보내는 시각</label>
+        <select id="mr-hour"></select></div>
+      <div><label class="rp-toggle"><input type="checkbox" id="mr-on"> 매주 자동으로 보내기</label></div>
+      <div><button type="button" class="primary" id="mr-save" onclick="mrSave()" style="width:100%">발송 시간 저장</button></div>
+    </div>
+
+    <label>항목별 담당 이메일 <span style="font-weight:500;color:var(--text3)">— 칸을 벗어나면 바로 저장됩니다 · 여러 명은 쉼표로</span></label>
+    <div id="mr-owners"></div>
+
+    <div class="rp-actions" style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px">
+      <button type="button" id="mr-plan" onclick="mrPlan()">지금 보내면 누구에게? (미리보기)</button>
+      <button type="button" id="mr-send" onclick="mrSend()">지금 보내기</button>
+    </div>
+    <div id="mr-plan-out" style="margin-top:14px;font-size:13px;line-height:1.7"></div>
+    <div id="mr-preview" style="margin-top:12px;display:none"><iframe id="mr-frame" title="미입력 알림 미리보기" sandbox
+      style="width:100%;height:420px;border:1px solid var(--border);border-radius:12px;background:#fff"></iframe></div>
   </div>
 
   <div class="card" data-pane="list">
@@ -340,9 +373,9 @@ function rowHtml(u) {
     </tr>`;
 }
 
-/* 탭 — 주소 끝(#list/#form/#mail)에 남겨 새로고침해도 그 탭으로 */
+/* 탭 — 주소 끝(#list/#form/#mail/#remind)에 남겨 새로고침해도 그 탭으로 */
 function showPane(name) {
-  if (!['list', 'form', 'mail'].includes(name)) name = 'list';
+  if (!['list', 'form', 'mail', 'remind'].includes(name)) name = 'list';
   document.querySelectorAll('.card[data-pane]').forEach(c => c.classList.toggle('on', c.dataset.pane === name));
   document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
   if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
@@ -529,6 +562,113 @@ async function rpSend() {
   ['rp-day', 'rp-hour', 'rp-on'].forEach(id => $(id).addEventListener('change', () => { rpSync(); rpMarkDirty(); rpRender(); }));
   try { Object.assign(RP, await rpApi('GET')); rpRemember(); rpRender(); }
   catch (e) { $('rp-status').innerHTML = `<span class="rp-pill off">설정을 불러오지 못했습니다: ${escH(e.message)}</span>`; }
+})();
+
+/* ── 미입력 알림 메일 ── */
+const MR = { on: true, day: '화', hour: 16, trigger: false, owners: [] };
+async function mrApi(method, body) {
+  const res = await fetch('/api/reminder', {
+    method, cache: 'no-store',
+    headers: body ? { 'content-type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (res.status === 401) { location.replace('/login.html'); throw new Error('unauthorized'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || ('HTTP ' + res.status));
+  return data;
+}
+function mrStatus() {
+  const n = MR.owners.filter(o => o.to.length).length;
+  $('mr-status').innerHTML =
+    `<span class="rp-pill ${MR.savedOn ? 'on' : 'off'}">${MR.savedOn ? '자동 발송 켜짐' : '자동 발송 꺼짐'}</span>` +
+    `<span class="rp-pill">매주 ${MR.savedDay}요일 ${hourLabel(MR.savedHour)}</span>` +
+    `<span class="rp-pill ${n ? '' : 'off'}">담당 이메일 ${n} / ${MR.owners.length}항목</span>` +
+    (MR.trigger ? '' : '<span class="rp-pill off">예약이 아직 없음 — [발송 시간 저장]을 누르면 만들어집니다</span>');
+}
+function mrRenderOwners() {
+  const groups = [];
+  MR.owners.forEach((o, i) => {
+    let g = groups.find(x => x.name === o.group);
+    if (!g) groups.push(g = { name: o.group, rows: [] });
+    g.rows.push({ ...o, i });
+  });
+  $('mr-owners').innerHTML = groups.map(g => {
+    const set = g.rows.filter(r => r.to.length).length;
+    return `<div class="grp${set === g.rows.length ? ' closed' : ''}">
+      <button type="button" class="grp-hd" onclick="this.parentNode.classList.toggle('closed')">
+        <span class="grp-arrow">▼</span><span class="grp-name">${escH(g.name)}</span>
+        <span class="grp-count">${set}/${g.rows.length} 지정</span><span class="grp-spacer"></span></button>
+      <div class="grp-body"><table class="mr-tbl">${g.rows.map(r => `<tr>
+        <td class="it">${escH(r.item)}</td>
+        <td><input type="text" id="mr-o-${r.i}" value="${escH(r.to.join(', '))}" placeholder="담당 이메일"
+          autocapitalize="off" spellcheck="false" onchange="mrOwner(${r.i})"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"></td>
+        <td class="st" id="mr-s-${r.i}">${r.to.length ? '' : '없음'}</td></tr>`).join('')}</table></div></div>`;
+  }).join('');
+}
+async function mrOwner(i) {
+  const o = MR.owners[i], el = $('mr-o-' + i), st = $('mr-s-' + i);
+  const raw = el.value.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
+  const bad = raw.filter(x => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+  if (bad.length) { st.textContent = '형식 오류'; st.style.color = 'var(--warn)'; return show('err', '이메일 형식이 아닙니다: ' + bad.join(', ')); }
+  st.textContent = '저장 중…'; st.style.color = '';
+  try {
+    const r = await mrApi('POST', { action: 'owner', group: o.group, item: o.item, to: raw });
+    o.to = r.to; el.value = r.to.join(', ');
+    st.textContent = '저장됨'; st.style.color = 'var(--pos)';
+    mrStatus();
+  } catch (e) { st.textContent = '실패'; st.style.color = 'var(--warn)'; show('err', `${o.item} 담당을 저장하지 못했습니다: ${e.message}`); }
+}
+async function mrSave() {
+  $('mr-save').disabled = true;
+  try {
+    const r = await mrApi('POST', { action: 'save', on: $('mr-on').checked, day: $('mr-day').value, hour: Number($('mr-hour').value) });
+    Object.assign(MR, r); MR.savedOn = r.on; MR.savedDay = r.day; MR.savedHour = r.hour; mrStatus();
+    show('ok', `저장했습니다 — 매주 ${r.day}요일 ${hourLabel(r.hour)}에 ${r.on ? '보냅니다' : '보내지 않습니다(꺼짐)'}.`);
+  } catch (e) { show('err', '저장하지 못했습니다: ' + e.message); }
+  finally { $('mr-save').disabled = false; }
+}
+function mrPlanHtml(p) {
+  const wk = p.week.slice(5).replace('-', '/');
+  const who = Object.entries(p.byEmail);
+  let h = `<b>${wk} 주</b> · 아직 안 낸 항목 ${p.missing}개 → 메일 ${who.length}통<br>`;
+  h += who.length ? who.map(([m, its]) => `· ${escH(m)} — ${its.map(x => escH(x.item)).join(', ')}`).join('<br>') : '· 보낼 사람이 없습니다.';
+  if (p.noOwner.length) h += `<br><span style="color:var(--warn)">담당 이메일이 없어 건너뜀: ${p.noOwner.map(x => escH(x.item)).join(', ')}</span>`;
+  return h;
+}
+async function mrPlan() {
+  $('mr-plan').disabled = true; $('mr-plan').textContent = '확인 중… (10초쯤)';
+  try {
+    const r = await mrApi('POST', { action: 'plan' });
+    $('mr-plan-out').innerHTML = mrPlanHtml(r.plan);
+    if (r.sample) {
+      $('mr-frame').srcdoc = `<meta charset="utf-8"><body style="margin:16px"><div style="font:12px sans-serif;color:#888;margin-bottom:10px">예시 — ${escH(r.sampleTo)}에게 갈 메일 · 제목: ${escH(r.sample.subject)}</div>` + r.sample.html;
+      $('mr-preview').style.display = 'block';
+    } else $('mr-preview').style.display = 'none';
+  } catch (e) { show('err', '확인하지 못했습니다: ' + e.message); }
+  finally { $('mr-plan').disabled = false; $('mr-plan').textContent = '지금 보내면 누구에게? (미리보기)'; }
+}
+async function mrSend() {
+  if (!confirm('지난주 자료를 아직 안 낸 항목의 담당자에게 지금 알림을 보낼까요?')) return;
+  $('mr-send').disabled = true; $('mr-send').textContent = '보내는 중…';
+  try {
+    const r = await mrApi('POST', { action: 'send' });
+    show('ok', r.sent ? `${r.sent}명에게 보냈습니다: ${r.to.join(', ')}` : '보낼 사람이 없었습니다(모두 냈거나 담당 이메일이 없음).');
+    $('mr-plan-out').innerHTML = r.noOwner.length
+      ? `<span style="color:var(--warn)">담당 이메일이 없어 건너뜀: ${r.noOwner.map(x => escH(x.item)).join(', ')}</span>` : '';
+  } catch (e) { show('err', '보내지 못했습니다: ' + e.message); }
+  finally { $('mr-send').disabled = false; $('mr-send').textContent = '지금 보내기'; }
+}
+(async () => {
+  $('mr-day').innerHTML = ['월','화','수','목','금','토','일'].map(d => `<option value="${d}">${d}요일</option>`).join('');
+  $('mr-hour').innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${hourLabel(h)}</option>`).join('');
+  try {
+    const r = await mrApi('GET');
+    Object.assign(MR, r.settings); MR.owners = r.owners;
+    MR.savedOn = MR.on; MR.savedDay = MR.day; MR.savedHour = MR.hour;
+    $('mr-day').value = MR.day; $('mr-hour').value = String(MR.hour); $('mr-on').checked = MR.on;
+    mrStatus(); mrRenderOwners();
+  } catch (e) { $('mr-status').innerHTML = `<span class="rp-pill off">설정을 불러오지 못했습니다: ${escH(e.message)}</span>`; }
 })();
 
 async function logout() {
