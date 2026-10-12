@@ -63,7 +63,7 @@ function fakeData(weeks = 20) {
                         '주일 온라인': wobble(24300, i), '수요 온라인': wobble(4600, i), '금요 온라인': wobble(11000, i) },
       },
       '청년교구': {
-        '청년금요집회': { '현장 인원': wobble(330, i), '온라인': wobble(60, i) },
+        '청년금요기도회': { '현장 인원': wobble(330, i), '온라인': wobble(60, i) },
         ...Object.fromEntries([1,2,3,4].map(n => [`${n}청년부 (예배)`, { '예배인원': wobble(380 - n*40, i) }])),
         ...Object.fromEntries([1,2,3,4].map(n => [`1청년부 ${n}팀`,
           { '팀모임 인원': wobble(110, i + n), '순모임 인원': wobble(104, i + n) }])),
