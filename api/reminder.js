@@ -2,13 +2,13 @@ import { verifySession, readCookie, SESSION_COOKIE } from '../lib/auth.js';
 
 /* 미입력 알림 메일 — 관리자만.
 
-   지난주 자료를 아직 안 낸 항목의 담당자에게 정해진 요일·시각(기본 화 16시)에 한 통씩.
+   지난주 자료를 아직 안 낸 항목의 담당자에게 한 통씩 — 1차(기본 화 16시)·2차(기본 수 12시), 항목마다 차수를 정한다.
    담당 이메일은 교회 시트의 「입력담당」 탭, 켜기·요일·시각은 「보고설정」 탭에 있고
    메일은 Apps Script(교회 계정)가 보낸다. 이 함수는 둘 사이를 이어 줄 뿐이다.
 
-   GET                                    → { settings: { on, day, hour, trigger }, owners: [{ group, item, to }] }
-   POST { action: 'save', on, day, hour }
-   POST { action: 'owner', group, item, to }
+   GET                                    → { settings: { on, day, hour, day2, hour2, trigger }, owners: [{ group, item, to, round }], staff }
+   POST { action: 'save', on, day, hour, day2, hour2 }
+   POST { action: 'owner', group, item, to?, round? }  — 주어진 것만 고친다
    POST { action: 'plan' }                → 지금 보내면 누구에게 무엇이 가는지 + 예시 한 통
    POST { action: 'send' }                → 지금 보낸다 */
 
@@ -36,7 +36,7 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const b = await callGas({ mode: 'reminder-settings' });
-      return res.status(200).json({ settings: b.settings, owners: b.owners });
+      return res.status(200).json({ settings: b.settings, owners: b.owners, staff: (b.staff || []).map(p => ({ name: p.name, title: p.title, part: p.part, email: p.email })) });
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
 
@@ -44,13 +44,19 @@ export default async function handler(req, res) {
     if (body.action === 'save') {
       const day = DAYS.includes(body.day) ? body.day : '화';
       const hour = Math.min(23, Math.max(0, parseInt(body.hour, 10) || 0));
-      const b = await callGas({ mode: 'reminder-settings-save', on: body.on ? '1' : '0', day, hour: String(hour) });
+      const day2 = DAYS.includes(body.day2) ? body.day2 : '수';
+      const hour2 = Math.min(23, Math.max(0, parseInt(body.hour2, 10) || 0));
+      const b = await callGas({ mode: 'reminder-settings-save', on: body.on ? '1' : '0', day, hour: String(hour), day2, hour2: String(hour2) });
       return res.status(200).json(b.settings);
     }
     if (body.action === 'owner') {
-      const to = (Array.isArray(body.to) ? body.to : String(body.to || '').split(/[,;\s]+/))
-        .map(x => String(x).trim()).filter(x => EMAIL_RE.test(x)).slice(0, 10);
-      const b = await callGas({ mode: 'reminder-owner-save', group: String(body.group || ''), item: String(body.item || ''), to: to.join(',') });
+      const q = { mode: 'reminder-owner-save', group: String(body.group || ''), item: String(body.item || '') };
+      if (body.to !== undefined) {
+        q.to = (Array.isArray(body.to) ? body.to : String(body.to || '').split(/[,;\s]+/))
+          .map(x => String(x).trim()).filter(x => EMAIL_RE.test(x)).slice(0, 10).join(',');
+      }
+      if (body.round !== undefined) q.round = String(body.round) === '2' ? '2' : '1';
+      const b = await callGas(q);
       return res.status(200).json(b.owner);
     }
     if (body.action === 'plan') {
