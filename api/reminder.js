@@ -51,7 +51,7 @@ export default async function handler(req, res) {
         if (DAYS.includes(d && d.day) && hour >= 0 && hour <= 23) deadlines[String(g)] = { day: d.day, hour };
       });
       const b = await callGas({ mode: 'reminder-settings-save', on: body.on ? '1' : '0', deadlines: JSON.stringify(deadlines) });
-      return res.status(200).json(b.settings);
+      return res.status(200).json(b.settings);   // next: 다가오는 발송 시각
     }
     if (body.action === 'owner') {
       const to = (Array.isArray(body.to) ? body.to : String(body.to || '').split(/[,;\s]+/))

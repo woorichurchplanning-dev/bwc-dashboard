@@ -77,6 +77,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .grp-hd{display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
   padding:11px 14px;background:var(--bg2,#f6f8fa);border:0;font:inherit}
 .grp-hd:hover{background:var(--bg3,#eef1f4)}
+.mr-hd{cursor:default;flex-wrap:wrap}
+.mr-hd select{width:auto;margin:0;padding:5px 8px;font-size:12.5px}
+.mr-hd .mr-open{cursor:pointer;display:flex;align-items:center;gap:10px}
+.mr-hd .mr-more{cursor:pointer;font-size:12px;color:var(--text3)}
+.mr-onoff{display:flex;align-items:center;gap:10px;margin:0 0 16px;padding:12px 14px;border-radius:10px;font-size:13.5px;font-weight:600}
+.mr-onoff.on{background:rgba(16,185,129,.09)}
+.mr-onoff.off{background:rgba(239,68,68,.08)}
+.mr-onoff span{flex:1}
 .grp-name{font-weight:700;font-size:13.5px}
 .grp-count{font-size:12px;color:var(--text3);font-variant-numeric:tabular-nums}
 .grp-spacer{flex:1}
@@ -179,25 +187,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 
   <div class="card" id="mr-card" data-pane="remind">
     <h2>미입력 알림 메일</h2>
-    <div class="desc">묶음마다 마감이 있습니다. 마감이 지났는데 지난주(월~주일) 자료가 아직 없으면, 그 항목 담당자에게
-      교회 계정이 한 번 보냅니다(매시간 확인 — 마감 뒤 1시간 안에 갑니다). 한 사람이 여러 항목을 맡으면 한 통에 모아 갑니다.
-      담당이 없는 항목은 건너뜁니다. 교구는 별도 시트로 들어오므로 빠집니다.</div>
+    <div class="desc">마감 시각이 되면, 그때까지 지난주 자료를 입력하지 않은 항목의 담당자에게 메일이 갑니다.</div>
     <div class="rp-status" id="mr-status"><span class="rp-pill">불러오는 중…</span></div>
+    <div class="mr-onoff" id="mr-onoff" style="display:none"></div>
 
-    <label>묶음별 마감 <span style="font-weight:500;color:var(--text3)">— 그 주가 끝나는 주일 다음 주 기준</span></label>
-    <table class="mr-tbl" id="mr-dl" style="margin-bottom:12px"></table>
-    <div class="rp-row">
-      <div><label class="rp-toggle"><input type="checkbox" id="mr-on"> 마감이 지나면 자동으로 보내기</label></div>
-      <div><button type="button" class="primary" id="mr-save" onclick="mrSave()" style="width:100%">마감 저장</button></div>
-    </div>
+    <label>마감 요일/시간 설정 <span style="font-weight:500;color:var(--text3)">— 바꾸면 바로 저장 · 줄을 누르면 항목별 담당자가 보입니다(이름을 치면 명단에서 찾음, 칸을 벗어나면 저장)</span></label>
+    <div id="mr-groups" style="margin-bottom:8px"></div>
 
-    <label>항목별 담당 <span style="font-weight:500;color:var(--text3)">— 이름을 치면 교역자 명단에서 고를 수 있습니다(이메일도 됨) · 칸을 벗어나면 바로 저장 · 여러 명은 쉼표로</span></label>
-    <div id="mr-owners"></div>
-
-    <label style="margin-top:18px">메일 문구 <span style="font-weight:500;color:var(--text3)">— {호칭} 한형우 목사님 · {기간} 10/5(월) ~ 10/11(주일) · {주} 10/11 · {건수} 1 · 칸을 비우면 기본 문구</span></label>
+    <label style="margin-top:18px">메일 문구 <span style="font-weight:500;color:var(--text3)">— {호칭} 한형우 목사님 · {기간} 10/5(월) ~ 10/11(주일) · {주} 10/11 · {건수} 1</span></label>
     <div class="mr-tx" id="mr-text"></div>
     <div class="rp-actions">
-      <button type="button" onclick="mrTextReset()">기본 문구로 되돌리기</button>
       <button type="button" class="primary" id="mr-tsave" onclick="mrTextSave()">문구 저장</button>
     </div>
 
@@ -678,25 +677,39 @@ async function mrApi(method, body) {
 function mrStatus() {
   const n = MR.owners.filter(o => o.to.length).length;
   $('mr-status').innerHTML =
-    `<span class="rp-pill ${MR.savedOn ? 'on' : 'off'}">${MR.savedOn ? '자동 발송 켜짐' : '자동 발송 꺼짐'}</span>` +
-
-    `<span class="rp-pill ${n ? '' : 'off'}">담당 이메일 ${n} / ${MR.owners.length}항목</span>` +
-    (MR.trigger ? '' : '<span class="rp-pill off">예약이 아직 없음 — [마감 저장]을 누르면 만들어집니다</span>');
+    `<span class="rp-pill ${n === MR.owners.length ? '' : 'off'}">담당 지정 ${n} / ${MR.owners.length}항목</span>`;
+  const box = $('mr-onoff'); box.style.display = 'flex';
+  box.className = 'mr-onoff ' + (MR.on ? 'on' : 'off');
+  box.innerHTML = MR.on
+    ? `<span>● 자동 발송 켜짐${(MR.next || []).length ? ` — 다음 발송 ${escH(MR.next.join(', '))}` : ''}</span><button type="button" id="mr-toggle" onclick="mrToggle()">끄기</button>`
+    : `<span>○ 자동 발송 꺼짐 — 마감이 지나도 메일이 가지 않습니다</span><button type="button" class="primary" id="mr-toggle" onclick="mrToggle()">켜기</button>`;
 }
+async function mrToggle() {
+  const on = !MR.on;
+  if (!on && !confirm('자동 발송을 끌까요? 끄는 동안에는 마감이 지나도 메일이 가지 않습니다.')) return;
+  $('mr-toggle').disabled = true;
+  try {
+    const r = await mrApi('POST', { action: 'save', on, deadlines: MR.deadlines });
+    Object.assign(MR, r); mrStatus();
+    show('ok', r.on ? '자동 발송을 켰습니다.' + ((r.next || []).length ? ' 다음 발송: ' + r.next.join(', ') : '') : '자동 발송을 껐습니다.');
+  } catch (e) { show('err', '바꾸지 못했습니다: ' + e.message); mrStatus(); }
+}
+/* 마감 요일/시간 + 그 묶음의 항목별 담당 — 한 줄에 묶음 하나 */
 function mrRenderOwners() {
-  const groups = [];
-  MR.owners.forEach((o, i) => {
-    let g = groups.find(x => x.name === o.group);
-    if (!g) groups.push(g = { name: o.group, rows: [] });
-    g.rows.push({ ...o, i });
-  });
-  $('mr-owners').innerHTML = groups.map(g => {
-    const set = g.rows.filter(r => r.to.length).length;
-    return `<div class="grp${set === g.rows.length ? ' closed' : ''}">
-      <button type="button" class="grp-hd" onclick="this.parentNode.classList.toggle('closed')">
-        <span class="grp-arrow">▼</span><span class="grp-name">${escH(g.name)}</span>
-        <span class="grp-count">${set}/${g.rows.length} 지정 · ${dlLabel(MR.deadlines[g.name])} 마감</span><span class="grp-spacer"></span></button>
-      <div class="grp-body"><table class="mr-tbl">${g.rows.map(r => `<tr>
+  const days = ['월','화','수','목','금','토','일'];
+  const open = new Set([...document.querySelectorAll('#mr-groups .grp:not(.closed)')].map(el => el.dataset.g));
+  $('mr-groups').innerHTML = Object.entries(MR.deadlines).map(([g, d], k) => {
+    const rows = MR.owners.map((o, i) => ({ ...o, i })).filter(o => o.group === g);
+    const set = rows.filter(r => r.to.length).length;
+    return `<div class="grp${open.has(g) ? '' : ' closed'}" data-g="${escH(g)}">
+      <div class="grp-hd mr-hd">
+        <span class="mr-open" onclick="this.closest('.grp').classList.toggle('closed')"><span class="grp-arrow">▼</span><span class="grp-name">${escH(g)}</span></span>
+        <select id="mr-dd-${k}" onchange="mrSave()">${days.map(x => `<option value="${x}"${x === d.day ? ' selected' : ''}>${x}요일</option>`).join('')}</select>
+        <select id="mr-dh-${k}" onchange="mrSave()">${Array.from({ length: 24 }, (_, h) => `<option value="${h}"${h === d.hour ? ' selected' : ''}>${h === 12 ? '낮 12시' : hourLabel(h)}</option>`).join('')}</select>
+        <span class="grp-spacer"></span>
+        <span class="mr-more" onclick="this.closest('.grp').classList.toggle('closed')">담당 ${set}/${rows.length}${set < rows.length ? ' · 빈 곳 있음' : ''}</span>
+      </div>
+      <div class="grp-body"><table class="mr-tbl">${rows.map(r => `<tr>
         <td class="it">${escH(r.item)}</td>
         <td><div class="sg-wrap"><input type="text" id="mr-o-${r.i}" value="${escH(r.to.join(', '))}" placeholder="이름 또는 이메일" autocomplete="off"
           autocapitalize="off" spellcheck="false" onchange="mrOwner(${r.i})"
@@ -723,24 +736,15 @@ async function mrOwner(i) {
     mrStatus(); mrRenderAs();
   } catch (e) { st.textContent = '실패'; st.style.color = 'var(--warn)'; show('err', `${o.item} 담당을 저장하지 못했습니다: ${e.message}`); }
 }
-/* 묶음별 마감 — 요일·시각 고르기 */
-function mrRenderDeadlines() {
-  const days = ['월','화','수','목','금','토','일'];
-  $('mr-dl').innerHTML = Object.entries(MR.deadlines).map(([g, d], k) => `<tr>
-    <td class="it">${escH(g)}</td>
-    <td><select id="mr-dd-${k}">${days.map(x => `<option value="${x}"${x === d.day ? ' selected' : ''}>${x}요일</option>`).join('')}</select>
-      <select id="mr-dh-${k}">${Array.from({ length: 24 }, (_, h) => `<option value="${h}"${h === d.hour ? ' selected' : ''}>${h === 12 ? '낮 12시' : hourLabel(h)}</option>`).join('')}</select></td></tr>`).join('');
-}
+/* 마감 요일/시간 — 고르면 바로 저장하고 예약도 새 시각으로 다시 건다 */
 async function mrSave() {
-  $('mr-save').disabled = true;
+  const deadlines = {};
+  Object.keys(MR.deadlines).forEach((g, k) => { deadlines[g] = { day: $('mr-dd-' + k).value, hour: Number($('mr-dh-' + k).value) }; });
   try {
-    const deadlines = {};
-    Object.keys(MR.deadlines).forEach((g, k) => { deadlines[g] = { day: $('mr-dd-' + k).value, hour: Number($('mr-dh-' + k).value) }; });
-    const r = await mrApi('POST', { action: 'save', on: $('mr-on').checked, deadlines });
-    Object.assign(MR, r); MR.savedOn = r.on; mrStatus(); mrRenderDeadlines(); mrRenderOwners();
-    show('ok', '저장했습니다 — ' + Object.entries(r.deadlines).map(([g, d]) => `${g} ${dlLabel(d)}`).join(' · ') + (r.on ? '' : ' (자동 발송 꺼짐)'));
+    const r = await mrApi('POST', { action: 'save', on: MR.on, deadlines });
+    Object.assign(MR, r); mrStatus(); mrRenderOwners();
+    show('ok', '마감을 저장했습니다.' + (r.on && (r.next || []).length ? ' 다음 발송: ' + r.next.join(', ') : ''));
   } catch (e) { show('err', '저장하지 못했습니다: ' + e.message); }
-  finally { $('mr-save').disabled = false; }
 }
 function mrPlanHtml(p) {
   const wk = p.week.slice(5).replace('-', '/');
@@ -771,10 +775,6 @@ function mrRenderText() {
     : `<div class="k">${k}</div><textarea id="mr-t-${k}" rows="${(MR.text[k] || '').split('\n').length + 1}">${escH(MR.text[k] || '')}</textarea>`;
   $('mr-text').innerHTML = row('제목') + row('인사') + row('요청') +
     '<div class="fixed">↓ 여기에 안 낸 항목 표와 [입력하러 가기] 버튼이 들어갑니다</div>' + row('안내') + row('맺음');
-}
-function mrTextReset() {
-  if (!confirm('메일 문구를 기본 문구로 되돌릴까요? ([문구 저장]을 눌러야 반영됩니다)')) return;
-  MR.text = { ...MR.textDefaults }; mrRenderText();
 }
 async function mrTextSave() {
   $('mr-tsave').disabled = true;
@@ -821,7 +821,7 @@ async function mrSend() {
   try {
     const r = await mrApi('GET');
     Object.assign(MR, r.settings); MR.owners = r.owners; MR.staff = r.staff || [];
-    MR.savedOn = MR.on; $('mr-on').checked = MR.on; mrRenderDeadlines();
+
     MR.text = r.text || {}; MR.textDefaults = r.textDefaults || {}; mrRenderText();
     mrStatus(); mrRenderOwners(); mrRenderAs();
     if (STATE.users && STATE.users.length) renderRows();   // 계정 목록에 이메일 붙이기
