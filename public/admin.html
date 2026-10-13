@@ -386,7 +386,7 @@ function emailOfUser(u) {
   const key = String(u.name || '').replace(/\s*(목사|전도사|강도사|간사|사무장)$/, '').replace(/\s+/g, '');
   const hit = (MR.staff || []).filter(p => p.email && p.name === key);
   if (hit.length === 1) return hit[0].email;
-  const dept = deptOf(u) + ' ' + (u.name || '');
+  const dept = [deptOf(u), u.name, ...(u.schoolDepts || []), ...(u.youthDepts || [])].join(' ');
   const by = hit.filter(p => p.part && dept.includes(p.part));
   return by.length === 1 ? by[0].email : '';
 }
@@ -806,13 +806,22 @@ async function icCheck(input) {
   try {
     const people = parseCsv(await f.text());
     if (!people.length || !('Phone 1 - Value' in people[0])) throw new Error('구글 주소록 CSV가 아닌 것 같습니다');
-    const checks = [];
-    people.forEach(r => {
+    const book = people.map(r => {
       const name = (r['Family Name'] || '') + (r['Given Name'] || '');
-      if (!name) return;
       const note = ((r['Name'] || '').match(/\((.+?)\)/) || [])[1] || '';
       const phone = (PHONE_FIXES[name] || r['Phone 1 - Value'] || '').replace(/\D/g, '');
-      if (phone.length >= 4) checks.push({ id: name + note, pw: phone.slice(-4) });
+      return { name, note, phone };
+    }).filter(p => p.name && p.phone.length >= 4);
+    // 계정마다 주소록 사람을 찾는다. 동명이인(김정은)은 괄호 속 부서로 가린다
+    const checks = [];
+    STATE.users.filter(u => u.mustChangePassword).forEach(u => {
+      const key = String(u.name || '').replace(/\s+/g, '');
+      let hit = book.filter(p => p.name === key);
+      if (hit.length > 1) {
+        const dept = [deptOf(u), u.id, ...(u.schoolDepts || []), ...(u.youthDepts || [])].join(' ');
+        hit = hit.filter(p => p.note && dept.includes(p.note));
+      }
+      if (hit.length === 1) checks.push({ id: u.id, pw: hit[0].phone.slice(-4) });
     });
     const res = await fetch('/api/users', { method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ action: 'check-initial', checks }) });
