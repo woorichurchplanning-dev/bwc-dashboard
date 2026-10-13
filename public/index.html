@@ -5427,7 +5427,7 @@ const EXPECTED_INPUTS = [
   { group: '직장순장반', items: DISTRICT_14 },
   { group: '청년교구', items: ['청년금요기도회', '1청년부 (예배)', '1청년부 1팀', '1청년부 2팀', '1청년부 3팀',
       '1청년부 4팀', '2청년부 (예배)', '2청년부 1팀', '2청년부 2팀', '2청년부 3팀', '3청년부', '4청년부'] },
-  { group: '주일학교', items: ['사랑부', '영아부', '유아부', '유치부', '송림유년부', '서현유년부', '송림초등부',
+  { group: '주일학교', items: ['사랑1부', '사랑2부', '영아부', '유아부', '유치부', '송림유년부', '서현유년부', '송림초등부',
       '서현초등부', '송림소년부', '서현소년부', '송림청소년부', '서현중등부', '서현고등부'] },
   { group: '새가족', items: ['장년 새가족', '장년등록자', '청년 새가족'] },
 ];
@@ -5438,7 +5438,12 @@ function inputStatus(week) {
   return EXPECTED_INPUTS.map(({ group, items }) => {
     if (off[group]) return { group, all: items.length, miss: [], off: off[group] };
     const got = rec[group] || {};
-    const miss = items.filter(it => !got[it] || typeof got[it] !== 'object');
+    const miss = items.filter(it => {
+      // 사랑1부·사랑2부는 Apps Script 가 '사랑부'로 합쳐 넘긴다 — 그 부의 학생 칸으로 확인
+      const sp = group === '주일학교' && it.match(/^사랑([12]부)$/);
+      if (sp) { const o = got['사랑부']; return !o || typeof o !== 'object' || o[sp[1] + ' 학생'] == null; }
+      return !got[it] || typeof got[it] !== 'object';
+    });
     return { group, all: items.length, miss };
   });
 }
