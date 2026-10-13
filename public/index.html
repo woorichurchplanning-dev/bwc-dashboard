@@ -2922,10 +2922,12 @@ function initSunday() {
   renderSunTrend(fw);
 
   // 주 선택 초기화
-  sunWeekState.fw = fw_all;
+  // 이전주·다음주·달력은 위쪽 기간 설정과 상관없이 자료가 있는 모든 주를 오간다
+  const sunAll = D.weeks.filter(w => !fw_all.length || w <= fw_all[fw_all.length - 1]);
+  sunWeekState.fw = sunAll.length ? sunAll : fw_all;
   // 최신 주차에 주일예배 입력이 아직 없을 수 있다 → 값이 있는 마지막 주를 기본 선택
-  let sunIdx = fw_all.length - 1;
-  while (sunIdx > 0 && !hasSundayData(fw_all[sunIdx])) sunIdx--;
+  let sunIdx = sunWeekState.fw.length - 1;
+  while (sunIdx > 0 && !hasSundayData(sunWeekState.fw[sunIdx])) sunIdx--;
   sunWeekState.weekIndex = sunIdx;
   renderSunWeekComparison();
 
