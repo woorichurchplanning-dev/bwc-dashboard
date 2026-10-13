@@ -106,6 +106,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .rp-chip button{border:0;background:transparent;padding:0 6px;font-size:15px;line-height:1;color:var(--accent-dark)}
 .rp-add{display:flex;gap:8px;margin-bottom:18px}
 .rp-add input{flex:1}
+.sg-wrap{position:relative;flex:1}
+.sg-list{position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:30;background:var(--surface);border:1px solid rgba(0,0,0,.14);
+  border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:260px;overflow:auto;display:none}
+.sg-item{padding:7px 10px;font-size:13px;cursor:pointer;display:flex;gap:8px;align-items:baseline}
+.sg-item small{color:var(--text3);font-size:11.5px;margin-left:auto}
+.sg-item.on,.sg-item:hover{background:rgba(99,91,255,.09)}
 .rp-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px;align-items:end}
 .rp-toggle{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin:0;padding:9px 0}
 .rp-actions{display:flex;flex-wrap:wrap;gap:8px}
@@ -147,11 +153,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
     <div class="desc">지난주(월~주일) 요약을 교회 계정(woorichurchplanning@gmail.com)이 정해진 요일·시각에 보냅니다.</div>
     <div class="rp-status" id="rp-status"><span class="rp-pill">불러오는 중…</span></div>
 
-    <label>받는 사람 <span style="font-weight:500;color:var(--text3)">— 추가하거나 ×로 빼면 바로 저장됩니다</span></label>
+    <label>받는 사람 <span style="font-weight:500;color:var(--text3)">— 이름을 치고 목록에서 고르면 바로 추가·저장됩니다 · ×로 빼기</span></label>
     <div class="rp-chips" id="rp-chips"></div>
     <div class="rp-add">
-      <input type="text" id="rp-email" placeholder="이메일 주소 (쉼표로 여러 개 가능)" autocapitalize="off" spellcheck="false"
-             onkeydown="if(event.key==='Enter'){event.preventDefault();rpAdd()}">
+      <div class="sg-wrap"><input type="text" id="rp-email" placeholder="이름을 치면 교역자 명단에서 찾습니다 (이메일도 됨)" autocapitalize="off" spellcheck="false"
+             autocomplete="off" style="width:100%" onkeydown="if(event.key==='Enter'){event.preventDefault();rpAdd()}"></div>
       <button type="button" onclick="rpAdd()">추가</button>
     </div>
 
@@ -186,7 +192,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
     </div>
 
     <label>항목별 담당 <span style="font-weight:500;color:var(--text3)">— 이름을 치면 교역자 명단에서 고를 수 있습니다(이메일도 됨) · 칸을 벗어나면 바로 저장 · 여러 명은 쉼표로</span></label>
-    <datalist id="mr-staff"></datalist>
     <div id="mr-owners"></div>
 
     <label style="margin-top:18px">메일 문구 <span style="font-weight:500;color:var(--text3)">— {호칭} 한형우 목사님 · {기간} 10/5(월) ~ 10/11(주일) · {주} 10/11 · {건수} 1 · 칸을 비우면 기본 문구</span></label>
@@ -524,7 +529,7 @@ function rpSync() {
 }
 function rpRender() {
   $('rp-chips').innerHTML = RP.to.length
-    ? RP.to.map((m, i) => `<span class="rp-chip">${escH(m)}<button type="button" title="빼기" onclick="rpRemove(${i})">×</button></span>`).join('')
+    ? RP.to.map((m, i) => `<span class="rp-chip" title="${escH(m)}">${escH(whoOf([m]))}<button type="button" title="빼기" onclick="rpRemove(${i})">×</button></span>`).join('')
     : '<span style="font-size:12.5px;color:var(--warn)">받는 사람이 없습니다 — 아래에 추가하세요.</span>';
   $('rp-day').value = RP.day; $('rp-hour').value = String(RP.hour); $('rp-on').checked = RP.on;
   $('rp-status').innerHTML =
@@ -538,14 +543,13 @@ function rpRender() {
    예전에는 [저장]을 따로 눌러야 해서, 추가만 하고 [지금 보내기]를 누르면
    화면에는 4명이 보이는데 실제로는 저장된 1명에게만 가는 일이 있었다. */
 async function rpAdd() {
-  const raw = $('rp-email').value.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
-  const bad = raw.filter(x => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
-  const added = raw.filter(x => !bad.includes(x) && !RP.to.includes(x));
+  const { out: raw, bad } = resolveOwners($('rp-email').value);   // 이름도 이메일로 바꾼다
+  const added = raw.filter(x => !RP.to.includes(x));
   added.forEach(x => RP.to.push(x));
   $('rp-email').value = bad.join(', ');
-  if (bad.length) show('err', '이메일 형식이 아닙니다: ' + bad.join(', '));
+  if (bad.length) show('err', '명단에 없는 이름이거나 이메일 형식이 아닙니다: ' + bad.join(', '));
   rpSync(); rpRender();
-  if (added.length) await rpSave(`${added.join(', ')} 추가 — 저장했습니다.`);
+  if (added.length) await rpSave(`${whoOf(added)} 추가 — 저장했습니다.`);
 }
 async function rpRemove(i) {
   const [gone] = RP.to.splice(i, 1); rpSync(); rpRender();
@@ -612,6 +616,43 @@ function whoOf(to) {
   const by = staffByEmail();
   return to.map(m => by[m.toLowerCase()] ? staffLabel(by[m.toLowerCase()]) : m).join(', ');
 }
+/* 이름 검색 목록 — 칸에 이름(또는 부서·이메일 일부)을 치면 교역자 명단에서 찾아 보여 준다.
+   쉼표로 여러 명을 적는 칸이면 마지막 쉼표 뒤만 찾는다. ↑↓ 로 고르고 Enter, 또는 누르기 */
+function attachSuggest(input, onPick) {
+  if (!input || input._sg) return;
+  input._sg = true;
+  const list = document.createElement('div');
+  list.className = 'sg-list'; input.parentNode.appendChild(list);
+  let items = [], at = -1;
+  const hide = () => { list.style.display = 'none'; items = []; at = -1; };
+  const paint = () => list.querySelectorAll('.sg-item').forEach((el, k) => el.classList.toggle('on', k === at));
+  const pick = k => { const p = items[k]; hide(); if (p) onPick(p, input); };
+  input.addEventListener('input', () => {
+    const q = input.value.split(/[,;]/).pop().trim().toLowerCase().replace(/\s+/g, '');
+    if (!q) return hide();
+    items = (MR.staff || []).filter(p => p.email &&
+      [p.name, p.part, p.title, p.email].join('').toLowerCase().replace(/\s+/g, '').includes(q)).slice(0, 8);
+    if (!items.length) return hide();
+    at = 0;
+    list.innerHTML = items.map((p, k) => `<div class="sg-item" data-k="${k}"><b>${escH(p.name)}</b>
+      <span>${escH([p.title, p.part].filter(Boolean).join(' · '))}</span><small>${escH(p.email)}</small></div>`).join('');
+    list.style.display = 'block'; paint();
+  });
+  list.addEventListener('mousedown', e => {
+    const el = e.target.closest('.sg-item'); if (!el) return;
+    e.preventDefault(); pick(Number(el.dataset.k));
+  });
+  // 칸에 붙은 Enter 처리(저장·blur)보다 먼저 받아야 해서 capture 로 단다
+  input.addEventListener('keydown', e => {
+    if (!items.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); at = (at + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length; paint();
+    } else if (e.key === 'Enter' && !e.isComposing) {
+      e.preventDefault(); e.stopImmediatePropagation(); pick(at < 0 ? 0 : at);
+    } else if (e.key === 'Escape') hide();
+  }, true);
+  input.addEventListener('blur', () => setTimeout(hide, 150));
+}
 /* 칸에 친 것(이름·이메일 섞어도 됨)을 이메일로 바꾼다 */
 function resolveOwners(raw) {
   const out = [], bad = [];
@@ -657,12 +698,17 @@ function mrRenderOwners() {
         <span class="grp-count">${set}/${g.rows.length} 지정 · ${dlLabel(MR.deadlines[g.name])} 마감</span><span class="grp-spacer"></span></button>
       <div class="grp-body"><table class="mr-tbl">${g.rows.map(r => `<tr>
         <td class="it">${escH(r.item)}</td>
-        <td><input type="text" id="mr-o-${r.i}" value="${escH(r.to.join(', '))}" placeholder="이름 또는 이메일" list="mr-staff"
+        <td><div class="sg-wrap"><input type="text" id="mr-o-${r.i}" value="${escH(r.to.join(', '))}" placeholder="이름 또는 이메일" autocomplete="off"
           autocapitalize="off" spellcheck="false" onchange="mrOwner(${r.i})"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"></td>
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"></div></td>
         <td class="who" id="mr-w-${r.i}" title="${escH(whoOf(r.to))}">${escH(whoOf(r.to))}</td>
         <td class="st" id="mr-s-${r.i}">${r.to.length ? '' : '없음'}</td></tr>`).join('')}</table></div></div>`;
   }).join('');
+  MR.owners.forEach((o, i) => attachSuggest($('mr-o-' + i), (p, el) => {
+    const parts = el.value.split(/[,;]/).map(x => x.trim()); parts.pop();
+    el.value = [...parts.filter(Boolean), p.email].join(', ');
+    mrOwner(i);
+  }));
 }
 async function mrOwner(i) {
   const o = MR.owners[i], el = $('mr-o-' + i), st = $('mr-s-' + i);
@@ -776,10 +822,11 @@ async function mrSend() {
     const r = await mrApi('GET');
     Object.assign(MR, r.settings); MR.owners = r.owners; MR.staff = r.staff || [];
     MR.savedOn = MR.on; $('mr-on').checked = MR.on; mrRenderDeadlines();
-    $('mr-staff').innerHTML = MR.staff.filter(p => p.email).map(p => `<option value="${escH(p.email)}">${escH(staffLabel(p))}</option>`).join('');
     MR.text = r.text || {}; MR.textDefaults = r.textDefaults || {}; mrRenderText();
     mrStatus(); mrRenderOwners(); mrRenderAs();
     if (STATE.users && STATE.users.length) renderRows();   // 계정 목록에 이메일 붙이기
+    attachSuggest($('rp-email'), p => { $('rp-email').value = p.email; rpAdd(); });
+    if (RP.to) rpRender();   // 받는 사람 칩을 이름으로
   } catch (e) { $('mr-status').innerHTML = `<span class="rp-pill off">설정을 불러오지 못했습니다: ${escH(e.message)}</span>`; }
 })();
 
