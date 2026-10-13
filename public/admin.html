@@ -220,6 +220,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
     <input type="search" id="q" placeholder="이름 · 아이디 · 부서로 찾기" autocomplete="off"
            oninput="renderRows()" style="width:100%;margin:0 0 14px">
     <div id="groups"><div style="color:var(--text3);font-size:13px">불러오는 중…</div></div>
+    <div class="rp-actions" style="border-top:1px solid var(--border);padding-top:14px;margin-top:14px">
+      <button type="button" id="ic-btn" onclick="$('ic-file').click()">초기 비밀번호 점검 (주소록 CSV 고르기)</button>
+      <input type="file" id="ic-file" accept=".csv,text/csv" style="display:none" onchange="icCheck(this)">
+    </div>
+    <div class="desc" style="margin-top:6px">비밀번호를 아직 안 바꾼 계정이 주소록 전화번호 뒷자리 4자리와 맞는지 확인합니다.
+      구글 주소록에서 내보낸 CSV를 고르면 됩니다. 파일은 이 화면에서만 읽고, 서버에는 아이디별 뒷자리만 보내 대조합니다.</div>
+    <div id="ic-out" style="font-size:13px;line-height:1.8;margin-top:8px"></div>
   </div>
 
   <div class="card" data-pane="form">
@@ -775,6 +782,55 @@ async function mrSend() {
     if (STATE.users && STATE.users.length) renderRows();   // 계정 목록에 이메일 붙이기
   } catch (e) { $('mr-status').innerHTML = `<span class="rp-pill off">설정을 불러오지 못했습니다: ${escH(e.message)}</span>`; }
 })();
+
+/* 초기 비밀번호 점검 — 구글 주소록 CSV(Name, Given Name, Family Name, Phone 1 - Value) */
+function parseCsv(text) {
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  const head = rows.shift() || [];
+  return rows.filter(r => r.length > 1).map(r => Object.fromEntries(head.map((h, i) => [h, r[i] || ''])));
+}
+const PHONE_FIXES = { '신용헌': '010-2857-9658', '박세흠': '010-3283-8229' };   // scripts/make-roster-xlsx.py 와 같게
+async function icCheck(input) {
+  const f = input.files[0]; input.value = '';
+  if (!f) return;
+  $('ic-btn').disabled = true; $('ic-out').textContent = '확인 중… (계정 수에 따라 10~30초)';
+  try {
+    const people = parseCsv(await f.text());
+    if (!people.length || !('Phone 1 - Value' in people[0])) throw new Error('구글 주소록 CSV가 아닌 것 같습니다');
+    const checks = [];
+    people.forEach(r => {
+      const name = (r['Family Name'] || '') + (r['Given Name'] || '');
+      if (!name) return;
+      const note = ((r['Name'] || '').match(/\((.+?)\)/) || [])[1] || '';
+      const phone = (PHONE_FIXES[name] || r['Phone 1 - Value'] || '').replace(/\D/g, '');
+      if (phone.length >= 4) checks.push({ id: name + note, pw: phone.slice(-4) });
+    });
+    const res = await fetch('/api/users', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'check-initial', checks }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.error || ('HTTP ' + res.status));
+    const by = s => data.result.filter(x => x.state === s);
+    const list = a => a.map(x => escH(x.name === x.id ? x.id : `${x.name}(${x.id})`)).join(', ');
+    $('ic-out').innerHTML = !data.result.length ? '비밀번호를 안 바꾼 계정이 없습니다.' :
+      `초기 비밀번호 계정 ${data.result.length}개 — ` +
+      `<b style="color:var(--pos)">뒷자리와 맞음 ${by('ok').length}</b>` +
+      (by('diff').length ? ` · <b style="color:var(--warn)">다름 ${by('diff').length}</b>` : '') +
+      (by('nophone').length ? ` · 주소록에 없음 ${by('nophone').length}` : '') +
+      (by('diff').length ? `<br><span style="color:var(--warn)">다름: ${list(by('diff'))}</span>` : '') +
+      (by('nophone').length ? `<br><span style="color:var(--text3)">주소록에서 못 찾음: ${list(by('nophone'))}</span>` : '') +
+      `<br><span style="color:var(--text3)">맞음: ${list(by('ok'))}</span>`;
+  } catch (e) { $('ic-out').innerHTML = `<span style="color:var(--warn)">점검하지 못했습니다: ${escH(e.message)}</span>`; }
+  finally { $('ic-btn').disabled = false; }
+}
 
 async function logout() {
   try { await fetch('/api/logout', { method: 'POST' }); } catch {}

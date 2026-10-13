@@ -1,4 +1,4 @@
-import { verifySession, readCookie, SESSION_COOKIE, hashPassword } from '../lib/auth.js';
+import { verifySession, readCookie, SESSION_COOKIE, hashPassword, verifyPassword } from '../lib/auth.js';
 import { ALL_TABS, TAB_DEFS, grantsOf, ID_RE, normId, MIN_INITIAL_PASSWORD,
          SCHOOL_DEPTS, YOUTH_DEPTS, YOUTH_TEAMS, DISTRICTS, DEPTS } from '../lib/users.js';
 import { loadStore, saveStore, canWrite } from '../lib/store.js';
@@ -42,6 +42,21 @@ export default async function handler(req, res) {
       districts: DISTRICTS,
       users: users.map(publicView),
     });
+  }
+
+  /* 초기 비밀번호 점검 — 아직 안 바꾼 계정이 '전화번호 뒷자리'와 맞는지만 알려 준다.
+     checks: [{ id, pw }] (관리자 화면이 주소록 CSV에서 뽑아 보낸 값). 해시도 비밀번호도 돌려주지 않는다. */
+  if (req.method === 'POST' && (req.body || {}).action === 'check-initial') {
+    const checks = Array.isArray(req.body.checks) ? req.body.checks.slice(0, 150) : [];
+    const want = new Map(checks.map(c => [String(c.id || '').toLowerCase(), String(c.pw || '')]));
+    const result = [];
+    for (const u of users.filter(x => x.mustChangePassword)) {
+      const pw = want.get(String(u.id).toLowerCase());
+      if (!pw) { result.push({ id: u.id, name: u.name, state: 'nophone' }); continue; }
+      const ok = /^\d{4,8}$/.test(pw) && await verifyPassword(pw, u.salt, u.hash);
+      result.push({ id: u.id, name: u.name, state: ok ? 'ok' : 'diff' });
+    }
+    return res.status(200).json({ result });
   }
 
   if (!canWrite()) {
