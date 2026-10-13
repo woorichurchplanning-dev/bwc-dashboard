@@ -2,13 +2,14 @@ import { verifySession, readCookie, SESSION_COOKIE } from '../lib/auth.js';
 
 /* 미입력 알림 메일 — 관리자만.
 
-   지난주 자료를 아직 안 낸 항목의 담당자에게 한 통씩 — 1차(기본 화 16시)·2차(기본 수 12시), 항목마다 차수를 정한다.
+   묶음마다 마감(주일학교·청년교구 화 14시, 예배 수 12시, 새가족 목 13시)이 있고,
+   마감이 지났는데 아직 안 낸 항목의 담당자에게 한 번 보낸다(Apps Script 가 매시간 확인).
    담당 이메일은 교회 시트의 「입력담당」 탭, 켜기·요일·시각은 「보고설정」 탭에 있고
    메일은 Apps Script(교회 계정)가 보낸다. 이 함수는 둘 사이를 이어 줄 뿐이다.
 
-   GET                                    → { settings: { on, day, hour, day2, hour2, trigger }, owners: [{ group, item, to, round }], staff }
-   POST { action: 'save', on, day, hour, day2, hour2 }
-   POST { action: 'owner', group, item, to?, round? }  — 주어진 것만 고친다
+   GET                                    → { settings: { on, deadlines: { 묶음: { day, hour } }, trigger }, owners: [{ group, item, to }], staff }
+   POST { action: 'save', on, deadlines }
+   POST { action: 'owner', group, item, to }
    POST { action: 'plan' }                → 지금 보내면 누구에게 무엇이 가는지 + 예시 한 통
    POST { action: 'send' }                → 지금 보낸다 */
 
@@ -42,21 +43,18 @@ export default async function handler(req, res) {
 
     const body = req.body || {};
     if (body.action === 'save') {
-      const day = DAYS.includes(body.day) ? body.day : '화';
-      const hour = Math.min(23, Math.max(0, parseInt(body.hour, 10) || 0));
-      const day2 = DAYS.includes(body.day2) ? body.day2 : '수';
-      const hour2 = Math.min(23, Math.max(0, parseInt(body.hour2, 10) || 0));
-      const b = await callGas({ mode: 'reminder-settings-save', on: body.on ? '1' : '0', day, hour: String(hour), day2, hour2: String(hour2) });
+      const deadlines = {};
+      Object.entries(body.deadlines || {}).slice(0, 20).forEach(([g, d]) => {
+        const hour = parseInt(d && d.hour, 10);
+        if (DAYS.includes(d && d.day) && hour >= 0 && hour <= 23) deadlines[String(g)] = { day: d.day, hour };
+      });
+      const b = await callGas({ mode: 'reminder-settings-save', on: body.on ? '1' : '0', deadlines: JSON.stringify(deadlines) });
       return res.status(200).json(b.settings);
     }
     if (body.action === 'owner') {
-      const q = { mode: 'reminder-owner-save', group: String(body.group || ''), item: String(body.item || '') };
-      if (body.to !== undefined) {
-        q.to = (Array.isArray(body.to) ? body.to : String(body.to || '').split(/[,;\s]+/))
-          .map(x => String(x).trim()).filter(x => EMAIL_RE.test(x)).slice(0, 10).join(',');
-      }
-      if (body.round !== undefined) q.round = String(body.round) === '2' ? '2' : '1';
-      const b = await callGas(q);
+      const to = (Array.isArray(body.to) ? body.to : String(body.to || '').split(/[,;\s]+/))
+        .map(x => String(x).trim()).filter(x => EMAIL_RE.test(x)).slice(0, 10);
+      const b = await callGas({ mode: 'reminder-owner-save', group: String(body.group || ''), item: String(body.item || ''), to: to.join(',') });
       return res.status(200).json(b.owner);
     }
     if (body.action === 'plan') {
