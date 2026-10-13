@@ -196,9 +196,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
       <button type="button" class="primary" id="mr-tsave" onclick="mrTextSave()">문구 저장</button>
     </div>
 
-    <label style="margin-top:18px">시험 발송 <span style="font-weight:500;color:var(--text3)">— 그 담당자가 지금 받을 메일을 제목에 [테스트]를 붙여 다른 주소로 보냅니다(실제 발송 기록은 안 남음)</span></label>
+    <label style="margin-top:18px">시험 발송 <span style="font-weight:500;color:var(--text3)">— 아래 주소로 시험 메일을 발송합니다. 담당자를 고르면 그 사람 이메일이 들어갑니다(다른 주소로 바꿔도 됨) · 제목에 [테스트]가 붙고, 실제 발송 기록은 남지 않습니다</span></label>
     <div class="rp-row" style="grid-template-columns:1fr 1fr auto">
-      <div><select id="mr-as"></select></div>
+      <div><select id="mr-as" onchange="mrAsPick()"></select></div>
       <div><input type="text" id="mr-to" placeholder="받을 주소" autocapitalize="off" spellcheck="false"></div>
       <div><button type="button" id="mr-test" onclick="mrTest()">시험 발송</button></div>
     </div>
@@ -334,7 +334,7 @@ function renderRows() {
   renderSummary();
   const box = $('groups');
   const q = ($('q')?.value || '').trim().toLowerCase();
-  const match = u => !q || [u.id, u.name, deptOf(u)].join(' ').toLowerCase().includes(q);
+  const match = u => !q || [u.id, u.name, deptOf(u), emailOfUser(u)].join(' ').toLowerCase().includes(q);
   const shown = STATE.users.filter(match);
 
   if (!STATE.users.length) {
@@ -374,11 +374,21 @@ function renderRows() {
   }).join('');
 }
 
+/* 계정 이름 → 「교역자」 명단 이메일. 동명이인(김정은)은 부서로 가린다. 못 찾으면 빈 문자열 */
+function emailOfUser(u) {
+  const key = String(u.name || '').replace(/\s*(목사|전도사|강도사|간사|사무장)$/, '').replace(/\s+/g, '');
+  const hit = (MR.staff || []).filter(p => p.email && p.name === key);
+  if (hit.length === 1) return hit[0].email;
+  const dept = deptOf(u) + ' ' + (u.name || '');
+  const by = hit.filter(p => p.part && dept.includes(p.part));
+  return by.length === 1 ? by[0].email : '';
+}
 function rowHtml(u) {
   const labelOf = (k) => (STATE.tabDefs.find(t => t.key === k) || {}).label || k;
   return `<tr>
       <td><code>${u.id}</code></td>
-      <td>${u.name}${u.mustChangePassword ? ' <span class="badge init">초기 비밀번호</span>' : ''}</td>
+      <td>${u.name}${u.mustChangePassword ? ' <span class="badge init">초기 비밀번호</span>' : ''}${
+        emailOfUser(u) ? `<div style="font-size:11.5px;color:var(--text3);margin-top:2px">${escH(emailOfUser(u))}</div>` : ''}</td>
       <td><span class="badge ${u.role}">${u.role === 'admin' ? '관리자' : '담당'}</span></td>
       <td><div class="tabchips">${
         u.tabs === '*' ? '<span class="chip all">전체</span>'
@@ -730,17 +740,17 @@ function mrRenderAs() {
   $('mr-as').innerHTML = '<option value="">누구 몫으로? (담당자 고르기)</option>' +
     opts.map(m => `<option value="${escH(m)}"${m === cur ? ' selected' : ''}>${escH(whoOf([m]))}</option>`).join('');
 }
+function mrAsPick() { $('mr-to').value = $('mr-as').value; }
 async function mrTest() {
   const as = $('mr-as').value, to = $('mr-to').value.trim();
   if (!as) return show('err', '누구 몫의 메일을 보낼지 담당자를 골라 주세요.');
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return show('err', '받을 주소를 이메일로 적어 주세요.');
-  try { localStorage.setItem('mr-test-to', to); } catch {}
   $('mr-test').disabled = true; $('mr-test').textContent = '보내는 중…';
   try {
     const r = await mrApi('POST', { action: 'test', as, to });
-    show('ok', `${to}로 보냈습니다 — ${r.subject} (${r.items.map(x => x.item).join(', ')})`);
+    show('ok', `${whoOf([to])}(${to})에게 보냈습니다 — ${r.subject} (${r.items.map(x => x.item).join(', ')})`);
   } catch (e) {
-    show('err', /nothing_for/.test(e.message) ? `${whoOf([as])} 몫으로 지금 안 낸 항목이 없어 보낼 내용이 없습니다.` : '보내지 못했습니다: ' + e.message);
+    show('err', /nothing_for/.test(e.message) ? `${whoOf([as])}님이 맡은 항목이 없습니다.` : '보내지 못했습니다: ' + e.message);
   } finally { $('mr-test').disabled = false; $('mr-test').textContent = '시험 발송'; }
 }
 async function mrSend() {
@@ -761,8 +771,8 @@ async function mrSend() {
     MR.savedOn = MR.on; $('mr-on').checked = MR.on; mrRenderDeadlines();
     $('mr-staff').innerHTML = MR.staff.filter(p => p.email).map(p => `<option value="${escH(p.email)}">${escH(staffLabel(p))}</option>`).join('');
     MR.text = r.text || {}; MR.textDefaults = r.textDefaults || {}; mrRenderText();
-    try { $('mr-to').value = localStorage.getItem('mr-test-to') || ''; } catch {}
     mrStatus(); mrRenderOwners(); mrRenderAs();
+    if (STATE.users && STATE.users.length) renderRows();   // 계정 목록에 이메일 붙이기
   } catch (e) { $('mr-status').innerHTML = `<span class="rp-pill off">설정을 불러오지 못했습니다: ${escH(e.message)}</span>`; }
 })();
 
