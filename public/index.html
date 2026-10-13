@@ -937,7 +937,12 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
     <!-- 주 선택 네비게이션 -->
     <div style="display:flex; gap:var(--s2); margin-bottom:var(--s5); align-items:center; justify-content:center;">
       <button class="stab" onclick="sunWeekNav(-1)" style="flex-grow:0">← 이전주</button>
-      <span id="sun-week-label" style="font-weight:600; min-width:180px; text-align:center; font-size:14px;">2026년 5월 18-24주</span>
+      <label style="position:relative;display:inline-flex;align-items:center;gap:6px;cursor:pointer" title="달력에서 날짜를 고르면 그 날짜가 든 주로 갑니다">
+        <span id="sun-week-label" style="font-weight:600; min-width:180px; text-align:center; font-size:14px;">2026년 5월 18-24주</span>
+        <span aria-hidden="true" style="font-size:15px">📅</span>
+        <input type="date" id="sun-week-date" onchange="sunWeekPick(this.value)" aria-label="날짜로 주 고르기"
+          style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%">
+      </label>
       <button class="stab" onclick="sunWeekNav(1)" style="flex-grow:0">다음주 →</button>
     </div>
 
@@ -3045,6 +3050,21 @@ function sunWeekNav(offset) {
   }
 }
 
+/* 달력에서 고른 날짜가 든 주로 간다 — 주차 키는 그 주가 끝나는 주일(월~주일) */
+function sunWeekPick(val) {
+  if (!val) return;
+  const d = new Date(val + 'T00:00:00');
+  const fw = sunWeekState.fw;
+  let idx = fw.findIndex(w => { const e = parseWeekDate(w), st = new Date(e); st.setDate(st.getDate() - 6); return d >= st && d <= e; });
+  if (idx < 0) {   // 자료가 있는 주 중 가장 가까운 주
+    let best = Infinity;
+    fw.forEach((w, i) => { const gap = Math.abs(parseWeekDate(w) - d); if (gap < best) { best = gap; idx = i; } });
+  }
+  if (idx < 0) return;
+  sunWeekState.weekIndex = idx;
+  renderSunWeekComparison();
+  updateSunDrill('loc', 'all');
+}
 function renderSunWeekComparison() {
   const fw = sunWeekState.fw;
   const idx = sunWeekState.weekIndex;
@@ -3062,6 +3082,12 @@ function renderSunWeekComparison() {
   renderSunRooms(week);
   document.getElementById('sun-week-label').innerHTML =
     weekLabel + (filled ? '' : ' <span style="color:var(--color-warning);font-weight:700">· 미입력</span>');
+  const pk = document.getElementById('sun-week-date');
+  if (pk) {
+    const iso = x => `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
+    const first = parseWeekDate(fw[0]); first.setDate(first.getDate() - 6);
+    pk.min = iso(first); pk.max = iso(parseWeekDate(fw[fw.length - 1])); pk.value = iso(weekEnd);
+  }
 
   const sunData = D.sunday[week] || {};
   const sh1 = v(sunData.bu?.['1부']?.장년);
