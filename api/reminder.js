@@ -10,7 +10,9 @@ import { verifySession, readCookie, SESSION_COOKIE } from '../lib/auth.js';
    GET                                    → { settings: { on, deadlines: { 묶음: { day, hour } }, trigger }, owners: [{ group, item, to }], staff }
    POST { action: 'save', on, deadlines }
    POST { action: 'owner', group, item, to }
-   POST { action: 'plan' }                → 지금 보내면 누구에게 무엇이 가는지 + 예시 한 통
+   POST { action: 'text', text: { 제목, 인사, 요청, 안내, 맺음 } } → 메일 문구 저장(빈 칸 = 기본 문구)
+   POST { action: 'plan', as? }           → 지금 보내면 누구에게 무엇이 가는지 + 예시 한 통(as 담당 몫)
+   POST { action: 'test', as, to }        → as 담당이 받을 메일을 to 로 시험 발송(보낸 기록 안 남김)
    POST { action: 'send' }                → 지금 보낸다 */
 
 const GAS = process.env.APPS_SCRIPT_URL ||
@@ -37,7 +39,7 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const b = await callGas({ mode: 'reminder-settings' });
-      return res.status(200).json({ settings: b.settings, owners: b.owners, staff: (b.staff || []).map(p => ({ name: p.name, title: p.title, part: p.part, email: p.email })) });
+      return res.status(200).json({ settings: b.settings, owners: b.owners, staff: (b.staff || []).map(p => ({ name: p.name, title: p.title, part: p.part, email: p.email })), text: b.text, textDefaults: b.textDefaults });
     }
     if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
 
@@ -57,8 +59,22 @@ export default async function handler(req, res) {
       const b = await callGas({ mode: 'reminder-owner-save', group: String(body.group || ''), item: String(body.item || ''), to: to.join(',') });
       return res.status(200).json(b.owner);
     }
+    if (body.action === 'text') {
+      const text = {};
+      ['제목', '인사', '요청', '안내', '맺음'].forEach(k => {
+        if (body.text && typeof body.text[k] === 'string') text[k] = body.text[k].slice(0, k === '제목' ? 200 : 1500);
+      });
+      const b = await callGas({ mode: 'reminder-text-save', text: JSON.stringify(text) });
+      return res.status(200).json({ text: b.text });
+    }
+    if (body.action === 'test') {
+      const as = String(body.as || '').trim(), to = String(body.to || '').trim();
+      if (!EMAIL_RE.test(as) || !EMAIL_RE.test(to)) return res.status(400).json({ error: 'bad_email' });
+      const b = await callGas({ mode: 'reminder-test', as, to });
+      return res.status(200).json({ to: b.to, subject: b.subject, items: b.items });
+    }
     if (body.action === 'plan') {
-      const b = await callGas({ mode: 'reminder-plan' });
+      const b = await callGas({ mode: 'reminder-plan', as: EMAIL_RE.test(String(body.as || '')) ? String(body.as) : '' });
       return res.status(200).json({ plan: b.plan, sample: b.sample, sampleTo: b.sampleTo });
     }
     if (body.action === 'send') {

@@ -51,7 +51,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
 label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin:0 0 6px}
 input[type=text],input[type=password],select{width:100%;padding:9px 11px;font-size:13px;font-family:inherit;
   border:1px solid rgba(0,0,0,.14);border-radius:8px;background:var(--surface);color:var(--text)}
-input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,91,255,.12)}
+textarea{width:100%;padding:9px 11px;font-size:13px;font-family:inherit;line-height:1.6;resize:vertical;
+  border:1px solid rgba(0,0,0,.14);border-radius:8px;background:var(--surface);color:var(--text)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,91,255,.12)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px}
 .checks{display:flex;flex-wrap:wrap;gap:8px}
 .checks label{display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;
@@ -114,6 +116,9 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 .mr-tbl select{margin:0 6px 0 0;padding:6px 8px;font-size:12.5px;width:auto;display:inline-block}
 .mr-tbl td.st{width:70px;font-size:12px;color:var(--text3);white-space:nowrap}
 .mr-tbl input{width:100%;margin:0}
+.mr-tx{display:grid;grid-template-columns:70px 1fr;gap:8px 10px;align-items:start;margin-bottom:12px}
+.mr-tx .k{font-size:12.5px;font-weight:600;color:var(--text2);padding-top:9px}
+.mr-tx .fixed{font-size:12px;color:var(--text3);padding:4px 0;grid-column:2}
 #rp-preview{margin-top:16px;display:none}
 #rp-preview iframe{width:100%;height:900px;border:1px solid var(--border);border-radius:12px;background:#efefec}
 #q{padding:9px 12px;border:1px solid var(--line,rgba(0,0,0,.15));border-radius:9px;font:inherit;font-size:13px}
@@ -183,6 +188,20 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
     <label>항목별 담당 <span style="font-weight:500;color:var(--text3)">— 이름을 치면 교역자 명단에서 고를 수 있습니다(이메일도 됨) · 칸을 벗어나면 바로 저장 · 여러 명은 쉼표로</span></label>
     <datalist id="mr-staff"></datalist>
     <div id="mr-owners"></div>
+
+    <label style="margin-top:18px">메일 문구 <span style="font-weight:500;color:var(--text3)">— {호칭} 한형우 목사님 · {기간} 10/5(월) ~ 10/11(주일) · {주} 10/11 · {건수} 1 · 칸을 비우면 기본 문구</span></label>
+    <div class="mr-tx" id="mr-text"></div>
+    <div class="rp-actions">
+      <button type="button" onclick="mrTextReset()">기본 문구로 되돌리기</button>
+      <button type="button" class="primary" id="mr-tsave" onclick="mrTextSave()">문구 저장</button>
+    </div>
+
+    <label style="margin-top:18px">시험 발송 <span style="font-weight:500;color:var(--text3)">— 그 담당자가 지금 받을 메일을 제목에 [테스트]를 붙여 다른 주소로 보냅니다(실제 발송 기록은 안 남음)</span></label>
+    <div class="rp-row" style="grid-template-columns:1fr 1fr auto">
+      <div><select id="mr-as"></select></div>
+      <div><input type="text" id="mr-to" placeholder="받을 주소" autocapitalize="off" spellcheck="false"></div>
+      <div><button type="button" id="mr-test" onclick="mrTest()">시험 발송</button></div>
+    </div>
 
     <div class="rp-actions" style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px">
       <button type="button" id="mr-plan" onclick="mrPlan()">지금 보내면 누구에게? (미리보기)</button>
@@ -638,7 +657,7 @@ async function mrOwner(i) {
     o.to = r.to || []; el.value = o.to.join(', ');
     $('mr-w-' + i).textContent = $('mr-w-' + i).title = whoOf(o.to);
     st.textContent = '저장됨'; st.style.color = 'var(--pos)';
-    mrStatus();
+    mrStatus(); mrRenderAs();
   } catch (e) { st.textContent = '실패'; st.style.color = 'var(--warn)'; show('err', `${o.item} 담당을 저장하지 못했습니다: ${e.message}`); }
 }
 /* 묶음별 마감 — 요일·시각 고르기 */
@@ -672,7 +691,7 @@ function mrPlanHtml(p) {
 async function mrPlan() {
   $('mr-plan').disabled = true; $('mr-plan').textContent = '확인 중… (10초쯤)';
   try {
-    const r = await mrApi('POST', { action: 'plan' });
+    const r = await mrApi('POST', { action: 'plan', as: $('mr-as').value });
     $('mr-plan-out').innerHTML = mrPlanHtml(r.plan);
     if (r.sample) {
       $('mr-frame').srcdoc = `<meta charset="utf-8"><body style="margin:16px"><div style="font:12px sans-serif;color:#888;margin-bottom:10px">예시 — ${escH(r.sampleTo)}에게 갈 메일 · 제목: ${escH(r.sample.subject)}</div>` + r.sample.html;
@@ -680,6 +699,49 @@ async function mrPlan() {
     } else $('mr-preview').style.display = 'none';
   } catch (e) { show('err', '확인하지 못했습니다: ' + e.message); }
   finally { $('mr-plan').disabled = false; $('mr-plan').textContent = '지금 보내면 누구에게? (미리보기)'; }
+}
+/* 메일 문구 — 제목·인사·요청 / (항목 표·버튼) / 안내·맺음 */
+const MR_TX = ['제목', '인사', '요청', '안내', '맺음'];
+function mrRenderText() {
+  const row = k => k === '제목'
+    ? `<div class="k">${k}</div><input type="text" id="mr-t-${k}" value="${escH(MR.text[k] || '')}">`
+    : `<div class="k">${k}</div><textarea id="mr-t-${k}" rows="${(MR.text[k] || '').split('\n').length + 1}">${escH(MR.text[k] || '')}</textarea>`;
+  $('mr-text').innerHTML = row('제목') + row('인사') + row('요청') +
+    '<div class="fixed">↓ 여기에 안 낸 항목 표와 [입력하러 가기] 버튼이 들어갑니다</div>' + row('안내') + row('맺음');
+}
+function mrTextReset() {
+  if (!confirm('메일 문구를 기본 문구로 되돌릴까요? ([문구 저장]을 눌러야 반영됩니다)')) return;
+  MR.text = { ...MR.textDefaults }; mrRenderText();
+}
+async function mrTextSave() {
+  $('mr-tsave').disabled = true;
+  try {
+    const text = Object.fromEntries(MR_TX.map(k => [k, $('mr-t-' + k).value]));
+    const r = await mrApi('POST', { action: 'text', text });
+    MR.text = r.text; mrRenderText();
+    show('ok', '메일 문구를 저장했습니다. [미리보기]나 [시험 발송]으로 확인해 보세요.');
+  } catch (e) { show('err', '문구를 저장하지 못했습니다: ' + e.message); }
+  finally { $('mr-tsave').disabled = false; }
+}
+function mrRenderAs() {
+  const seen = new Set(), opts = [];
+  MR.owners.forEach(o => o.to.forEach(m => { if (!seen.has(m)) { seen.add(m); opts.push(m); } }));
+  const cur = $('mr-as').value;
+  $('mr-as').innerHTML = '<option value="">누구 몫으로? (담당자 고르기)</option>' +
+    opts.map(m => `<option value="${escH(m)}"${m === cur ? ' selected' : ''}>${escH(whoOf([m]))}</option>`).join('');
+}
+async function mrTest() {
+  const as = $('mr-as').value, to = $('mr-to').value.trim();
+  if (!as) return show('err', '누구 몫의 메일을 보낼지 담당자를 골라 주세요.');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return show('err', '받을 주소를 이메일로 적어 주세요.');
+  try { localStorage.setItem('mr-test-to', to); } catch {}
+  $('mr-test').disabled = true; $('mr-test').textContent = '보내는 중…';
+  try {
+    const r = await mrApi('POST', { action: 'test', as, to });
+    show('ok', `${to}로 보냈습니다 — ${r.subject} (${r.items.map(x => x.item).join(', ')})`);
+  } catch (e) {
+    show('err', /nothing_for/.test(e.message) ? `${whoOf([as])} 몫으로 지금 안 낸 항목이 없어 보낼 내용이 없습니다.` : '보내지 못했습니다: ' + e.message);
+  } finally { $('mr-test').disabled = false; $('mr-test').textContent = '시험 발송'; }
 }
 async function mrSend() {
   if (!confirm('지난주 자료를 아직 안 낸 항목의 담당자에게 지금 알림을 보낼까요?')) return;
@@ -698,7 +760,9 @@ async function mrSend() {
     Object.assign(MR, r.settings); MR.owners = r.owners; MR.staff = r.staff || [];
     MR.savedOn = MR.on; $('mr-on').checked = MR.on; mrRenderDeadlines();
     $('mr-staff').innerHTML = MR.staff.filter(p => p.email).map(p => `<option value="${escH(p.email)}">${escH(staffLabel(p))}</option>`).join('');
-    mrStatus(); mrRenderOwners();
+    MR.text = r.text || {}; MR.textDefaults = r.textDefaults || {}; mrRenderText();
+    try { $('mr-to').value = localStorage.getItem('mr-test-to') || ''; } catch {}
+    mrStatus(); mrRenderOwners(); mrRenderAs();
   } catch (e) { $('mr-status').innerHTML = `<span class="rp-pill off">설정을 불러오지 못했습니다: ${escH(e.message)}</span>`; }
 })();
 
