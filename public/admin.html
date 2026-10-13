@@ -130,6 +130,23 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .mr-tbl select{margin:0 6px 0 0;padding:6px 8px;font-size:12.5px;width:auto;display:inline-block}
 .mr-tbl td.st{width:70px;font-size:12px;color:var(--text3);white-space:nowrap}
 .mr-tbl input{width:100%;margin:0}
+.mr-who{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.mr-who .rp-chip{padding:3px 4px 3px 10px;font-size:12.5px}
+.mr-add{flex:0 1 130px;min-width:100px}
+.mr-add input{padding:5px 8px;font-size:12.5px}
+.mr-add .sg-list{right:auto;min-width:300px}
+/* 담당자 표에서는 이름 목록이 표 밖으로 내려와야 한다 — 묶음 상자가 잘라내지 않게 */
+#mr-groups .grp, #mr-groups .grp-body{overflow:visible}
+#mr-groups .grp-hd{border-radius:10px 10px 0 0}
+.mr-who .rp-chip{white-space:nowrap}
+/* 폰: 항목 이름 한 줄, 그 아래 담당자 칩 — 좁은 칸에 칩이 세로로 찌그러지지 않게 */
+@media (max-width:600px){
+  .mr-tbl tr{display:grid;grid-template-columns:1fr auto;border-bottom:1px solid var(--border);padding:6px 0}
+  .mr-tbl td{border:0;padding:3px 8px}
+  .mr-tbl td.it{width:auto}
+  .mr-tbl td.st{width:auto;text-align:right}
+  .mr-tbl td:nth-child(2){grid-column:1 / -1;grid-row:2}
+}
 .mr-tx{display:grid;grid-template-columns:70px 1fr;gap:8px 10px;align-items:start;margin-bottom:12px}
 .mr-tx .k{font-size:12.5px;font-weight:600;color:var(--text2);padding-top:9px}
 .mr-tx .fixed{font-size:12px;color:var(--text3);padding:4px 0;grid-column:2}
@@ -191,7 +208,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
     <div class="rp-status" id="mr-status"><span class="rp-pill">불러오는 중…</span></div>
     <div class="mr-onoff" id="mr-onoff" style="display:none"></div>
 
-    <label>마감 요일/시간 설정 <span style="font-weight:500;color:var(--text3)">— 바꾸면 바로 저장 · 줄을 누르면 항목별 담당자가 보입니다(이름을 치면 명단에서 찾음, 칸을 벗어나면 저장)</span></label>
+    <label>마감 요일/시간 설정 <span style="font-weight:500;color:var(--text3)">— 바꾸면 바로 저장 · 줄을 누르면 항목별 담당자가 보입니다(+ 이름에 이름을 치고 누르면 바로 저장 · ×로 빼기)</span></label>
     <div id="mr-groups" style="margin-bottom:8px"></div>
 
     <label style="margin-top:18px">메일 문구 <span style="font-weight:500;color:var(--text3)">— {호칭} 한형우 목사님 · {기간} 10/5(월) ~ 10/11(주일) · {주} 10/11 · {건수} 1</span></label>
@@ -707,33 +724,61 @@ function mrRenderOwners() {
         <select id="mr-dd-${k}" onchange="mrSave()">${days.map(x => `<option value="${x}"${x === d.day ? ' selected' : ''}>${x}요일</option>`).join('')}</select>
         <select id="mr-dh-${k}" onchange="mrSave()">${Array.from({ length: 24 }, (_, h) => `<option value="${h}"${h === d.hour ? ' selected' : ''}>${h === 12 ? '낮 12시' : hourLabel(h)}</option>`).join('')}</select>
         <span class="grp-spacer"></span>
-        <span class="mr-more" onclick="this.closest('.grp').classList.toggle('closed')">담당 ${set}/${rows.length}${set < rows.length ? ' · 빈 곳 있음' : ''}</span>
+        <span class="mr-more" onclick="this.closest('.grp').classList.toggle('closed')">${mrCount(g)}</span>
       </div>
       <div class="grp-body"><table class="mr-tbl">${rows.map(r => `<tr>
         <td class="it">${escH(r.item)}</td>
-        <td><div class="sg-wrap"><input type="text" id="mr-o-${r.i}" value="${escH(r.to.join(', '))}" placeholder="이름 또는 이메일" autocomplete="off"
-          autocapitalize="off" spellcheck="false" onchange="mrOwner(${r.i})"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"></div></td>
-        <td class="who" id="mr-w-${r.i}" title="${escH(whoOf(r.to))}">${escH(whoOf(r.to))}</td>
+        <td><div class="mr-who" id="mr-w-${r.i}">${mrChips(r)}</div></td>
         <td class="st" id="mr-s-${r.i}">${r.to.length ? '' : '없음'}</td></tr>`).join('')}</table></div></div>`;
   }).join('');
-  MR.owners.forEach((o, i) => attachSuggest($('mr-o-' + i), (p, el) => {
-    const parts = el.value.split(/[,;]/).map(x => x.trim()); parts.pop();
-    el.value = [...parts.filter(Boolean), p.email].join(', ');
-    mrOwner(i);
-  }));
+  MR.owners.forEach((o, i) => mrWireAdd(i));
 }
-async function mrOwner(i) {
-  const o = MR.owners[i], el = $('mr-o-' + i), st = $('mr-s-' + i);
-  const { out: raw, bad } = resolveOwners(el.value);
+/* 담당자 칸 — 이메일 대신 이름 칩만 보인다(이메일은 칩에 마우스를 올리면).
+   예전엔 이메일을 쉼표로 늘어놓은 입력칸 옆에 이름 칸이 따로 있어 한 줄이 길고 헷갈렸다.
+   이제 "+ 이름"에 이름을 치고 목록에서 누르면 그 사람 이메일이 바로 저장된다. */
+const staffShort = p => `${p.name}${MR.staff.filter(x => x.name === p.name).length > 1 && p.part ? `(${p.part})` : ''} ${p.title || ''}`.trim();
+function mrChips(r) {
+  const by = staffByEmail();
+  return r.to.map((m, k) => {
+    const p = by[m.toLowerCase()];
+    return `<span class="rp-chip" title="${escH(m)}">${escH(p ? staffShort(p) : m)}<button type="button" aria-label="빼기" onclick="mrOwnerDel(${r.i},${k})">×</button></span>`;
+  }).join('') + `<div class="sg-wrap mr-add"><input type="text" id="mr-o-${r.i}" placeholder="+ 이름" autocomplete="off"
+    autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();mrOwnerTyped(${r.i})}"></div>`;
+}
+/* 묶음 머리의 "담당 2/3 · 빈 곳 있음" */
+function mrCount(g) {
+  const rows = MR.owners.filter(o => o.group === g), set = rows.filter(o => o.to.length).length;
+  return `담당 ${set}/${rows.length}${set < rows.length ? ' · 빈 곳 있음' : ''}`;
+}
+function mrWireAdd(i) {
+  attachSuggest($('mr-o-' + i), p => mrOwnerSet(i, [...MR.owners[i].to, p.email]));
+}
+/* 목록에서 고르지 않고 이메일(또는 이름 전체)을 쳐서 Enter 했을 때 */
+function mrOwnerTyped(i) {
+  const el = $('mr-o-' + i), st = $('mr-s-' + i);
+  if (!el.value.trim()) return;
+  const { out, bad } = resolveOwners(el.value);
   if (bad.length) { st.textContent = '확인 필요'; st.style.color = 'var(--warn)'; return show('err', '명단에 없는 이름이거나 이메일 형식이 아닙니다: ' + bad.join(', ')); }
+  mrOwnerSet(i, [...MR.owners[i].to, ...out]);
+}
+function mrOwnerDel(i, k) {
+  mrOwnerSet(i, MR.owners[i].to.filter((_, j) => j !== k));
+}
+async function mrOwnerSet(i, to) {
+  const o = MR.owners[i], st = $('mr-s-' + i);
+  to = [...new Set(to.map(m => m.trim()).filter(Boolean))];
   st.textContent = '저장 중…'; st.style.color = '';
   try {
-    const r = await mrApi('POST', { action: 'owner', group: o.group, item: o.item, to: raw });
-    o.to = r.to || []; el.value = o.to.join(', ');
-    $('mr-w-' + i).textContent = $('mr-w-' + i).title = whoOf(o.to);
-    st.textContent = '저장됨'; st.style.color = 'var(--pos)';
+    const r = await mrApi('POST', { action: 'owner', group: o.group, item: o.item, to });
+    o.to = r.to || [];
+    $('mr-w-' + i).innerHTML = mrChips({ ...o, i });
+    mrWireAdd(i);
+    st.textContent = o.to.length ? '저장됨' : '없음'; st.style.color = o.to.length ? 'var(--pos)' : '';
+    const head = [...document.querySelectorAll('#mr-groups .grp')].find(el => el.dataset.g === o.group);
+    if (head) head.querySelector('.mr-more').textContent = mrCount(o.group);
     mrStatus(); mrRenderAs();
+    // 한 항목에 여러 명을 연달아 넣을 수 있게 칸에 다시 커서를 둔다
+    $('mr-o-' + i).focus();
   } catch (e) { st.textContent = '실패'; st.style.color = 'var(--warn)'; show('err', `${o.item} 담당을 저장하지 못했습니다: ${e.message}`); }
 }
 /* 마감 요일/시간 — 고르면 바로 저장하고 예약도 새 시각으로 다시 건다 */
