@@ -706,6 +706,9 @@ table.sp-mini { font-size:12px; }
 table.sp-mini th, table.sp-mini td { padding:5px 6px; white-space:nowrap; }
 .sp-ychip { display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:5px; vertical-align:0; }
 table.sp-matrix td, table.sp-matrix th { font-variant-numeric:tabular-nums; }
+table.sp-ev { width:100%; font-variant-numeric:tabular-nums; }
+table.sp-ev th, table.sp-ev td { padding:7px 10px; white-space:nowrap; vertical-align:top; }
+table.sp-ev tr.sp-row-total td { background:var(--color-bg-subtle, #f4f6f8); font-weight:700; }
 table.sp-matrix tr.sp-row-total td { background:var(--color-bg-subtle, #f4f6f8); font-weight:700; }
 table.sp-matrix tr.sp-row-site td { font-weight:600; }
 table.sp-matrix tr.sp-row-online td { color:var(--color-accent, #635bff); border-bottom:1.5px solid var(--color-border-default); }
@@ -1241,11 +1244,13 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
     <button class="stab" onclick="spTab('holywk')">고난주간 집회</button>
     <button class="stab" onclick="spTab('christmas')">성탄예배</button>
     <button class="stab" onclick="spTab('newyear')">송구영신예배</button>
+    <button class="stab" onclick="spTab('events')">성찬식·세례식</button>
   </div>
   <div class="ss on" id="special-dawn"></div>
   <div class="ss" id="special-holywk"></div>
   <div class="ss" id="special-christmas"></div>
   <div class="ss" id="special-newyear"></div>
+  <div class="ss" id="special-events"></div>
 </section>
 
 <!-- ═══ YEAR COMPARISON ═══ -->
@@ -1951,6 +1956,14 @@ function exportCSV() {
           nfVal(r, type, 'new_believer')
         ]);
       });
+    });
+  } else if (tab === 'special' && SUB_TAB['special'] === 'events') {
+    name = '주일행사';
+    rows.push(['주차', '행사', '송림', '서현', '현장합계', '송림 메모', '서현 메모']);
+    Object.keys(D.sunday).sort().forEach(w => {
+      const s = D.sunday[w], ev = s.events;
+      if (!ev?.tags?.length) return;
+      rows.push([w, ev.tags.join(', '), v(s.songrim), v(s.jangnyeon), v(s.songrim) + v(s.jangnyeon), ev.memo['송림'] || '', ev.memo['서현'] || '']);
     });
   } else if (tab === 'special') {
     const key = SUB_TAB['special'] || 'dawn';
@@ -5062,6 +5075,65 @@ function specialPlaces(agg, years) {
 
 function initSpecial() { spTab(SUB_TAB['special'] || 'dawn'); }
 
+/* 주일 행사 — 성찬식·세례식처럼 따로 세지 않고 그 주일 출석에 태그만 붙인 것을 모아 본다 */
+let SP_EV_TAG = '';
+function setSpEvTag(t) { SP_EV_TAG = t; renderSunEventsTab(); }
+function renderSunEventsTab() {
+  const el = document.getElementById('special-events');
+  if (!el) return;
+  const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const weeks = Object.keys(D.sunday).sort();
+  const tagged = weeks.filter(w => D.sunday[w]?.events?.tags?.length);
+  const allTags = [];
+  ['성찬식', '세례식'].concat(...tagged.map(w => D.sunday[w].events.tags))
+    .forEach(t => { if (!allTags.includes(t)) allTags.push(t); });
+  if (SP_EV_TAG && !allTags.includes(SP_EV_TAG)) SP_EV_TAG = '';
+  const howTo = `입력앱 <b>주일예배 → 서현/송림</b> 표 아래 <b>이 주일의 행사</b>에서 성찬식·세례식을 고르고 메모를 남기면 여기에 모입니다.
+    인원은 따로 세지 않고 그 주일 현장 출석을 씁니다.`;
+  const btns = `<div class="stabs" style="margin-bottom:12px">${['', ...allTags].map(t =>
+    `<button class="stab${SP_EV_TAG === t ? ' on' : ''}" onclick="setSpEvTag('${esc(t).replace(/'/g, "\\'")}')">${t ? esc(t) : '전체'}</button>`).join('')}</div>`;
+  const list = tagged.filter(w => !SP_EV_TAG || D.sunday[w].events.tags.includes(SP_EV_TAG)).reverse();
+  if (!list.length) {
+    el.innerHTML = btns + `<div class="cc"><div class="ct">${SP_EV_TAG ? esc(SP_EV_TAG) + ' ' : ''}표시된 주일 없음</div>
+      <div class="cs" style="margin-top:6px;line-height:1.7">${howTo}</div></div>`;
+    return;
+  }
+  const tot = w => (D.sunday[w]?.songrim || 0) + (D.sunday[w]?.jangnyeon || 0);
+  // 직전 주일(출석이 들어온 주) 대비
+  const prevOf = w => { for (let i = weeks.indexOf(w) - 1; i >= 0; i--) if (tot(weeks[i])) return weeks[i]; return null; };
+  const n = v => (v ? fmt(v) : '<span class="sp-dash">–</span>');
+  const dl = (a, b) => {
+    if (!a || !b) return '<span class="sp-dash">–</span>';
+    const d = a - b, pc = Math.round(d / b * 100);
+    return `<span class="${d > 0 ? 'sp-up' : d < 0 ? 'sp-down' : ''}">${d > 0 ? '▲' : d < 0 ? '▼' : ''} ${fmt(Math.abs(d))}</span><span class="sp-pct">${pc > 0 ? '+' : ''}${pc}%</span>`;
+  };
+  const chip = t => `<span class="sub-chip" style="margin-right:4px">${esc(t)}</span>`;
+  let body = '', year = null;
+  list.forEach(w => {
+    const y = w.slice(0, 4);
+    if (y !== year) {
+      year = y;
+      const cnt = list.filter(x => x.startsWith(y)).length;
+      body += `<tr class="sp-row-total"><td class="sp-l" colspan="7"><span class="sp-ychip" style="background:${yearColor(+y)}"></span>${y}년 · ${cnt}회</td></tr>`;
+    }
+    const s = D.sunday[w], ev = s.events, dt = parseWeekDate(w), p = prevOf(w);
+    const memo = Object.entries(ev.memo).map(([site, m]) => `${Object.keys(ev.memo).length > 1 ? `<b>${site}</b> ` : ''}${esc(m)}`).join('<br>');
+    body += `<tr>
+      <td class="sp-l" style="white-space:nowrap">${dt.getMonth() + 1}/${dt.getDate()}</td>
+      <td class="sp-l">${ev.tags.map(chip).join('')}</td>
+      <td class="sp-n">${n(s.songrim)}</td><td class="sp-n">${n(s.jangnyeon)}</td>
+      <td class="sp-n"><b>${n(tot(w))}</b></td>
+      <td class="sp-n">${dl(tot(w), p && tot(p))}</td>
+      <td class="sp-l" style="white-space:normal;min-width:180px;font-size:12.5px;color:var(--color-text-secondary)">${memo || ''}</td></tr>`;
+  });
+  el.innerHTML = btns + `<div class="cc">
+    <div class="ct">${SP_EV_TAG ? esc(SP_EV_TAG) + ' 주일' : '행사가 있었던 주일'} · ${list.length}회</div>
+    <div class="cs" style="margin-bottom:10px;line-height:1.6">${howTo}</div>
+    <div style="overflow-x:auto"><table class="sp-ev">
+      <tr><th class="sp-l">날짜</th><th class="sp-l">행사</th><th class="sp-n">송림</th><th class="sp-n">서현</th><th class="sp-n">현장 합계</th><th class="sp-n">직전 주일 대비</th><th class="sp-l">메모</th></tr>
+      ${body}</table></div></div>`;
+}
+
 function spTab(key, opts) {
   const par = document.getElementById('s-special');
   const t = document.getElementById('special-' + key);
@@ -5070,7 +5142,7 @@ function spTab(key, opts) {
   par.querySelectorAll('.ss').forEach(el => el.classList.remove('on'));
   t.classList.add('on');
   SUB_TAB['special'] = key;
-  renderSpecial(key);
+  if (key === 'events') renderSunEventsTab(); else renderSpecial(key);
   if (!opts?.silent) writeHash('special', key);
 }
 
@@ -5539,6 +5611,18 @@ function weekNotes(week) {
   return out;
 }
 
+/* '행사' 칸은 '성찬식,세례식' 처럼 쉼표로, '행사 메모'는 장소마다 */
+function sunEvents(sh, sr) {
+  const tags = [], memo = {};
+  [['송림', sr], ['서현', sh]].forEach(([site, r]) => {
+    String(r['행사'] ?? '').split(',').map(t => t.trim()).filter(Boolean)
+      .forEach(t => { if (!tags.includes(t)) tags.push(t); });
+    const m = String(r['행사 메모'] ?? '').trim();
+    if (m) memo[site] = m;
+  });
+  return tags.length || Object.keys(memo).length ? { tags, memo } : null;
+}
+
 function applyNewData(data) {
   Object.entries(data).forEach(([date, rec]) => {
     if (!rec || typeof rec !== 'object') return;
@@ -5564,6 +5648,8 @@ function applyNewData(data) {
         grand_total:   (shTotal||0)+(srTotal||0) || null,
         online:        D.sunday[date]?.online ?? null,
         note:          sh['note'] || sh['비고'] || sr['note'] || sr['비고'] || null,
+        // 주일 행사 태그(입력앱 주일예배 표 아래 '이 주일의 행사') — 성찬식·세례식 등. 장소마다 따로 붙는다
+        events:        sunEvents(sh, sr),
         bu: {
           '1부': { 장년: sh['1부']??null, 송림: sr['1부']??null },
           '2부': { 장년: sh['2부']??null, 송림: sr['2부']??null },
