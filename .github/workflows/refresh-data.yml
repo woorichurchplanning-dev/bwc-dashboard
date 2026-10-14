@@ -6,9 +6,10 @@ on:
   repository_dispatch:
     types: [sheet-updated]
   schedule:
-    # 15분마다 '최근 3주만' 받아 얹는다. 이게 평소의 반영 통로다.
-    # (Apps Script 는 한 주에 10초쯤 걸려 3주면 30초 안팎이다.)
-    - cron: '*/15 * * * *'
+    # 15분마다 돌던 '최근 3주' 갱신은 껐다(2026-10-15). 돌 때마다 Blob에 list·put을
+    # 서너 번씩 해서 한 달 8,600번쯤 됐고, Hobby 한도를 넘겨 Vercel 계정 전체가
+    # 30일 정지됐다. 즉시 반영은 Apps Script → /api/ingest 가 맡고, 아래 '최근 주차만
+    # 반영' 단계는 수동 실행 버튼으로만 돈다.
     # 하루 한 번 전체를 다시 만든다 — UTC 19:30 = KST 04:30
     - cron: '30 19 * * *'
   workflow_dispatch:       # 수동 실행 버튼
