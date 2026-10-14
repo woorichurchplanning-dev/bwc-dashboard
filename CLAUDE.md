@@ -39,9 +39,13 @@ bash scripts/deploy.sh                     # 자료까지 새로 수집해 올�
 ## 자료가 들어오는 길
 
 ```
-입력앱 → 구글시트 → Apps Script → ① GitHub Action(15분마다) → /api/ingest → Blob
+입력앱 → 구글시트 → Apps Script → ① GitHub Action(하루 한 번 KST 04:30 전체) → Blob
                                   ② 대시보드가 열릴 때 최근 2주를 직접 다시 읽음
 ```
+
+①은 원래 15분마다 최근 3주를 /api/ingest 로 올렸다. 그게 Blob list·put을 한 달 8,600번쯤
+해서 Hobby 한도를 넘겼고, 2026-10-14 Vercel 계정 전체(이 계정의 모든 사이트)가 30일
+정지됐다. **Blob을 주기적으로 쓰는 일을 다시 늘리지 말 것.**
 
 `LIVE_REFRESH_WEEKS = 2` 가 ②다. 화면을 열면 최근 2주는 그 자리에서 다시 받는다.
 그래서 방금 넣은 것도 대개 바로 보인다.
