@@ -851,7 +851,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
   <div class="nt" onclick="sw('sunday')">주일예배</div>
   <div class="nt" onclick="sw('wd')">주중예배</div>
   <div class="nt" onclick="sw('newfam')">새가족</div>
-  <div class="nt" onclick="sw('special')">특별예배</div>
+  <div class="nt" onclick="sw('special')">특별예배/행사</div>
   <div class="nt" onclick="sw('yearcomp')">연도별 비교</div>
 </nav>
 
@@ -1117,16 +1117,22 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
   <div class="page-hdr">
     <div class="page-hdr-title"><h2>주중예배</h2><p>수요예배·금요기도회·새벽기도 출석 현황</p></div>
   </div>
+  <!-- 현장 / 온라인 / 함께 — 온라인이 훨씬 커서 함께 보면 현장이 묻힌다. 기본은 현장 -->
+  <div class="stabs" id="wd-view">
+    <button class="stab on" data-v="off" onclick="wdView('off')">현장</button>
+    <button class="stab" data-v="on" onclick="wdView('on')">온라인</button>
+    <button class="stab" data-v="both" onclick="wdView('both')">함께</button>
+  </div>
   <div class="kg" id="kk-wd"></div>
   <div class="cg">
-    <div class="cc"><div class="ch"><div><div class="ct">수요예배 현장 / 온라인 추이</div></div></div><canvas id="c-wed"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct">금요기도회 현장 / 온라인 추이</div><div class="cs">4/5 성금요일·부활절 특별집회 포함</div></div></div><canvas id="c-fri"></canvas></div>
+    <div class="cc"><div class="ch"><div><div class="ct" id="ct-wed">수요예배</div></div></div><canvas id="c-wed"></canvas></div>
+    <div class="cc"><div class="ch"><div><div class="ct" id="ct-fri">금요기도회</div><div class="cs">4/5 성금요일·부활절 특별집회 포함</div></div></div><canvas id="c-fri"></canvas></div>
   </div>
   <div class="cg">
-    <div class="cc"><div class="ch"><div><div class="ct">새벽기도 온라인 (주별 합계)</div><div class="cs">월~토 온라인 접속 합산</div></div></div><canvas id="c-dawn-on"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct">새벽기도 현장 (주별 합계)</div><div class="cs">월~토 현장 출석 합산</div></div></div><canvas id="c-dawn-off"></canvas></div>
+    <div class="cc" data-wd="off"><div class="ch"><div><div class="ct">새벽기도 현장 (일평균)</div><div class="cs">그 주 월~토 중 모인 날의 하루 평균</div></div></div><canvas id="c-dawn-off"></canvas></div>
+    <div class="cc" data-wd="on"><div class="ch"><div><div class="ct">새벽기도 온라인 (주별 합계)</div><div class="cs">월~토 온라인 접속 합산</div></div></div><canvas id="c-dawn-on"></canvas></div>
   </div>
-  <div class="cc"><div class="ch"><div><div class="ct">요일별 새벽기도 온라인 현황</div><div class="cs">월~토 요일별 온라인 접속 패턴</div></div></div><canvas id="c-dawn-day"></canvas></div>
+  <div class="cc" data-wd="on"><div class="ch"><div><div class="ct">요일별 새벽기도 온라인 현황</div><div class="cs">월~토 요일별 온라인 접속 패턴</div></div></div><canvas id="c-dawn-day"></canvas></div>
 </section>
 
 <!-- ═══ LEADER ═══ -->
@@ -1228,7 +1234,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
 <!-- ═══ SPECIAL SERVICES ═══ -->
 <section class="sec" id="s-special">
   <div class="page-hdr">
-    <div class="page-hdr-title"><h2>특별예배</h2><p>일자 · 장소(서현·송림) · 부별 출석을 연도끼리 비교합니다</p></div>
+    <div class="page-hdr-title"><h2>특별예배/행사</h2><p>일자 · 장소(서현·송림) · 부별 출석을 연도끼리 비교합니다</p></div>
   </div>
   <div class="stabs">
     <button class="stab on" onclick="spTab('dawn')">특별새벽부흥회</button>
@@ -3885,34 +3891,56 @@ function renderSchoolDept() {
 }
 
 // ── WEEKDAY ──
+let WD_VIEW = 'off';   // off 현장(기본) · on 온라인 · both 함께
+function wdView(v) {
+  WD_VIEW = v;
+  document.querySelectorAll('#wd-view .stab').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  initWD();
+}
+/* 새벽기도 현장 하루 평균 — 그 주 월~토 중 숫자가 있는 날로 나눈다 */
+function dawnOfflineDaily(fw) {
+  return fw.map(w => {
+    const vals = Object.values(D.dawn[w]?.offline || {}).filter(x => x > 0);
+    return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  });
+}
 function initWD() {
   const fw=getFW(); const wl=getWL(fw); if(!fw.length) return;
   const wedOff=fw.map(w=>nn(D.weekday[w]?.wed_off)), wedOn=fw.map(w=>nn(D.weekday[w]?.wed_on));
   const friOff=fw.map(w=>nn(D.weekday[w]?.fri_off)), friOn=fw.map(w=>nn(D.weekday[w]?.fri_on));
-  const dawnOn=dawnOnline(fw), dawnOff=dawnOffline(fw);
+  const dawnOn=dawnOnline(fw), dawnDay=dawnOfflineDaily(fw);
   const OUTLIERS=['2026-04-05','2026-01-04'];
   const wedOnAvg=avg(wedOn.filter((_,i)=>!OUTLIERS.includes(fw[i])));
   const friOnAvg=avg(friOn.filter((_,i)=>!OUTLIERS.includes(fw[i])));
-  const lWedOff=wedOff.filter(x=>x>0).slice(-1)[0]||0, pWedOff=wedOff.filter(x=>x>0).slice(-2)[0]||0;
-  const dWed=lWedOff-pWedOff;
+  const delta=a=>{ const x=a.filter(v=>v>0); return (x.slice(-1)[0]||0)-(x.slice(-2)[0]||0); };
+  const tr=d=>({trend:`${d>=0?'▲':'▼'} 전주 ${d>=0?'+':''}${fmt(d)}`,td:d>=0?'up':'dn'});
+  const V=WD_VIEW, showOff=V!=='on', showOn=V!=='off';
 
-  mkKPI('kk-wd',[
-    {label:'수요예배 현장 (평균)',value:fmt(avg(wedOff.filter(x=>x>0))),sub:'평균 현장 출석',color:'blue',
-      trend:`${dWed>=0?'▲':'▼'} 전주 ${dWed>=0?'+':''}${fmt(dWed)}`,td:dWed>=0?'up':'dn'},
+  const k=[];
+  if (showOff) k.push(
+    {label:'수요예배 현장 (평균)',value:fmt(avg(wedOff.filter(x=>x>0))),sub:'평균 현장 출석',color:'blue',...tr(delta(wedOff))},
+    {label:'금요기도회 현장 (평균)',value:fmt(avg(friOff.filter(x=>x>0))),sub:'평균 현장 출석',color:'purple',...tr(delta(friOff))},
+    {label:'새벽기도 현장 (일평균)',value:fmt(avg(dawnDay.filter(x=>x>0))),sub:'하루 평균 현장 출석',color:'gold',...tr(delta(dawnDay))});
+  if (showOn) k.push(
     {label:'수요예배 온라인 (평균)',value:fmt(wedOnAvg),sub:'특별집회 제외',color:'teal'},
-    {label:'금요기도회 현장 (평균)',value:fmt(avg(friOff.filter(x=>x>0))),sub:'평균 현장 출석',color:'purple'},
     {label:'금요기도회 온라인 (평균)',value:fmt(friOnAvg),sub:'특별집회 제외',color:'orange'},
-    {label:'새벽기도 온라인 (주평균)',value:fmt(avg(dawnOn)),sub:'주별 온라인 합계',color:'green'},
-    {label:'새벽기도 현장 (주평균)',value:fmt(avg(dawnOff.filter(x=>x>0))),sub:'주별 현장 합계',color:'gold'},
-  ]);
+    {label:'새벽기도 온라인 (주평균)',value:fmt(avg(dawnOn)),sub:'주별 온라인 합계',color:'green'});
+  mkKPI('kk-wd',k);
 
-  mkChart('c-wed','bar',wl,[bds('현장',wedOff,C.b),bds('온라인',wedOn,C.t)],{stack:true});
-  mkChart('c-fri','bar',wl,[bds('현장',friOff,C.p),bds('온라인',friOn,C.or)],{stack:true});
-  mkChart('c-dawn-on','line',wl,[lds('온라인 합계',dawnOn,C.id,true)]);
-  mkChart('c-dawn-off','line',wl,[lds('현장 합계',dawnOff,C.gr,true)]);
-  const days=['월','화','수','목','금','토'];
-  const dayColors=[C.b,C.p,C.g,C.or,C.t,C.pk];
-  mkChart('c-dawn-day','line',wl,days.map((d,i)=>lds(d,fw.map(w=>nn(D.dawn[w]?.online?.[d])),dayColors[i])));
+  const title = {off:'현장', on:'온라인', both:'현장 / 온라인'}[V];
+  setText('ct-wed', `수요예배 ${title} 추이`); setText('ct-fri', `금요기도회 ${title} 추이`);
+  const two=(off,on,cOff,cOn)=>[...(showOff?[bds('현장',off,cOff)]:[]),...(showOn?[bds('온라인',on,cOn)]:[])];
+  mkChart('c-wed','bar',wl,two(wedOff,wedOn,C.b,C.t),{stack:V==='both'});
+  mkChart('c-fri','bar',wl,two(friOff,friOn,C.p,C.or),{stack:V==='both'});
+
+  document.querySelectorAll('#s-wd [data-wd]').forEach(el => el.style.display = (el.dataset.wd==='off'?showOff:showOn) ? '' : 'none');
+  if (showOff) mkChart('c-dawn-off','line',wl,[lds('현장 일평균',dawnDay,C.gr,true)]);
+  if (showOn) {
+    mkChart('c-dawn-on','line',wl,[lds('온라인 합계',dawnOn,C.id,true)]);
+    const days=['월','화','수','목','금','토'];
+    const dayColors=[C.b,C.p,C.g,C.or,C.t,C.pk];
+    mkChart('c-dawn-day','line',wl,days.map((d,i)=>lds(d,fw.map(w=>nn(D.dawn[w]?.online?.[d])),dayColors[i])));
+  }
 }
 
 /* ══════════════════════════════════════════════════
@@ -4346,7 +4374,7 @@ function ycYouth(d) {
 function ycDawnOff(d) {
   const o = D.dawn[d]?.offline; if (!o) return null;
   const vals = Object.values(o).map(x => Number(x)||0).filter(x => x > 0);
-  return vals.length ? vals.reduce((a,b)=>a+b,0) : null;
+  return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0) / vals.length) : null;   // 하루 평균
 }
 
 const YC_METRICS = [
@@ -4355,7 +4383,7 @@ const YC_METRICS = [
   { key:'youth',  label:'청년교구',   sub:'1–4청년부 예배',      color:'#09825d', fn: ycYouth },
   { key:'wed',    label:'수요예배',   sub:'현장 출석',           color:'#0891b2', fn: w => nn(D.weekday[w]?.wed_off) },
   { key:'fri',    label:'금요기도회', sub:'현장 출석',           color:'#c0123c', fn: w => nn(D.weekday[w]?.fri_off) },
-  { key:'dawn',   label:'새벽기도',   sub:'주간 현장 합계',      color:'#7c3aed', fn: ycDawnOff },
+  { key:'dawn',   label:'새벽기도',   sub:'현장 일평균',      color:'#7c3aed', fn: ycDawnOff },
   { key:'dist',   label:'장년교구',   sub:'다락방 출석',         color:'#0e7490',
     fn: w => { const r = D.cell.find(x => x.date === w); return r ? r.totalChul : null; } },
   { key:'nf',     label:'새가족',     sub:'등록신청',              color:'#db2777',
@@ -4733,7 +4761,7 @@ function ycPointItems() {
   if (canSee('wd')) {
     items.push({ id:'wd:wed', label:'수요예배 · 현장', fn: w => nn(D.weekday[w]?.wed_off) });
     items.push({ id:'wd:fri', label:'금요기도회 · 현장', fn: w => nn(D.weekday[w]?.fri_off) });
-    items.push({ id:'wd:dawn', label:'새벽기도 · 주간 현장 합계', fn: ycDawnOff });
+    items.push({ id:'wd:dawn', label:'새벽기도 · 현장 일평균', fn: ycDawnOff });
   }
   return items;
 }
