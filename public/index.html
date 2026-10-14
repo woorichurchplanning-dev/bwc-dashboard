@@ -707,6 +707,13 @@ table.sp-mini th, table.sp-mini td { padding:5px 6px; white-space:nowrap; }
 .sp-ychip { display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:5px; vertical-align:0; }
 table.sp-matrix td, table.sp-matrix th { font-variant-numeric:tabular-nums; }
 table.sp-ev { width:100%; font-variant-numeric:tabular-nums; }
+/* 주중예배 차트 아래 특수 사항(휴회·비고) */
+.wd-memo { margin-top:10px; padding-top:8px; border-top:1px dashed var(--color-border-default); font-size:12px; color:var(--color-text-secondary); max-height:132px; overflow-y:auto; }
+.wd-memo-ttl { font-size:11px; font-weight:700; color:var(--color-text-tertiary); margin-bottom:4px; }
+.wd-memo-row { display:flex; flex-wrap:wrap; gap:6px; align-items:baseline; padding:2px 0; line-height:1.5; }
+.wd-memo-date { font-weight:700; color:var(--color-text-primary); font-variant-numeric:tabular-nums; min-width:44px; }
+.wd-memo-tag { font-size:11px; font-weight:700; padding:0 7px; border-radius:9px; background:var(--color-warning-bg); color:var(--color-warning); }
+.wd-memo-num { color:var(--color-text-tertiary); font-size:11.5px; }
 table.sp-ev th, table.sp-ev td { padding:7px 10px; white-space:nowrap; vertical-align:top; }
 table.sp-ev tr.sp-row-total td { background:var(--color-bg-subtle, #f4f6f8); font-weight:700; }
 table.sp-matrix tr.sp-row-total td { background:var(--color-bg-subtle, #f4f6f8); font-weight:700; }
@@ -1128,12 +1135,12 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
   </div>
   <div class="kg" id="kk-wd"></div>
   <div class="cg">
-    <div class="cc"><div class="ch"><div><div class="ct" id="ct-wed">수요예배</div></div></div><canvas id="c-wed"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct" id="ct-fri">금요기도회</div><div class="cs">4/5 성금요일·부활절 특별집회 포함</div></div></div><canvas id="c-fri"></canvas></div>
+    <div class="cc"><div class="ch"><div><div class="ct" id="ct-wed">수요예배</div></div></div><canvas id="c-wed"></canvas><div class="wd-memo" id="memo-wed"></div></div>
+    <div class="cc"><div class="ch"><div><div class="ct" id="ct-fri">금요기도회</div><div class="cs">4/5 성금요일·부활절 특별집회 포함</div></div></div><canvas id="c-fri"></canvas><div class="wd-memo" id="memo-fri"></div></div>
   </div>
   <div class="cg">
-    <div class="cc" data-wd="off"><div class="ch"><div><div class="ct">새벽기도 현장 (일평균)</div><div class="cs">그 주 월~토 중 모인 날의 하루 평균</div></div></div><canvas id="c-dawn-off"></canvas></div>
-    <div class="cc" data-wd="on"><div class="ch"><div><div class="ct">새벽기도 온라인 (주별 합계)</div><div class="cs">월~토 온라인 접속 합산</div></div></div><canvas id="c-dawn-on"></canvas></div>
+    <div class="cc" data-wd="off"><div class="ch"><div><div class="ct">새벽기도 현장 (일평균)</div><div class="cs">그 주 월~토 중 모인 날의 하루 평균</div></div></div><canvas id="c-dawn-off"></canvas><div class="wd-memo" id="memo-dawn-off"></div></div>
+    <div class="cc" data-wd="on"><div class="ch"><div><div class="ct">새벽기도 온라인 (주별 합계)</div><div class="cs">월~토 온라인 접속 합산</div></div></div><canvas id="c-dawn-on"></canvas><div class="wd-memo" id="memo-dawn-on"></div></div>
   </div>
   <div class="cc" data-wd="on"><div class="ch"><div><div class="ct">요일별 새벽기도 온라인 현황</div><div class="cs">월~토 요일별 온라인 접속 패턴</div></div></div><canvas id="c-dawn-day"></canvas></div>
 </section>
@@ -2524,7 +2531,7 @@ function schoolTot(w) {
 }
 function dawnOnline(fw)  {
   return (fw||getFW()).map(w => {
-    if (!D.dawn[w]) return null;
+    if (!D.dawn[w] || D.dawn[w].allOff) return null;
     const vals = Object.values(D.dawn[w].online||{});
     return vals.length ? vals.reduce((a,b)=>a+(b||0),0) : null;
   });
@@ -2759,20 +2766,20 @@ function initHome() {
         // 세 예배를 한 장에 모으되 두 칸 너비를 쓴다. 한 칸에 넣으면 수요만
         // 크게 나오고 금요·새벽은 곁가지처럼 보여 서로 비교가 안 된다.
         bodyHtml: (() => {
-          const cell = (kind, name, off, on, dPrev, unit) => `
+          const cell = (kind, name, off, on, dPrev, unit, why) => `
             <div class="wk-tri-cell ${kind}">
               <div class="wk-tri-name">${name}</div>
               <div><span class="wk-tri-num">${off != null ? fmt(off) : '–'}</span><span class="wk-tri-unit">${unit || '명'}</span></div>
               ${dPrev == null ? '<div class="wk-tri-delta"></div>' : `<div class="wk-tri-delta ${dPrev >= 0 ? 'up' : 'dn'}">${dPrev >= 0 ? '▲ +' : '▼ '}${fmt(dPrev)} 전주</div>`}
-              <div class="wk-tri-online">${on ? `온라인 ${fmt(on)}` : ''}</div>
+              <div class="wk-tri-online">${why ? `<span title="${esc(why)}">${why === '휴회' ? '휴회' : `휴회 · ${esc(why.length > 14 ? why.slice(0, 14) + '…' : why)}`}</span>` : on ? `온라인 ${fmt(on)}` : ''}</div>
             </div>`;
-          const dWed  = wedOff  != null && pWedOff  != null ? wedOff - pWedOff : null;
-          const dFri  = friOff  && pFriOff  ? friOff - pFriOff : null;
+          const dWed  = !D.weekday[lW]?.wed_why && wedOff && pWedOff ? wedOff - pWedOff : null;
+          const dFri  = !D.weekday[lW]?.fri_why && friOff && pFriOff ? friOff - pFriOff : null;
           const dDawn = dawnOff != null && pDawnOff != null ? dawnOff - pDawnOff : null;
           return `<div class="wk-tri">
-            ${cell('wed',  '수요예배',   wedOff || null, wedOn,  dWed)}
-            ${cell('fri',  '금요기도회', friOff || null, friOn,  dFri)}
-            ${cell('dawn', '새벽기도',   dawnOff,        dawnOn, dDawn, '명/일')}
+            ${cell('wed',  '수요예배',   wedOff || null, wedOn,  dWed, '명', D.weekday[lW]?.wed_why)}
+            ${cell('fri',  '금요기도회', friOff || null, friOn,  dFri, '명', D.weekday[lW]?.fri_why)}
+            ${cell('dawn', '새벽기도',   dawnOff,        dawnOn, dDawn, '명/일', D.dawn[lW]?.allOff ? D.dawn[lW].why : '')}
           </div>`;
         })(),
       },
@@ -3917,6 +3924,38 @@ function dawnOfflineDaily(fw) {
     return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
   });
 }
+/* 차트 아래 특수 사항 — 휴회(그래프에서 뺀 날의 숫자와 사유)와 비고. 고른 기간 안의 것만, 최근 것부터 */
+function wdMemo(fw) {
+  const md = (w, back) => { const d = parseWeekDate(w); d.setDate(d.getDate() - back); return `${d.getMonth() + 1}/${d.getDate()}`; };
+  const nums = r => [r?.off ? `현장 ${fmt(r.off)}` : '', r?.on ? `온라인 ${fmt(r.on)}` : ''].filter(Boolean).join(' · ');
+  const line = (date, tag, text, extra) => `<div class="wd-memo-row"><span class="wd-memo-date">${date}</span>` +
+    (tag ? `<span class="wd-memo-tag">${tag}</span>` : '') + (text && text !== '휴회' ? `<span>${esc(text)}</span>` : '') +
+    (extra ? `<span class="wd-memo-num">${extra} (그래프 제외)</span>` : '') + `</div>`;
+  const put = (id, rows) => {
+    const el = document.getElementById(id); if (!el) return;
+    el.innerHTML = rows.length ? `<div class="wd-memo-ttl">특수 사항</div>${rows.join('')}` : '';
+    el.style.display = rows.length ? '' : 'none';
+  };
+  const rev = [...fw].reverse();
+  ['wed', 'fri'].forEach(k => {
+    const back = k === 'wed' ? 4 : 2;
+    put(`memo-${k}`, rev.flatMap(w => {
+      const r = D.weekday[w]; if (!r) return [];
+      if (r[k + '_why']) return [line(`${md(w, back)}(${k === 'wed' ? '수' : '금'})`, '휴회', r[k + '_why'], nums(r[k + '_raw']))];
+      return r[k + '_note'] ? [line(`${md(w, back)}(${k === 'wed' ? '수' : '금'})`, '', r[k + '_note'])] : [];
+    }));
+  });
+  const dawnRows = rev.flatMap(w => {
+    const r = D.dawn[w]; if (!r) return [];
+    if (r.offDays?.length) {
+      const sum = o => r.offDays.reduce((a, d) => a + (Number(o?.[d]) || 0), 0);
+      const extra = [sum(r.raw.offline) ? `현장 ${fmt(sum(r.raw.offline))}` : '', sum(r.raw.online) ? `온라인 ${fmt(sum(r.raw.online))}` : ''].filter(Boolean).join(' · ');
+      return [line(`${md(w, 6)}~${md(w, 1)}`, r.allOff ? '휴회' : `휴회 ${r.offDays.join('·')}`, r.why, extra)];
+    }
+    return r.note ? [line(`${md(w, 6)}~${md(w, 1)}`, '', r.note)] : [];
+  });
+  put('memo-dawn-off', dawnRows); put('memo-dawn-on', dawnRows);
+}
 function initWD() {
   const fw=getFW(); const wl=getWL(fw); if(!fw.length) return;
   const wedOff=fw.map(w=>nn(D.weekday[w]?.wed_off)), wedOn=fw.map(w=>nn(D.weekday[w]?.wed_on));
@@ -3943,13 +3982,17 @@ function initWD() {
   const title = {off:'현장', on:'온라인', both:'현장 / 온라인'}[V];
   setText('ct-wed', `수요예배 ${title} 추이`); setText('ct-fri', `금요기도회 ${title} 추이`);
   const two=(off,on,cOff,cOn)=>[...(showOff?[bds('현장',off,cOff)]:[]),...(showOn?[bds('온라인',on,cOn)]:[])];
-  mkChart('c-wed','bar',wl,two(wedOff,wedOn,C.b,C.t),{stack:V==='both'});
-  mkChart('c-fri','bar',wl,two(friOff,friOn,C.p,C.or),{stack:V==='both'});
+  // 휴회한 주는 막대를 비우고 날짜 밑에 '휴회'를 적는다 — 사유는 차트 아래 메모에
+  const offLbl = key => wl.map((l, i) => D.weekday[fw[i]]?.[key] ? [l, '휴회'] : l);
+  const dawnLbl = wl.map((l, i) => { const n = D.dawn[fw[i]]?.offDays?.length || 0; return n ? [l, n === 6 ? '휴회' : `휴회 ${n}일`] : l; });
+  mkChart('c-wed','bar',offLbl('wed_why'),two(wedOff,wedOn,C.b,C.t),{stack:V==='both'});
+  mkChart('c-fri','bar',offLbl('fri_why'),two(friOff,friOn,C.p,C.or),{stack:V==='both'});
+  wdMemo(fw);
 
   document.querySelectorAll('#s-wd [data-wd]').forEach(el => el.style.display = (el.dataset.wd==='off'?showOff:showOn) ? '' : 'none');
-  if (showOff) mkChart('c-dawn-off','line',wl,[lds('현장 일평균',dawnDay,C.gr,true)]);
+  if (showOff) mkChart('c-dawn-off','line',dawnLbl,[lds('현장 일평균',dawnDay,C.gr,true)]);
   if (showOn) {
-    mkChart('c-dawn-on','line',wl,[lds('온라인 합계',dawnOn,C.id,true)]);
+    mkChart('c-dawn-on','line',dawnLbl,[lds('온라인 합계',dawnOn,C.id,true)]);
     const days=['월','화','수','목','금','토'];
     const dayColors=[C.b,C.p,C.g,C.or,C.t,C.pk];
     mkChart('c-dawn-day','line',wl,days.map((d,i)=>lds(d,fw.map(w=>nn(D.dawn[w]?.online?.[d])),dayColors[i])));
@@ -5776,24 +5819,43 @@ function applyNewData(data) {
     const dawn   = wd['새벽기도']   || {};
     const online = wd['온라인예배'] || {};
 
+    /* 휴회 — 입력앱 '휴회' 칸(사유). 그 칸이 생기기 전 기록은 비고에 '휴회'라고 적힌 것.
+       휴회한 날은 그래프·평균에서 빼고(null), 숫자와 사유는 wed_raw·wed_why 로 남겨 메모에 보여 준다. */
+    const noteOf = r => String(r['비고'] ?? r['note'] ?? '').trim();
+    const offWhy = r => String(r['휴회'] ?? '').trim() || (/휴회/.test(noteOf(r)) ? noteOf(r) : '');
     if (Object.keys(wd).length > 0) {
+      const wedWhy = offWhy(wed), friWhy = offWhy(fri);
+      const wedOff = wed['인원'] ?? wed['현장'] ?? null, friOff = fri['인원'] ?? fri['현장'] ?? null;
       D.weekday[date] = {
-        wed_off: wed['인원'] ?? wed['현장'] ?? null,
-        wed_on:  online['수요 온라인'] ?? null,
-        wed_tot: wed['합계'] ?? null,
-        fri_off: fri['인원'] ?? fri['현장'] ?? null,
-        fri_on:  online['금요 온라인'] ?? null,
-        fri_tot: fri['합계'] ?? null,
+        wed_off: wedWhy ? null : wedOff,
+        wed_on:  wedWhy ? null : online['수요 온라인'] ?? null,
+        wed_tot: wedWhy ? null : wed['합계'] ?? null,
+        fri_off: friWhy ? null : friOff,
+        fri_on:  friWhy ? null : online['금요 온라인'] ?? null,
+        fri_tot: friWhy ? null : fri['합계'] ?? null,
+        wed_why: wedWhy, fri_why: friWhy,
+        wed_note: wedWhy ? '' : noteOf(wed), fri_note: friWhy ? '' : noteOf(fri),
+        wed_raw: { off: wedOff, on: online['수요 온라인'] ?? null },
+        fri_raw: { off: friOff, on: online['금요 온라인'] ?? null },
       };
     }
 
     if (Object.keys(dawn).length > 0) {
-      D.dawn[date] = {
-        offline: { 월:dawn['월']??0, 화:dawn['화']??0, 수:dawn['수']??0, 목:dawn['목']??0, 금:dawn['금']??0, 토:dawn['토']??0 },
-        // 2026-10-07 부터 입력앱에 요일별 온라인 칸('월 온라인' …)이 생겼다
-        online:  { 월:dawn['월 온라인']??0, 화:dawn['화 온라인']??0, 수:dawn['수 온라인']??0,
-                   목:dawn['목 온라인']??0, 금:dawn['금 온라인']??0, 토:dawn['토 온라인']??0 },
-      };
+      const DAYS6 = ['월', '화', '수', '목', '금', '토'];
+      const offline = {}, onlineD = {};
+      DAYS6.forEach(d => { offline[d] = dawn[d] ?? 0; onlineD[d] = dawn[d + ' 온라인'] ?? 0; });   // 2026-10-07 부터 요일별 온라인 칸
+      // 휴회 — '휴회 요일'이 없으면 월~토 전부. 옛 기록은 비고가 있고 현장이 모두 0이면 그 주 전체를 쉰 것으로 본다
+      let why = String(dawn['휴회'] ?? '').trim(), offDays = [];
+      if (why) {
+        offDays = String(dawn['휴회 요일'] ?? '').split(',').map(x => x.trim()).filter(d => DAYS6.includes(d));
+        if (!offDays.length) offDays = [...DAYS6];
+      } else if (noteOf(dawn) && DAYS6.every(d => !Number(offline[d]))) {
+        why = noteOf(dawn); offDays = [...DAYS6];
+      }
+      const raw = { offline: { ...offline }, online: { ...onlineD } };
+      offDays.forEach(d => { offline[d] = 0; onlineD[d] = 0; });
+      D.dawn[date] = { offline, online: onlineD, offDays, why, raw,
+                       note: why ? '' : noteOf(dawn), allOff: offDays.length === 6 };
     }
 
     // 주일 온라인 → D.sunday
