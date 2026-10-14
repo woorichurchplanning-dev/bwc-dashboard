@@ -19,8 +19,11 @@ const wb = Number(process.env.WEEKS_BACK || 140);
 // 이번 주가 끝나는 일요일(한국 날짜)부터 — 진행 중인 주도 담는다. refresh-recent.mjs 와 같은 규칙
 const b = new Date(Date.now() + 9 * 3600 * 1000); b.setUTCHours(0, 0, 0, 0);
 b.setUTCDate(b.getUTCDate() + (7 - b.getUTCDay()) % 7);
+// 공식 통계(호실별)를 넣어 둔 2024-01-07 주부터는 시간이 지나도 늘 받는다
+const since = Math.ceil((b - Date.parse("2024-01-07T00:00:00Z")) / (7 * 86400000)) + 1;
+const n = Math.max(wb, since);
 const w = [];
-for (let i = 0; i < wb; i++) { const d = new Date(b); d.setUTCDate(b.getUTCDate() - i * 7); w.push(d.toISOString().split("T")[0]); }
+for (let i = 0; i < n; i++) { const d = new Date(b); d.setUTCDate(b.getUTCDate() - i * 7); w.push(d.toISOString().split("T")[0]); }
 const batches = []; for (let i = 0; i < w.length; i += 12) batches.push(w.slice(i, i + 12));
 batches.forEach((x, i) => console.log(i + " " + x.join(",")));
 ' > "$TMP/batches.txt"
