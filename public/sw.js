@@ -2,8 +2,8 @@
 // 로그인 게이트가 생긴 뒤로는 '데이터'를 캐시하지 않는다.
 // index.html / data.json 을 캐시해 두면 로그아웃 후에도 남거나,
 // 권한이 다른 사용자가 이전 사용자의 화면을 보게 될 수 있다.
-const CACHE = 'bwc-dash-v3';
-const SHELL = ['./manifest.json', './icon-192.png', './icon-512.png',
+const CACHE = 'bwc-dash-v4';
+const SHELL = ['./brand-board.svg', './icon.svg', './manifest.json', './icon-192.png', './icon-512.png',
                './apple-touch-icon.png', './favicon-32.png'];
 
 self.addEventListener('install', (e) => {

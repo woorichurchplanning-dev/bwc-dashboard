@@ -16,8 +16,7 @@
 body{margin:0;background:var(--bg);font-family:var(--font);color:var(--text);font-size:14px}
 header{display:flex;align-items:center;gap:12px;padding:0 24px;height:60px;background:var(--surface);
   border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
-.cross{width:30px;height:30px;background:var(--accent);border-radius:8px;position:relative;flex-shrink:0}
-.cross::before,.cross::after{content:'';position:absolute;background:#fff;border-radius:2px}
+.brand-icon{width:36px;height:36px;object-fit:contain;flex-shrink:0}
 .cross::before{width:3px;height:16px;left:13.5px;top:7px}
 .cross::after{width:12px;height:3px;left:9px;top:13.5px}
 h1{font-size:15px;font-weight:700;margin:0}
@@ -157,7 +156,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 </head>
 <body>
 <header>
-  <div class="cross"></div>
+  <img class="brand-icon" src="brand-board.svg" alt="">
   <div><h1>계정 · 권한 관리</h1><div class="sub">분당우리교회 사역 데이터 대시보드</div></div>
   <div class="spacer"></div>
   <button onclick="location.href='/index.html'">← 대시보드</button>

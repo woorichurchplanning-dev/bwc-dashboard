@@ -105,13 +105,7 @@ body {
   height: 56px; position: sticky; top: 0; z-index: 100;
 }
 .hdr-l { display: flex; align-items: center; gap: var(--s3); }
-.cross {
-  width: 30px; height: 30px;
-  background: var(--color-accent); border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  position: relative; flex-shrink: 0;
-}
-.cross::before, .cross::after { content:''; position:absolute; background:#fff; border-radius:2px; }
+.brand-icon { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
 .cross::before { width:3px; height:16px; }
 .cross::after  { width:12px; height:3px; }
 .hdr-brand h1 {
@@ -836,7 +830,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
 
 <header class="hdr">
   <div class="hdr-l">
-    <div class="cross"></div>
+    <img class="brand-icon" src="brand-board.svg" alt="">
     <div class="hdr-brand">
       <h1>분당우리교회</h1>
       <p id="hdr-datestamp">Ministry Data Dashboard</p>
