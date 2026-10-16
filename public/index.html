@@ -5278,62 +5278,164 @@ function spEvTab(t) {
   spTab('events');
 }
 
-/* 주일 행사 — 성찬식·세례식처럼 따로 세지 않고 그 주일 출석에 태그만 붙인 것을 모아 본다 */
+/* 주일 행사 — 성찬식·세례식처럼 따로 세지 않고 그 주일 출석에 태그만 붙인 것.
+   특새·성탄예배와 같은 모양으로 보여 준다: 연도 막대 둘 → 연도별 요약(부 × 송림·서현) →
+   부별 연도 비교 → 고른 해 기록표(날짜마다). 한 해에 여러 번이면(성찬식 등) 부별 숫자는 회 평균이다. */
 let SP_EV_TAG = '';
 function setSpEvTag(t) { SP_EV_TAG = t; renderSunEventsTab(); }
+function setSpEvYear(y) { SP_YEAR['ev:' + SP_EV_TAG] = Number(y); renderSunEventsTab(); }
+function setSpEvMetric(m) { SP_METRIC['ev:' + SP_EV_TAG] = m; renderSunEventsTab(); }
 function renderSunEventsTab() {
   const el = document.getElementById('special-events');
   if (!el) return;
-  const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const weeks = Object.keys(D.sunday).sort();
-  const tagged = weeks.filter(w => D.sunday[w]?.events?.tags?.length);
   const allTags = sunEvVocab();
-  if (SP_EV_TAG && !allTags.includes(SP_EV_TAG)) SP_EV_TAG = '';
+  if (!allTags.includes(SP_EV_TAG)) SP_EV_TAG = allTags[0] || '';
+  const tag = SP_EV_TAG, sk = 'ev:' + tag;
   const howTo = `<b>주일예배</b> 탭에서 주일을 고르고 <b>＋ 행사 달기</b>로 태그를 붙이면(입력앱 주일예배 표 아래에서도 됩니다) 여기에 모입니다.
-    처음 쓰는 행사는 이름을 직접 쓰면 그다음부터 버튼으로 나옵니다. 인원은 따로 세지 않고 그 주일 현장 출석을 씁니다.`;
-  // 태그마다 위쪽 하위 탭이 있으므로, 태그를 골라 들어왔으면 안쪽 거르기 버튼은 뺀다
-  const btns = SP_EV_TAG ? '' : `<div class="stabs" style="margin-bottom:12px">${['', ...allTags].map(t =>
-    `<button class="stab${SP_EV_TAG === t ? ' on' : ''}" data-t="${esc(t)}" onclick="setSpEvTag(this.dataset.t)">${t ? esc(t) : '전체'}</button>`).join('')}</div>`;
-  const list = tagged.filter(w => !SP_EV_TAG || D.sunday[w].events.tags.includes(SP_EV_TAG)).reverse();
+    인원은 따로 세지 않고 그 주일 현장 출석을 씁니다.`;
+  const weeks = Object.keys(D.sunday).sort();
+  const list = weeks.filter(w => D.sunday[w]?.events?.tags?.includes(tag));
   if (!list.length) {
-    el.innerHTML = btns + `<div class="cc"><div class="ct">${SP_EV_TAG ? esc(SP_EV_TAG) + ' ' : ''}표시된 주일 없음</div>
+    el.innerHTML = `<div class="cc"><div class="ct">${esc(tag)} 자료 없음</div>
       <div class="cs" style="margin-top:6px;line-height:1.7">${howTo}</div></div>`;
     return;
   }
+
+  const PL = [['송림', '송림'], ['서현', '장년']];   // [보이는 이름, bu 안의 이름]
+  const sum = a => a.reduce((x, v) => x + (v || 0), 0);
   const tot = w => (D.sunday[w]?.songrim || 0) + (D.sunday[w]?.jangnyeon || 0);
-  // 직전 주일(출석이 들어온 주) 대비
-  const prevOf = w => { for (let i = weeks.indexOf(w) - 1; i >= 0; i--) if (tot(weeks[i])) return weeks[i]; return null; };
-  const n = v => (v ? fmt(v) : '<span class="sp-dash">–</span>');
+  const prevWeek = w => { for (let i = weeks.indexOf(w) - 1; i >= 0; i--) if (tot(weeks[i])) return weeks[i]; return null; };
+  const buVal = (w, u, k) => Number(D.sunday[w]?.bu?.[u]?.[k]) || 0;
+  const units = ['1부', '2부', '3부', '4부', '5부'].filter(u => list.some(w => PL.some(([, k]) => buVal(w, u, k))));
+  if (!units.length) units.push('1부');
+  // 부별 숫자가 없는 옛 주는 장소 합계만 있다 — 그때는 1부에 몰지 않고 합계 줄에만 넣는다
+  const siteOfW = (w, k) => Number(k === '송림' ? D.sunday[w]?.songrim : D.sunday[w]?.jangnyeon) || 0;
+
+  // 연도별 집계 — 부·장소는 회 평균, 합계는 연인원
+  const agg = {};
+  list.forEach(w => {
+    const y = Number(w.slice(0, 4));
+    (agg[y] = agg[y] || { dates: [] }).dates.push(w);
+  });
+  const years = Object.keys(agg).map(Number).sort((a, b) => a - b);
+  const avgOf = arr => { const c = arr.filter(v => v > 0); return c.length ? Math.round(sum(c) / c.length) : 0; };
+  years.forEach(y => {
+    const r = agg[y], ds = r.dates;
+    r.n = ds.length;
+    r.part = {};
+    units.forEach(u => { r.part[u] = {}; PL.forEach(([pl, k]) => { r.part[u][pl] = avgOf(ds.map(w => buVal(w, u, k))); }); });
+    r.site = {}; PL.forEach(([pl, k]) => { r.site[pl] = avgOf(ds.map(w => siteOfW(w, k))); });
+    r.avg = avgOf(ds.map(tot));
+    r.total = sum(ds.map(tot));
+    const withPrev = ds.filter(w => tot(w) && prevWeek(w));
+    r.prevAvg = withPrev.length ? Math.round(sum(withPrev.map(w => tot(prevWeek(w)))) / withPrev.length) : null;
+    r.liftAvg = withPrev.length ? Math.round(sum(withPrev.map(w => tot(w) - tot(prevWeek(w)))) / withPrev.length) : null;
+    r.online = avgOf(ds.map(w => Number(D.sunday[w]?.online) || 0));
+  });
+  const cur = SP_YEAR[sk] && agg[SP_YEAR[sk]] ? SP_YEAR[sk] : years[years.length - 1];
+  SP_YEAR[sk] = cur;
+  const R = agg[cur];
+  const many = years.some(y => agg[y].n > 1);
+  const per = many ? '회 평균' : '인원';
+
+  const n = v => (v == null || v === 0) ? '<span class="sp-dash">–</span>' : fmt(v);
   const dl = (a, b) => {
     if (!a || !b) return '<span class="sp-dash">–</span>';
     const d = a - b, pc = Math.round(d / b * 100);
-    return `<span class="${d > 0 ? 'sp-up' : d < 0 ? 'sp-down' : ''}">${d > 0 ? '▲' : d < 0 ? '▼' : ''} ${fmt(Math.abs(d))}</span><span class="sp-pct">${pc > 0 ? '+' : ''}${pc}%</span>`;
+    return `<span class="${d > 0 ? 'sp-up' : d < 0 ? 'sp-down' : ''}">${d > 0 ? '▲' : d < 0 ? '▼' : ''} ${fmt(Math.abs(d))}</span>` +
+      `<span class="sp-pct">${pc > 0 ? '+' : ''}${pc}%</span>`;
   };
-  const chip = t => `<span class="sub-chip" style="margin-right:4px">${esc(t)}</span>`;
-  let body = '', year = null;
-  list.forEach(w => {
-    const y = w.slice(0, 4);
-    if (y !== year) {
-      year = y;
-      const cnt = list.filter(x => x.startsWith(y)).length;
-      body += `<tr class="sp-row-total"><td class="sp-l" colspan="7"><span class="sp-ychip" style="background:${yearColor(+y)}"></span>${y}년 · ${cnt}회</td></tr>`;
-    }
-    const s = D.sunday[w], ev = s.events, dt = parseWeekDate(w), p = prevOf(w);
-    const memo = Object.entries(ev.memo).map(([site, m]) => `${Object.keys(ev.memo).length > 1 ? `<b>${site}</b> ` : ''}${esc(m)}`).join('<br>');
-    body += `<tr>
-      <td class="sp-l" style="white-space:nowrap">${dt.getMonth() + 1}/${dt.getDate()}</td>
-      <td class="sp-l">${ev.tags.map(chip).join('')}</td>
-      <td class="sp-n">${n(s.songrim)}</td><td class="sp-n">${n(s.jangnyeon)}</td>
-      <td class="sp-n"><b>${n(tot(w))}</b></td>
-      <td class="sp-n">${dl(tot(w), p && tot(p))}</td>
-      <td class="sp-l" style="white-space:normal;min-width:180px;font-size:12.5px;color:var(--color-text-secondary)">${memo || ''}</td></tr>`;
-  });
-  el.innerHTML = btns + `<div class="cc">
-    <div class="ct">${SP_EV_TAG ? esc(SP_EV_TAG) + ' 주일' : '행사가 있었던 주일'} · ${list.length}회</div>
-    <div class="cs" style="margin-bottom:10px;line-height:1.6">${howTo}</div>
-    <div style="overflow-x:auto"><table class="sp-ev">
-      <tr><th class="sp-l">날짜</th><th class="sp-l">행사</th><th class="sp-n">송림</th><th class="sp-n">서현</th><th class="sp-n">현장 합계</th><th class="sp-n">직전 주일 대비</th><th class="sp-l">메모</th></tr>
-      ${body}</table></div></div>`;
+  const yh = y => `<span class="sp-ychip" style="background:${yearColor(y)}"></span>${y}`;
+  const md = w => { const dt = parseWeekDate(w); return `${dt.getMonth() + 1}/${dt.getDate()}`; };
+  const yd = [...years].reverse();
+  const prevY = y => years[years.indexOf(y) - 1];
+
+  // ① 연도별 요약 — 부마다 해마다 송림 · 서현 · 합계 (전년 대비)
+  const COLS = PL.map(([pl]) => ({ t: pl, get: (r, u) => r.part[u][pl] }))
+    .concat([{ t: '합계', get: (r, u) => sum(PL.map(([pl]) => r.part[u][pl])), strong: true }]);
+  const ROWS = units.map(u => ({ l: `<b>${u}</b>`, get: c => r => c.get(r, u) }))
+    .concat([{ l: per === '인원' ? '합계' : '회 평균', cls: 'sp-row-total',
+      get: c => r => (c.t === '합계' ? r.avg : r.site[c.t]) }]);
+  const cell = (y, v, pv, strong, extra) => `<td class="nr sp-cell${y === cur ? ' sp-cur' : ''}${strong ? ' sp-strong' : ''}">` +
+    `<div class="sp-v">${n(v)}</div>${pv !== undefined && v ? `<div class="sp-dl">${dl(v, pv)}</div>` : ''}${extra || ''}</td>`;
+  const head1 = `<tr><th rowspan="2" class="sp-l">부</th>${yd.map(y => `<th colspan="${COLS.length}" class="sp-grp${y === cur ? ' sp-cur' : ''}" style="border-bottom-color:${yearColor(y)}">${yh(y)}${agg[y].n > 1 ? ` <span class="sp-dash">${agg[y].n}회</span>` : ''}</th>`).join('')}</tr>
+     <tr>${yd.map(y => COLS.map(c => `<th class="sp-n${y === cur ? ' sp-cur' : ''}">${c.t}</th>`).join('')).join('')}</tr>`;
+  let body1 = ROWS.map(rw => `<tr class="${rw.cls || ''}"><td class="sp-l">${rw.l}</td>${yd.map(y => COLS.map(c =>
+    cell(y, rw.get(c)(agg[y]), prevY(y) ? rw.get(c)(agg[prevY(y)]) : undefined, c.strong)).join('')).join('')}</tr>`).join('');
+  body1 += `<tr class="sp-row-total"><td class="sp-l">직전 주일</td>${yd.map(y => {
+    const r = agg[y];
+    return `<td class="nr sp-cell${y === cur ? ' sp-cur' : ''}" colspan="${COLS.length - 1}"><div class="sp-v">${n(r.prevAvg)}</div></td>` +
+      `<td class="nr sp-cell sp-strong${y === cur ? ' sp-cur' : ''}"><div class="sp-v">${dl(r.avg, r.prevAvg)}</div></td>`;
+  }).join('')}</tr>`;
+
+  // ② 부별 연도 비교
+  const METRICS = [{ id: 'site', title: '현장 합계', get: COLS[COLS.length - 1].get }]
+    .concat(PL.map(([pl]) => ({ id: pl, title: pl, get: (r, u) => r.part[u][pl] })));
+  const M = METRICS.find(m => m.id === SP_METRIC[sk]) || METRICS[0];
+  const cmpTable = `<table class="sp-mini"><tr><th class="sp-l"></th>${units.map(u => `<th class="sp-n">${u}</th>`).join('')}</tr>` +
+    yd.map(y => `<tr><td class="sp-l">${yh(y)}</td>${units.map(u => `<td class="nr">${n(M.get(agg[y], u))}</td>`).join('')}</tr>`).join('') + '</table>';
+
+  // ③ 고른 해 기록표 — 날짜마다
+  const ds = R.dates;
+  const line = (label, vals, cls, avgCol = true) => {
+    const c = vals.filter(v => v > 0);
+    return `<tr class="${cls || ''}"><td class="sp-l">${label}</td>${vals.map(v => `<td class="nr">${typeof v === 'string' ? v : n(v)}</td>`).join('')}` +
+      (ds.length > 1 ? `<td class="nr">${avgCol && c.length ? `<b>${fmt(Math.round(sum(c) / c.length))}</b>` : n(null)}</td>` : '') + '</tr>';
+  };
+  let body3 = '';
+  PL.forEach(([pl, k]) => { body3 += line(`<b>${pl} 계</b>`, ds.map(w => siteOfW(w, k)), 'sp-row-site'); });
+  body3 += line('<b>합계</b> <span class="sp-dash">현장</span>', ds.map(tot), 'sp-row-total');
+  body3 += line('<span class="sp-dash">직전 주일</span>', ds.map(w => { const p = prevWeek(w); return p ? tot(p) : 0; }));
+  body3 += line('<span class="sp-dash">직전 주일 대비</span>', ds.map(w => { const p = prevWeek(w); return dl(tot(w), p && tot(p)); }), '', false);
+  if (ds.some(w => D.sunday[w]?.online)) body3 += line('온라인', ds.map(w => Number(D.sunday[w]?.online) || 0));
+  PL.forEach(([pl, k]) => units.forEach(u => {
+    if (ds.some(w => buVal(w, u, k))) body3 += line(`<span class="sp-dash">${pl} ·</span> ${u}`, ds.map(w => buVal(w, u, k)));
+  }));
+  const others = w => D.sunday[w].events.tags.filter(t => t !== tag);
+  if (ds.some(w => others(w).length)) body3 += line('<span class="sp-dash">함께 있던 행사</span>', ds.map(w => others(w).map(esc).join(', ') || '<span class="sp-dash">–</span>'), '', false);
+  const memos = ds.map(w => [w, Object.entries(D.sunday[w].events.memo || {}).map(([site, m]) => `${site ? `<b>${esc(site)}</b> ` : ''}${esc(m)}`).join(' · ')]).filter(([, m]) => m);
+
+  el.innerHTML = `
+    <div class="cg">
+      <div class="cc"><div class="ch"><div><div class="ct">연도별 현장 ${per}</div><div class="cs">막대를 누르면 그 해 상세 · %는 전년 대비</div></div></div>
+        <canvas id="c-sp-ev-year" style="max-height:190px"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">직전 주일보다 늘어난 인원</div><div class="cs">현장 합계${many ? ' · 회 평균' : ''} · %는 직전 주일 대비</div></div></div>
+        <canvas id="c-sp-ev-lift" style="max-height:190px"></canvas></div>
+    </div>
+    <div class="yc-ctl">
+      <span class="yc-ctl-lbl">상세 연도</span>
+      <div class="yc-seg-group">
+        ${years.map(y => `<button class="yc-seg${y === cur ? ' on' : ''}" onclick="setSpEvYear(${y})" style="${y === cur ? `background:${yearColor(y)};border-color:${yearColor(y)};color:#fff` : ''}"><span class="sp-ychip" style="background:${y === cur ? '#fff' : yearColor(y)}"></span>${y}년${agg[y].n > 1 ? ` · ${agg[y].n}회` : ''}</button>`).join('')}
+      </div>
+    </div>
+    <div class="cc">
+      <div class="ch"><div><div class="ct">${esc(tag)} 연도별 요약</div>
+        <div class="cs">주일예배 탭에서 '${esc(tag)}' 태그를 붙인 주일의 현장 출석${many ? ' · 한 해에 여러 번이면 회 평균' : ''}</div></div></div>
+      <div style="overflow-x:auto"><table class="sp-sum" style="min-width:${84 + years.length * COLS.length * 92}px">${head1}${body1}</table></div>
+    </div>
+    <div class="cc">
+      <div class="ch"><div><div class="ct">부별 연도 비교 — ${M.title}</div><div class="cs">해마다 색이 다릅니다${many ? ' · 회 평균' : ''}</div></div>
+        <div class="yc-seg-group">${METRICS.map(m => `<button class="yc-seg${m.id === M.id ? ' on' : ''}" onclick="setSpEvMetric('${m.id}')">${m.title}</button>`).join('')}</div></div>
+      <canvas id="c-sp-ev-cmp" style="max-height:280px"></canvas>
+      <div style="overflow-x:auto;margin-top:10px">${cmpTable}</div>
+    </div>
+    <div class="cc">
+      <div class="ch"><div><div class="ct"><span class="sp-ychip" style="background:${yearColor(cur)}"></span>${cur}년 ${esc(tag)} 기록표</div>
+        <div class="cs">날짜마다 송림 · 서현 · 합계 · 직전 주일 · 부별</div></div></div>
+      <div style="overflow-x:auto"><table class="sp-matrix"><tr><th class="sp-l">구분</th>${ds.map(w => `<th class="sp-n">${md(w)}</th>`).join('')}${ds.length > 1 ? '<th class="sp-n">평균</th>' : ''}</tr>${body3}</table></div>
+      ${memos.length ? `<div class="cs" style="margin-top:10px;line-height:1.7">${memos.map(([w, m]) => `<b>${md(w)}</b> ${m}`).join('<br>')}</div>` : ''}
+    </div>`;
+
+  const yc = years.map(y => (y === cur ? yearColor(y) : yearColor(y) + 'aa'));
+  const yLabel = y => `${y}년${agg[y].n > 1 ? ` (${agg[y].n}회)` : ''}`;
+  spYearBars('c-sp-ev-year', years, years.map(yLabel), years.map(y => agg[y].avg || null), yc, setSpEvYear);
+  spYearBars('c-sp-ev-lift', years, years.map(yLabel), years.map(y => agg[y].liftAvg), yc, setSpEvYear,
+    years.map(y => (agg[y].prevAvg && agg[y].liftAvg != null ? Math.round(agg[y].liftAvg / agg[y].prevAvg * 100) : null)));
+  mkChart('c-sp-ev-cmp', 'line', units, years.map(y => {
+    const col = yearColor(y);
+    return { label: `${y}년`, data: units.map(u => M.get(agg[y], u) || null), borderColor: col, backgroundColor: col,
+      borderWidth: y === cur ? 3 : 2, tension: 0.25, pointRadius: 3.5, pointHoverRadius: 7 };
+  }));
 }
 
 function spTab(key, opts) {
