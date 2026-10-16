@@ -701,6 +701,21 @@ table.sp-mini th, table.sp-mini td { padding:5px 6px; white-space:nowrap; }
 .sp-ychip { display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:5px; vertical-align:0; }
 table.sp-matrix td, table.sp-matrix th { font-variant-numeric:tabular-nums; }
 table.sp-ev { width:100%; font-variant-numeric:tabular-nums; }
+.sun-ev { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:-8px 0 var(--s5); padding:10px 14px;
+  border:1px solid var(--color-border,#e5e7eb); border-radius:10px; background:var(--color-surface,#fff); font-size:13px; }
+.sun-ev:empty { display:none; }
+.sun-ev .lbl { font-weight:700; color:var(--color-text-secondary); margin-right:2px; }
+.sun-ev .memo { color:var(--color-text-secondary); font-size:12.5px; }
+.sun-ev .grow { flex:1; }
+.sun-ev .ev-chip { display:inline-flex; align-items:center; padding:4px 11px; border-radius:16px; font-size:12.5px; font-weight:600;
+  border:1.5px solid var(--color-border-strong,#d1d5db); background:#fff; color:var(--color-text-secondary); cursor:default; font-family:inherit; }
+.sun-ev .ev-chip.on { background:var(--color-accent,#635bff); border-color:var(--color-accent,#635bff); color:#fff; }
+.sun-ev button.ev-chip { cursor:pointer; }
+.sun-ev input { font:inherit; font-size:13px; padding:6px 10px; border:1.5px solid var(--color-border-strong,#d1d5db); border-radius:16px; }
+.sun-ev .ev-new { width:150px; }
+.sun-ev .ev-memo { flex:1 1 260px; border-radius:8px; }
+.sun-ev .ev-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; width:100%; }
+.sun-ev .ev-st { font-size:12px; color:var(--color-text-secondary); }
 /* 주중예배 차트 아래 특수 사항(휴회·비고) */
 .wd-memo { margin-top:10px; padding-top:8px; border-top:1px dashed var(--color-border-default); font-size:12px; color:var(--color-text-secondary); max-height:132px; overflow-y:auto; }
 .wd-memo-ttl { font-size:11px; font-weight:700; color:var(--color-text-tertiary); margin-bottom:4px; }
@@ -946,6 +961,9 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
         style="font-weight:600;font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--color-border,#ddd);background:var(--color-surface,#fff);color:inherit;min-width:220px;text-align:center;cursor:pointer"></select>
       <button class="stab" onclick="sunWeekNav(1)" style="flex-grow:0">다음주 →</button>
     </div>
+
+    <!-- 이 주일의 행사 — 성찬식·새생명 축제 같은 태그. 여기서 달고 고친다 -->
+    <div id="sun-ev-bar" class="sun-ev"></div>
 
     <!-- 선택된 주의 세부 비교 정보 -->
     <div id="sun-comparison-info" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:var(--s3); margin-bottom:var(--s5);"></div>
@@ -1245,7 +1263,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
     <button class="stab" onclick="spTab('holywk')">고난주간 집회</button>
     <button class="stab" onclick="spTab('christmas')">성탄예배</button>
     <button class="stab" onclick="spTab('newyear')">송구영신예배</button>
-    <button class="stab" onclick="spTab('events')">성찬식·세례식</button>
+    <span id="sp-ev-tabs" style="display:contents"></span>
   </div>
   <div class="ss on" id="special-dawn"></div>
   <div class="ss" id="special-holywk"></div>
@@ -1659,7 +1677,7 @@ function getHomeAutoFetchWeeks() {
     : 8;
   const charted = getHomeChartWeeks(wantedWeeks).filter(w => !hasAnyDashboardData(w));
   const recent  = getHomeChartWeeks(LIVE_REFRESH_WEEKS);
-  return [...new Set([...recent, ...charted])]
+  return [...new Set([...recent, ...charted, ...sunEvRecentEdits()])]
     .filter(w => !HOME_AUTO_FETCHED_WEEKS.has(w))
     .sort();
 }
@@ -3083,6 +3101,7 @@ function renderSunWeekComparison() {
   if (idx < 0 || idx >= fw.length) return;
 
   const week = fw[idx];
+  renderSunEventBar(week);
   // 주차 키는 그 주가 '끝나는' 주일이다 → 월요일(6일 전)부터 그 주일까지
   const weekEnd = parseWeekDate(week);
   const wd = new Date(weekEnd);
@@ -5110,7 +5129,154 @@ function specialPlaces(agg, years) {
   return [...set].sort();
 }
 
-function initSpecial() { spTab(SUB_TAB['special'] || 'dawn'); }
+function initSpecial() { loadSunEvVocab(); renderSpEvTabs(); spTab(SUB_TAB['special'] || 'dawn'); }
+
+/* ── 주일 행사 태그 ───────────────────────────────────────────
+   태그를 미리 정하지 않는다. 처음 한 번 직접 써서 저장하면 그다음부터 버튼으로 뜬다
+   (Apps Script 가 저장할 때마다 이름을 모아 둔다 · 입력앱도 같은 목록을 쓴다).
+   특별예배/행사 탭에는 태그마다 하위 탭이 하나씩 생긴다. */
+const SUN_EV_DEFAULTS = ['성찬식', '세례식'];
+let SUN_EV_REMOTE = [];            // Apps Script 의 태그 목록
+let SUN_EV_EDIT = null;            // 고치는 중이면 { week, tags, memo }
+const SUN_EV_EDITED_KEY = 'bwc-sun-ev-edited';
+const canEditSunEv = () => !!(ME && (ME.admin || (ME.tabs || []).includes('sunday')));
+
+/* 쓴 적 있는 태그 — 기본 둘 + 시트 목록 + 자료에 붙어 있는 것, 처음 나온 순서대로 */
+function sunEvVocab() {
+  const out = [];
+  const add = t => { t = String(t || '').trim(); if (t && !out.includes(t)) out.push(t); };
+  SUN_EV_DEFAULTS.forEach(add); SUN_EV_REMOTE.forEach(add);
+  Object.keys(D.sunday).sort().forEach(w => (D.sunday[w]?.events?.tags || []).forEach(add));
+  return out;
+}
+let SUN_EV_REMOTE_ASKED = false;
+function loadSunEvVocab() {
+  if (SUN_EV_REMOTE_ASKED) return;
+  SUN_EV_REMOTE_ASKED = true;
+  fetch(APPS_SCRIPT_URL + '?mode=event-tags', { cache: 'no-store' })
+    .then(r => r.ok ? r.json() : null)
+    .then(b => {
+      if (!b?.tags?.length) return;
+      SUN_EV_REMOTE = b.tags;
+      renderSpEvTabs();
+      if (SUN_EV_EDIT) renderSunEventBar(SUN_EV_EDIT.week);
+    })
+    .catch(() => {});
+}
+
+/* 대시보드의 지난 주차는 하루 한 번 새로 만드는 스냅샷에서 온다. 고친 주는 며칠 동안
+   열 때마다 시트에서 다시 읽어, 새로고침해도 고친 값이 그대로 보이게 한다. */
+function sunEvRecentEdits() {
+  try {
+    const m = JSON.parse(localStorage.getItem(SUN_EV_EDITED_KEY) || '{}');
+    const keep = Date.now() - 3 * 24 * 3600 * 1000;
+    return Object.keys(m).filter(w => m[w] > keep);
+  } catch { return []; }
+}
+function sunEvMarkEdited(week) {
+  try {
+    const m = JSON.parse(localStorage.getItem(SUN_EV_EDITED_KEY) || '{}');
+    const keep = Date.now() - 3 * 24 * 3600 * 1000;
+    Object.keys(m).forEach(w => { if (m[w] <= keep) delete m[w]; });
+    m[week] = Date.now();
+    localStorage.setItem(SUN_EV_EDITED_KEY, JSON.stringify(m));
+  } catch {}
+}
+
+function renderSunEventBar(week) {
+  const el = document.getElementById('sun-ev-bar');
+  if (!el) return;
+  if (SUN_EV_EDIT && SUN_EV_EDIT.week !== week) SUN_EV_EDIT = null;
+  const ev = D.sunday[week]?.events;
+  const tags = ev?.tags || [];
+  const memo = Object.values(ev?.memo || {}).join(' · ');
+  const can = canEditSunEv();
+  if (can) loadSunEvVocab();
+  if (!SUN_EV_EDIT) {
+    if (!tags.length && !memo && !can) { el.innerHTML = ''; return; }
+    el.innerHTML = `<span class="lbl">이 주일의 행사</span>
+      ${tags.length ? tags.map(t => `<span class="ev-chip on">${esc(t)}</span>`).join('') : '<span class="memo">없음</span>'}
+      ${memo ? `<span class="memo">${esc(memo)}</span>` : ''}
+      <span class="grow"></span>
+      ${can ? `<button class="stab" style="flex-grow:0" onclick="sunEvEdit('${week}')">${tags.length || memo ? '✏️ 행사 고치기' : '＋ 행사 달기'}</button>` : ''}`;
+    return;
+  }
+  loadSunEvVocab();
+  const e = SUN_EV_EDIT;
+  const vocab = sunEvVocab();
+  e.tags.forEach(t => { if (!vocab.includes(t)) vocab.push(t); });
+  el.innerHTML = `<div class="ev-row"><span class="lbl">이 주일의 행사</span>
+      ${vocab.map(t => `<button type="button" class="ev-chip${e.tags.includes(t) ? ' on' : ''}" data-t="${esc(t)}" onclick="sunEvToggle(this.dataset.t)">${esc(t)}</button>`).join('')}
+      <input type="text" class="ev-new" id="sun-ev-new" placeholder="＋ 새 행사 (예: 새생명 축제)" maxlength="30"
+        onkeydown="if(event.key==='Enter'&&!event.isComposing){event.preventDefault();sunEvAddNew()}">
+    </div>
+    <div class="ev-row">
+      <input type="text" class="ev-memo" id="sun-ev-memo" placeholder="메모 (예: 성찬 참여 약 3,000명 · 세례 24명)" maxlength="300"
+        value="${esc(e.memo)}" oninput="SUN_EV_EDIT.memo=this.value">
+      <button class="stab on" style="flex-grow:0" id="sun-ev-save" onclick="sunEvSave()">저장</button>
+      <button class="stab" style="flex-grow:0" onclick="SUN_EV_EDIT=null;renderSunEventBar('${week}')">취소</button>
+      <span class="ev-st" id="sun-ev-st">새 행사는 이름을 쓰고 Enter — 다음부터는 버튼으로 나옵니다</span>
+    </div>`;
+}
+function sunEvEdit(week) {
+  const ev = D.sunday[week]?.events;
+  SUN_EV_EDIT = { week, tags: [...(ev?.tags || [])], memo: Object.values(ev?.memo || {}).join(' · ') };
+  renderSunEventBar(week);
+}
+function sunEvToggle(t) {
+  const e = SUN_EV_EDIT; if (!e) return;
+  e.tags = e.tags.includes(t) ? e.tags.filter(x => x !== t) : [...e.tags, t];
+  renderSunEventBar(e.week);
+}
+function sunEvAddNew() {
+  const e = SUN_EV_EDIT, inp = document.getElementById('sun-ev-new');
+  if (!e || !inp) return;
+  inp.value.split(',').map(t => t.trim()).filter(Boolean).forEach(t => { if (!e.tags.includes(t)) e.tags.push(t); });
+  renderSunEventBar(e.week);
+  document.getElementById('sun-ev-new')?.focus();
+}
+async function sunEvSave() {
+  const e = SUN_EV_EDIT; if (!e) return;
+  // 쓰다 만 새 행사 이름도 같이 넣는다 — Enter 를 안 누르고 저장을 누르는 일이 많다
+  const pending = document.getElementById('sun-ev-new')?.value || '';
+  pending.split(',').map(t => t.trim()).filter(Boolean).forEach(t => { if (!e.tags.includes(t)) e.tags.push(t); });
+  const btn = document.getElementById('sun-ev-save'), st = document.getElementById('sun-ev-st');
+  btn.disabled = true; st.textContent = '시트에 저장 중…';
+  try {
+    const r = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ weekKey: e.week, tags: e.tags, memo: e.memo }),
+    });
+    const b = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(b.error === 'forbidden' ? '주일예배 권한이 있어야 고칠 수 있어요' : (b.detail || b.error || 'HTTP ' + r.status));
+    // 화면의 자료도 바로 고친다 — 시트를 다시 읽기를 기다리지 않는다
+    RAW[e.week] = { ...(RAW[e.week] || {}), '주일행사': { '주일': { '행사': b.tags.join(','), '행사 메모': b.memo } } };
+    if (D.sunday[e.week]) {
+      const sun = RAW[e.week]['주일예배'] || {};
+      D.sunday[e.week].events = sunEvents(sun['서현'] || {}, sun['송림'] || {}, RAW[e.week]['주일행사']['주일']);
+    }
+    b.tags.forEach(t => { if (!SUN_EV_REMOTE.includes(t)) SUN_EV_REMOTE.push(t); });
+    sunEvMarkEdited(e.week);
+    SUN_EV_EDIT = null;
+    DONE['special'] = false;
+    renderSpEvTabs();
+    renderSunEventBar(e.week);
+  } catch (err) {
+    btn.disabled = false; st.textContent = '저장 못 함 — ' + err.message;
+  }
+}
+
+/* 특별예배/행사 탭의 태그별 하위 탭 */
+function renderSpEvTabs() {
+  const box = document.getElementById('sp-ev-tabs');
+  if (!box) return;
+  box.innerHTML = sunEvVocab().map(t =>
+    `<button class="stab${SUB_TAB['special'] === 'events' && SP_EV_TAG === t ? ' on' : ''}" data-ev="${esc(t)}" onclick="spEvTab(this.dataset.ev)">${esc(t)}</button>`).join('');
+}
+function spEvTab(t) {
+  SP_EV_TAG = t;
+  spTab('events');
+}
 
 /* 주일 행사 — 성찬식·세례식처럼 따로 세지 않고 그 주일 출석에 태그만 붙인 것을 모아 본다 */
 let SP_EV_TAG = '';
@@ -5121,14 +5287,13 @@ function renderSunEventsTab() {
   const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const weeks = Object.keys(D.sunday).sort();
   const tagged = weeks.filter(w => D.sunday[w]?.events?.tags?.length);
-  const allTags = [];
-  ['성찬식', '세례식'].concat(...tagged.map(w => D.sunday[w].events.tags))
-    .forEach(t => { if (!allTags.includes(t)) allTags.push(t); });
+  const allTags = sunEvVocab();
   if (SP_EV_TAG && !allTags.includes(SP_EV_TAG)) SP_EV_TAG = '';
-  const howTo = `입력앱 <b>주일예배 → 서현/송림</b> 표 아래 <b>이 주일의 행사</b>에서 성찬식·세례식을 고르고 메모를 남기면 여기에 모입니다.
-    인원은 따로 세지 않고 그 주일 현장 출석을 씁니다.`;
-  const btns = `<div class="stabs" style="margin-bottom:12px">${['', ...allTags].map(t =>
-    `<button class="stab${SP_EV_TAG === t ? ' on' : ''}" onclick="setSpEvTag('${esc(t).replace(/'/g, "\\'")}')">${t ? esc(t) : '전체'}</button>`).join('')}</div>`;
+  const howTo = `<b>주일예배</b> 탭에서 주일을 고르고 <b>＋ 행사 달기</b>로 태그를 붙이면(입력앱 주일예배 표 아래에서도 됩니다) 여기에 모입니다.
+    처음 쓰는 행사는 이름을 직접 쓰면 그다음부터 버튼으로 나옵니다. 인원은 따로 세지 않고 그 주일 현장 출석을 씁니다.`;
+  // 태그마다 위쪽 하위 탭이 있으므로, 태그를 골라 들어왔으면 안쪽 거르기 버튼은 뺀다
+  const btns = SP_EV_TAG ? '' : `<div class="stabs" style="margin-bottom:12px">${['', ...allTags].map(t =>
+    `<button class="stab${SP_EV_TAG === t ? ' on' : ''}" data-t="${esc(t)}" onclick="setSpEvTag(this.dataset.t)">${t ? esc(t) : '전체'}</button>`).join('')}</div>`;
   const list = tagged.filter(w => !SP_EV_TAG || D.sunday[w].events.tags.includes(SP_EV_TAG)).reverse();
   if (!list.length) {
     el.innerHTML = btns + `<div class="cc"><div class="ct">${SP_EV_TAG ? esc(SP_EV_TAG) + ' ' : ''}표시된 주일 없음</div>
@@ -5175,7 +5340,9 @@ function spTab(key, opts) {
   const par = document.getElementById('s-special');
   const t = document.getElementById('special-' + key);
   if (!par || !t) return;
-  par.querySelectorAll('.stab').forEach(el => el.classList.toggle('on', (el.getAttribute('onclick')||'').includes(`'${key}'`)));
+  par.querySelectorAll('.stab').forEach(el => el.classList.toggle('on', el.dataset.ev != null
+    ? key === 'events' && el.dataset.ev === SP_EV_TAG
+    : (el.getAttribute('onclick')||'').includes(`'${key}'`)));
   par.querySelectorAll('.ss').forEach(el => el.classList.remove('on'));
   t.classList.add('on');
   SUB_TAB['special'] = key;
@@ -5649,7 +5816,14 @@ function weekNotes(week) {
 }
 
 /* '행사' 칸은 '성찬식,세례식' 처럼 쉼표로, '행사 메모'는 장소마다 */
-function sunEvents(sh, sr) {
+/* 주일 행사 — '주일행사/주일' 줄(대시보드·입력앱이 지금 쓰는 곳)이 있으면 그게 이긴다.
+   없으면 2026-10-14~ 잠깐 서현·송림 줄에 붙이던 옛 값을 읽는다. 빈 값으로 저장하면 행사가 지워진 것이다. */
+function sunEvents(sh, sr, ov) {
+  if (ov && ('행사' in ov || '행사 메모' in ov)) {
+    const tags = [...new Set(String(ov['행사'] ?? '').split(',').map(t => t.trim()).filter(Boolean))];
+    const m = String(ov['행사 메모'] ?? '').trim();
+    return tags.length || m ? { tags, memo: m ? { '': m } : {} } : null;
+  }
   const tags = [], memo = {};
   [['송림', sr], ['서현', sh]].forEach(([site, r]) => {
     String(r['행사'] ?? '').split(',').map(t => t.trim()).filter(Boolean)
@@ -5686,7 +5860,7 @@ function applyNewData(data) {
         online:        D.sunday[date]?.online ?? null,
         note:          sh['note'] || sh['비고'] || sr['note'] || sr['비고'] || null,
         // 주일 행사 태그(입력앱 주일예배 표 아래 '이 주일의 행사') — 성찬식·세례식 등. 장소마다 따로 붙는다
-        events:        sunEvents(sh, sr),
+        events:        sunEvents(sh, sr, RAW[date]?.['주일행사']?.['주일']),
         bu: {
           '1부': { 장년: sh['1부']??null, 송림: sr['1부']??null },
           '2부': { 장년: sh['2부']??null, 송림: sr['2부']??null },
@@ -5695,6 +5869,12 @@ function applyNewData(data) {
           '5부': { 장년: null, 송림: null },
         }
       };
+    }
+
+    // 행사 태그만 새로 들어온 경우(대시보드에서 고친 주를 다시 읽을 때) — 출석은 그대로 두고 태그만 바꾼다
+    if (rec['주일행사'] && D.sunday[date] && !(Object.keys(sh).length || Object.keys(sr).length)) {
+      const s0 = RAW[date]['주일예배'] || {};
+      D.sunday[date].events = sunEvents(s0['서현'] || s0['서현교회'] || s0['드림'] || {}, s0['송림'] || s0['송림교회'] || {}, RAW[date]['주일행사']['주일']);
     }
 
     // ── 주일학교 ──
