@@ -1248,7 +1248,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
     <div class="kg" id="kk-newfam-youth"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">청년 등록신청 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-youth-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">청년 등록 가능 사유 (누적)</div><div class="cs">냉담기·이사·짝믿음·결혼·초신자 등</div></div></div><canvas id="c-nf-youth-route"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct">청년 등록 가능 사유 (누적)</div><div class="cs">냉담기·이사·초신자·등록교인자녀 등</div></div></div><canvas id="c-nf-youth-route"></canvas></div>
     </div>
   </div>
 </section>
@@ -1958,7 +1958,7 @@ function exportCSV() {
   } else if (tab === 'newfam') {
     name = '새가족';
     const fd = filterByMode(D.newFamily);
-    rows.push(['날짜','구분','등록신청','등록 가능','등록 불가능','냉담기','이사','짝믿음','기타(이단 등)','결혼(부부)','초신자']);
+    rows.push(['날짜','구분','등록신청','등록 가능','등록 불가능','냉담기','이사','짝믿음','기타(이단 등)','결혼(부부)','초신자','등록교인자녀']);
     fd.forEach(r => {
       ['adult','youth'].forEach(type => {
         rows.push([
@@ -1972,7 +1972,8 @@ function exportCSV() {
           nfVal(r, type, 'mixed_belief'),
           nfVal(r, type, 'other'),
           nfVal(r, type, 'marriage'),
-          nfVal(r, type, 'new_believer')
+          nfVal(r, type, 'new_believer'),
+          nfVal(r, type, 'member_child')
         ]);
       });
     });
@@ -4236,6 +4237,8 @@ function nfReasonTotals(rows, type) {
     '기타(이단 등)': rows.reduce((a,r)=>a+nfVal(r,type,'other'),0),
     '결혼(부부)': rows.reduce((a,r)=>a+nfVal(r,type,'marriage'),0),
     '초신자': rows.reduce((a,r)=>a+nfVal(r,type,'new_believer'),0),
+    // 청년만 2026-10-18부터 받는 칸. 0이면 그래프에서 빠진다
+    '등록교인자녀': rows.reduce((a,r)=>a+nfVal(r,type,'member_child'),0),
   };
 }
 
@@ -4325,7 +4328,7 @@ function initNewFam() {
     return;
   }
   const fwRows = D.newFamily.filter(r => getFW().includes(r.date));
-  const rColors = [C.b, C.p, C.g, C.or, C.t, C.pk];
+  const rColors = [C.b, C.p, C.g, C.or, C.t, C.pk, C.lm];
 
   // 장년
   const latestAdult = D.newFamily[D.newFamily.length - 1];
@@ -6238,6 +6241,7 @@ function applyNewData(data) {
         adult_other:        n(adult['기타(이단 등)'], adult['기타']),
         adult_marriage:     n(adult['결혼(부부)'], adult['혼인']),
         adult_new_believer: n(adult['초신자'], adult['새신자']),
+        adult_member_child: n(adult['등록교인자녀']),
         youth_available:    n(young['등록 가능'], young['등록가능'], young['등록']),
         youth_unavailable:  n(young['등록 불가능'], young['등록불가능']),
         youth_cold:         n(young['냉담기'], young['냉담회복']),
@@ -6246,6 +6250,7 @@ function applyNewData(data) {
         youth_other:        n(young['기타(이단 등)'], young['기타']),
         youth_marriage:     n(young['결혼(부부)'], young['혼인']),
         youth_new_believer: n(young['초신자'], young['새신자']),
+        youth_member_child: n(young['등록교인자녀']),
         adult_visit:        n(adult['방문']),
         adult_reg:          n(adult['등록']),
         adult_comp:         n(adult['수료']),
