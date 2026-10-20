@@ -114,6 +114,7 @@ bash scripts/deploy.sh                     # 자료까지 새로 수집해 올�
   청년부 하위 탭처럼 그릴 때 통째로 다시 만드는 곳이 있어 `runInit` 이 그리기 전에 기간 줄을 빼 두었다가 돌려놓는다.
   'N주'·날짜 범위는 '직접 설정 ▾'에 접혀 있다.
 - '⬇ 엑셀'은 라이브러리 없이 .xlsx 를 만든다(`xlsxBlob`). 고르는 창의 항목은 `exportOptions(tab)` —
-  주일학교는 `schoolSheetOptions`(시트 여러 개), 다른 탭은 예전 CSV 내용(`tabExportRows`) 한 시트.
+  주일학교는 `schoolSheetOptions` — '부서별 비교' 한 시트 + 부서마다 시트 하나(주차 × 1·2부 학생·교사·합계·방문자·등반자).
+  부서 목록은 자료에서 뽑는다(`schoolExportDepts`) — 새 부서가 생기면 시트도 는다. 다른 탭은 예전 CSV 내용(`tabExportRows`) 한 시트.
 - 로그인: '아이디 저장'(localStorage `bwc-login-id`) · '로그인 유지'(7일, `SESSION_MAX_AGE_LONG`).
   권한은 세션에 담기므로 권한을 바꾸거나 계정을 지워도 다시 로그인하기 전까지(최대 7일) 예전 권한이 남는다.

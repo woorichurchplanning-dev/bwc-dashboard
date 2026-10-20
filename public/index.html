@@ -290,6 +290,18 @@ nav::-webkit-scrollbar { display: none; }
 .xl-opt input { margin-top:3px; accent-color:var(--color-accent); }
 .xl-opt b { font-size:13.5px; display:block; }
 .xl-opt small { font-size:12px; color:var(--color-text-secondary); line-height:1.45; display:block; }
+.xl-seg { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.xl-seg label { display:block; cursor:pointer; }
+.xl-seg input { display:none; }
+.xl-seg span { display:block; padding:9px 11px; border:1px solid var(--color-border-default); border-radius:9px; font-size:13.5px; font-weight:600; }
+.xl-seg small { display:block; font-size:11.5px; font-weight:400; color:var(--color-text-secondary); margin-top:2px; }
+.xl-seg input:checked + span { border-color:var(--color-accent); background:var(--color-accent-light); }
+.xl-all { margin-left:6px; border:1px solid var(--color-border-default); background:var(--color-bg-surface); border-radius:6px; font-size:11.5px; padding:2px 8px; cursor:pointer; font-family:var(--font-body); }
+.xl-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.xl-chip { cursor:pointer; }
+.xl-chip input { display:none; }
+.xl-chip span { display:inline-block; padding:6px 11px; border:1px solid var(--color-border-default); border-radius:16px; font-size:13px; color:var(--color-text-secondary); }
+.xl-chip input:checked + span { border-color:var(--color-accent); background:var(--color-accent-light); color:var(--color-accent); font-weight:600; }
 .xl-note { font-size:12px; color:var(--color-warning,#b45309); margin:4px 0; }
 .xl-go { width:100%; margin-top:12px; height:40px; border:0; border-radius:9px; background:var(--color-accent); color:#fff; font-weight:700; font-size:14px; cursor:pointer; font-family:var(--font-body); }
 
@@ -1990,72 +2002,51 @@ function xlsxBlob(sheets) {
   return xlZip(files);
 }
 
-/* 주일학교에서 고를 수 있는 시트들 */
-function schoolSheetOptions() {
-  const DS = myDepts();
-  const grpOf = d => SCHOOL_GROUPS[schGroupOf(d)]?.label || '';
+/* 주일학교 엑셀 — 부서마다 시트 하나(주차 × 1부·2부 학생·교사 …) + 부서별 비교 시트 하나.
+   부서 목록은 자료에서 뽑는다 — 시트에 부서가 새로 생기면 시트도 저절로 하나 늘어난다. */
+function schoolExportDepts(fw) {
+  const allow = ME?.schoolDepts?.length ? ME.schoolDepts : null;
+  const seen = new Set();
+  // 숫자가 한 번이라도 들어온 부서만 (옛 기록의 '수험생'처럼 늘 0인 칸은 뺀다)
+  fw.forEach(w => Object.entries(D.school[w] || {}).forEach(([d, r]) => {
+    if (!d.startsWith('_') && Object.values(r || {}).some(x => Number(x) > 0)) seen.add(d);
+  }));
+  const order = d => { const i = SCHOOL_DEPTS.indexOf(d); return i < 0 ? 99 : i; };
+  return [...seen].filter(d => !allow || allow.includes(d)).sort((a, b) => order(a) - order(b) || a.localeCompare(b, 'ko'));
+}
+function schoolSheetOptions(fw) {
   const n = x => (x == null ? '' : x);
-  const sum = a => { const f = a.filter(x => x != null); return f.length ? f.reduce((x, y) => x + y, 0) : ''; };
-  const byDept = kind => fw => [['주차', ...DS, '합계'], ...fw.map(w => { const vs = DS.map(d => schVal(w, d, kind, '')); return [w, ...vs.map(n), sum(vs)]; })];
-  const groups = Object.entries(SCHOOL_GROUPS).filter(([k]) => schGroupDepts(k).length);
+  const DS = schoolExportDepts(fw);
+  const deptRows = d => () => {
+    const r = w => D.school[w]?.[d] || {};
+    return [['주차', '1부 학생', '1부 교사', '2부 학생', '2부 교사', '학생 계', '교사 계', '합계', '방문자', '등반자'],
+      ...fw.map(w => [w, n(nn(r(w)['1부학생'])), n(nn(r(w)['1부교사'])), n(nn(r(w)['2부학생'])), n(nn(r(w)['2부교사'])),
+        n(schVal(w, d, '학생', '')), n(schVal(w, d, '교사', '')), n(schVal(w, d, '학생+교사', '')),
+        n(nn(r(w).방문자)), n(nn(r(w).등반자))])];
+  };
   return [
-    { id: 'stu', label: '부서별 학생', desc: '주차 × 부서 · 학생 수 (교사 빼고)', on: true, rows: byDept('학생') },
-    { id: 'tea', label: '부서별 교사', desc: '주차 × 부서 · 교사 수', rows: byDept('교사') },
-    { id: 'all', label: '부서별 학생+교사', desc: '주차 × 부서 · 합계. 2025년까지 옛 자료(구분 없음)도 여기 들어갑니다', rows: byDept('학생+교사') },
-    { id: 'grp', label: '묶음별 요약', desc: '주차 × 사랑부·미취학·어린이·청소년 학생/교사', on: true,
-      rows: fw => [['주차', ...groups.flatMap(([, g]) => [`${g.label} 학생`, `${g.label} 교사`]), '전체 학생', '전체 교사'],
-        ...fw.map(w => [w, ...groups.flatMap(([k]) => [n(schSum(w, schGroupDepts(k), '학생', '')), n(schSum(w, schGroupDepts(k), '교사', ''))]),
-          n(schSum(w, DS, '학생', '')), n(schSum(w, DS, '교사', ''))])] },
-    { id: 'bu', label: '1부 · 2부 학생', desc: '주차 × 부서별 1부·2부 학생 — 부별 쏠림 보기',
-      rows: fw => [['주차', ...DS.flatMap(d => [`${d} 1부`, `${d} 2부`]), '1부 합계', '2부 합계'],
-        ...fw.map(w => [w, ...DS.flatMap(d => [n(schVal(w, d, '학생', '1부')), n(schVal(w, d, '학생', '2부'))]),
-          n(schSum(w, DS, '학생', '1부')), n(schSum(w, DS, '학생', '2부'))])] },
-    { id: 'sum', label: '부서별 기간 요약', desc: '부서마다 평균 학생·교사, 교사 1명당 학생, 최고·최저, 처음 4주 → 마지막 4주 변화', on: true,
-      rows: fw => {
-        const out = [['묶음', '부서', '입력된 주', '학생 평균', '교사 평균', '교사 1명당 학생', '학생 최고', '최고 주', '학생 최저', '최저 주', '처음 4주 평균', '마지막 4주 평균', '변화(%)', '방문자 합계', '등반자 합계']];
-        DS.forEach(d => {
-          const ws = fw.filter(w => schVal(w, d, '학생', '') != null);
-          const st = ws.map(w => schVal(w, d, '학생', '')), te = ws.map(w => schVal(w, d, '교사', '')).filter(x => x != null);
-          const av = a => (a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : '');
-          const mx = st.length ? Math.max(...st) : '', mn = st.length ? Math.min(...st) : '';
-          const a4 = av(st.slice(0, 4)), b4 = av(st.slice(-4));
-          const tot = k => sum(fw.map(w => nn(D.school[w]?.[d]?.[k])));
-          out.push([grpOf(d), d, ws.length, av(st), av(te), av(te) ? Math.round(av(st) / av(te) * 10) / 10 : '',
-            mx, st.length ? ws[st.indexOf(mx)] : '', mn, st.length ? ws[st.indexOf(mn)] : '',
-            a4, b4, a4 && b4 && st.length >= 8 ? Math.round((b4 - a4) / a4 * 1000) / 10 : '', tot('방문자'), tot('등반자')]);
-        });
-        return out;
-      } },
-    { id: 'visit', label: '방문자 · 등반자', desc: '주차 × 부서 · 새로 온 아이(방문자)와 올라온 아이(등반자)',
-      rows: fw => [['주차', ...DS.flatMap(d => [`${d} 방문`, `${d} 등반`])],
-        ...fw.map(w => [w, ...DS.flatMap(d => [n(nn(D.school[w]?.[d]?.방문자)), n(nn(D.school[w]?.[d]?.등반자))])])] },
-    { id: 'raw', label: '원자료 (피벗용)', desc: '한 줄에 주차·묶음·부서·부·학생·교사·방문자·등반자 — 엑셀 피벗으로 직접 뽑을 때',
-      rows: fw => {
-        const out = [['주차', '연도', '월', '묶음', '부서', '부', '학생', '교사', '학생+교사', '방문자', '등반자']];
-        fw.forEach(w => DS.forEach(d => {
-          const r = D.school[w]?.[d]; if (!r) return;
-          const split = r['1부학생'] != null || r['1부교사'] != null || r['2부학생'] != null || r['2부교사'] != null;
-          (split ? ['1부', '2부'] : ['']).forEach(b => {
-            const st = nn(r[b + '학생']), te = nn(r[b + '교사']);
-            const tot = st == null && te == null ? (b ? nn(r[b]) : schoolDeptTotal(w, d)) : (st || 0) + (te || 0);
-            if (tot == null) return;
-            out.push([w, +w.slice(0, 4), +w.slice(5, 7), grpOf(d), d, b || '구분 없음', n(st), n(te), tot, n(nn(r[b + '방문자'])), n(nn(r[b + '등반자']))]);
-          });
-        }));
-        return out;
-      } },
+    { id: 'cmp', label: '부서별 비교', desc: '한 시트에 주차마다 부서별 학생 수와 합계 — 부서끼리 견줄 때', on: true,
+      rows: () => [['주차', ...DS, '합계'], ...fw.map(w => {
+        const vs = DS.map(d => schVal(w, d, '학생', ''));
+        const f = vs.filter(x => x != null);
+        return [w, ...vs.map(n), f.length ? f.reduce((a, b) => a + b, 0) : ''];
+      })] },
+    ...DS.map(d => ({ id: 'd:' + d, label: d, dept: true, on: true, rows: deptRows(d) })),
   ];
 }
 
 const TAB_LABEL = { home: '주간현황', district: '장년교구', youth: '청년교구', school: '주일학교', sunday: '주일예배', wd: '주중예배', newfam: '새가족', special: '특별예배', yearcomp: '연도별비교' };
-function exportOptions(tab) {
-  if (tab === 'school') return schoolSheetOptions();
-  return [{ id: 'tab', label: `${TAB_LABEL[tab] || tab} 자료`, desc: '이 탭의 주차별 숫자', on: true, rows: fw => tabExportRows(tab, fw).rows }];
+function exportOptions(tab, fw) {
+  if (tab === 'school') return schoolSheetOptions(fw);
+  return [{ id: 'tab', label: `${TAB_LABEL[tab] || tab} 자료`, desc: '이 탭의 주차별 숫자', on: true, rows: () => tabExportRows(tab, fw).rows }];
 }
 
+function xlPeriod() {
+  const m = document.getElementById('xl-modal');
+  return m?.querySelector('input[name=xl-p]:checked')?.value === 'all' ? D.weeks : getFW();
+}
 function openExport() {
   const tab = currentTab();
-  const opts = exportOptions(tab);
   const fw = getFW(), all = D.weeks;
   const lbl = ws => (ws.length ? `${ws[0]} ~ ${ws[ws.length - 1]} · ${ws.length}주` : '');
   let m = document.getElementById('xl-modal');
@@ -2063,26 +2054,39 @@ function openExport() {
   m.innerHTML = `<div class="modal xl-box">
     <div class="xl-h"><b>엑셀로 받기</b> · ${TAB_LABEL[tab] || ''}<button class="xl-x" onclick="document.getElementById('xl-modal').classList.remove('open')">✕</button></div>
     <div class="xl-sec">기간</div>
-    <label class="xl-opt"><input type="radio" name="xl-p" value="cur" checked><span><b>지금 고른 기간</b><small>${lbl(fw)}</small></span></label>
-    <label class="xl-opt"><input type="radio" name="xl-p" value="all"><span><b>전체 기간</b><small>${lbl(all)}</small></span></label>
-    <div class="xl-sec">받을 자료 <small>— 고른 것마다 엑셀 아래 탭(시트)이 하나씩 생깁니다</small></div>
-    ${opts.map(o => `<label class="xl-opt"><input type="checkbox" value="${o.id}"${o.on ? ' checked' : ''}><span><b>${o.label}</b><small>${o.desc}</small></span></label>`).join('')}
-    ${tab === 'school' && myDepts().length < SCHOOL_DEPTS.length ? `<div class="xl-note">담당 부서(${myDepts().join(', ')})만 들어갑니다</div>` : ''}
+    <div class="xl-seg">
+      <label><input type="radio" name="xl-p" value="cur" checked onchange="xlFillOpts()"><span>지금 고른 기간<small>${lbl(fw)}</small></span></label>
+      <label><input type="radio" name="xl-p" value="all" onchange="xlFillOpts()"><span>전체 기간<small>${lbl(all)}</small></span></label>
+    </div>
+    <div id="xl-opts"></div>
     <button class="xl-go" onclick="runExport()">⬇ 받기</button>
   </div>`;
   m.classList.add('open');
+  xlFillOpts();
 }
+/* 고를 거리 — 주일학교는 '부서별 비교' 한 줄 + 부서 버튼(부서마다 시트 하나) */
+function xlFillOpts() {
+  const box = document.getElementById('xl-opts'); if (!box) return;
+  const opts = exportOptions(currentTab(), xlPeriod());
+  const plain = opts.filter(o => !o.dept), depts = opts.filter(o => o.dept);
+  box.innerHTML = `<div class="xl-sec">받을 자료 <small>— 고른 것마다 엑셀 아래 탭(시트)이 하나씩</small></div>` +
+    plain.map(o => `<label class="xl-opt"><input type="checkbox" value="${esc(o.id)}"${o.on ? ' checked' : ''}><span><b>${o.label}</b><small>${o.desc}</small></span></label>`).join('') +
+    (depts.length ? `<div class="xl-sec">부서별 시트 <small>— 주차마다 1부·2부 학생·교사, 합계, 방문자·등반자</small>
+        <button class="xl-all" onclick="xlAll(true)">모두</button><button class="xl-all" onclick="xlAll(false)">비우기</button></div>
+      <div class="xl-chips">${depts.map(o => `<label class="xl-chip"><input type="checkbox" value="${esc(o.id)}"${o.on ? ' checked' : ''}><span>${o.label}</span></label>`).join('')}</div>` : '');
+}
+function xlAll(on) { document.querySelectorAll('#xl-opts .xl-chip input').forEach(x => { x.checked = on; }); }
 
 function runExport() {
   const m = document.getElementById('xl-modal');
   const tab = currentTab();
-  const fw = m.querySelector('input[name=xl-p]:checked').value === 'all' ? D.weeks : getFW();
-  const picked = [...m.querySelectorAll('input[type=checkbox]:checked')].map(x => x.value);
-  const opts = exportOptions(tab).filter(o => picked.includes(o.id));
+  const fw = xlPeriod();
+  const picked = [...m.querySelectorAll('#xl-opts input[type=checkbox]:checked')].map(x => x.value);
+  const opts = exportOptions(tab, fw).filter(o => picked.includes(o.id));
   if (!opts.length) { alert('받을 자료를 하나 이상 골라 주세요.'); return; }
-  // 숫자가 하나도 없는 주(학생·교사 구분 전의 옛 주 등)는 뺀다
+  // 숫자가 하나도 없는 주는 뺀다
   const sheets = opts.map(o => {
-    const rows = o.rows(fw);
+    const rows = o.rows();
     return { name: o.label, rows: [rows[0], ...rows.slice(1).filter(r => !/^\d{4}-\d{2}-\d{2}$/.test(r[0]) || r.slice(1).some(c => c !== '' && c != null))] };
   }).filter(sh => sh.rows.length > 1);
   if (!sheets.length) { alert('내보낼 데이터가 없습니다.'); return; }
@@ -6065,7 +6069,7 @@ function genSundays(weeksBack) {
 /* 주일학교 부서명 매핑: 새 GAS → 대시보드 D 오브젝트 */
 /* 시트 이름을 그대로 쓴다. 예전 짧은 이름으로 들어오는 자료만 옮겨 준다. */
 const SCHOOL_DEPT_MAP = {
-  '송림유년': '송림유년부', '서현유년': '서현유년부',
+  '송림유년': '송림유년부', '서현유년': '서현유년부', '송링유년': '송림유년부',   // 2023년 기록에 오타로 들어간 이름
   '송림초등': '송림초등부', '서현초등': '서현초등부',
   '송림소년': '송림소년부', '서현소년': '서현소년부',
   '중등부': '서현중등부', '고등부': '서현고등부',
