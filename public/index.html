@@ -254,6 +254,45 @@ nav::-webkit-scrollbar { display: none; }
 }
 .csv-btn:hover { border-color:var(--color-positive); color:var(--color-positive); }
 
+/* ── 주일학교 — 부서 고르기 · 보기 · 고른 주 카드 ── */
+.sch-bar { display:flex; gap:var(--s3); align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:var(--s3); }
+.sch-chips { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.sch-bu { margin:-4px 0 var(--s3); }
+.sch-lbl, .sch-kind span { font-size:12px; font-weight:600; color:var(--color-text-secondary); margin-right:2px; }
+.sch-chip { height:30px; padding:0 12px; border-radius:16px; border:1px solid var(--color-border-default);
+  background:var(--color-bg-surface); color:var(--color-text-secondary); font-size:13px; font-weight:500; cursor:pointer; font-family:var(--font-body); }
+.sch-chip:hover { border-color:var(--color-accent); color:var(--color-accent); }
+.sch-chip.on { background:var(--color-text-primary,#0a0e1a); border-color:var(--color-text-primary,#0a0e1a); color:#fff; font-weight:600; }
+.sch-kind { display:flex; align-items:center; gap:4px; background:var(--color-bg-subtle,#f1f5f9); border-radius:10px; padding:3px 4px 3px 10px; }
+.sch-kind button { height:28px; padding:0 12px; border:0; border-radius:8px; background:transparent; font-size:13px; font-weight:500;
+  color:var(--color-text-secondary); cursor:pointer; font-family:var(--font-body); }
+.sch-kind button.on { background:var(--color-bg-surface,#fff); color:var(--color-accent); font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+.sch-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:var(--s3); margin-bottom:var(--s5); }
+.sch-card { padding:14px 16px; border:1px solid; border-radius:12px; }
+.sch-card-t { font-size:11.5px; color:var(--color-text-secondary); font-weight:600; margin-bottom:6px; }
+.sch-card-v { font-size:26px; font-weight:800; margin-bottom:4px; font-variant-numeric:tabular-nums; }
+.sch-card-s { font-size:12px; color:var(--color-text-secondary); line-height:1.5; }
+.flt-slot .flt-bar { margin-bottom:var(--s5); }
+/* 기간 직접 설정 — 평소에는 접어 둔다 */
+.flt-more { display:none; width:100%; gap:var(--s3); align-items:center; flex-wrap:wrap; padding-top:8px; border-top:1px dashed var(--color-border-default); }
+.flt-more.open { display:flex; }
+.flt-grow { flex:1; }
+.flt-more .flt-group { flex-wrap:wrap; flex-shrink:1; }
+#t-sch th { white-space:nowrap; }
+
+.xl-box { max-width:520px; width:calc(100% - 32px); max-height:86vh; overflow:auto; padding:20px 22px; text-align:left; }
+.xl-h { font-size:15px; margin-bottom:6px; display:flex; align-items:center; gap:4px; }
+.xl-x { margin-left:auto; border:0; background:none; font-size:16px; cursor:pointer; color:var(--color-text-secondary); }
+.xl-sec { font-size:12px; font-weight:700; color:var(--color-text-secondary); margin:14px 0 6px; }
+.xl-sec small { font-weight:500; }
+.xl-opt { display:flex; gap:10px; align-items:flex-start; padding:8px 10px; border:1px solid var(--color-border-default); border-radius:9px; margin-bottom:6px; cursor:pointer; }
+.xl-opt:has(input:checked) { border-color:var(--color-accent); background:var(--color-accent-light); }
+.xl-opt input { margin-top:3px; accent-color:var(--color-accent); }
+.xl-opt b { font-size:13.5px; display:block; }
+.xl-opt small { font-size:12px; color:var(--color-text-secondary); line-height:1.45; display:block; }
+.xl-note { font-size:12px; color:var(--color-warning,#b45309); margin:4px 0; }
+.xl-go { width:100%; margin-top:12px; height:40px; border:0; border-radius:9px; background:var(--color-accent); color:#fff; font-weight:700; font-size:14px; cursor:pointer; font-family:var(--font-body); }
+
 /* ── MAIN ── */
 main { padding: var(--s6) var(--s8) var(--s12); max-width:1440px; margin:0 auto; }
 .sec { display: none; }
@@ -884,25 +923,28 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
   <button class="flt-quick"    id="fq-26"   onclick="applyQuick(26)">26주</button>
   <button class="flt-quick on" id="fq-8"    onclick="applyQuick(8)">8주</button>
   <button class="flt-quick"    id="fq-4"    onclick="applyQuick(4)">4주</button>
-  <div class="flt-quick-sep"></div>
-  <div class="flt-group">
-    <span class="flt-lbl">지난</span>
-    <input type="number" class="flt-num" id="flt-nweeks" min="1" max="260" placeholder="N"
-           onkeydown="if(event.key==='Enter')applyNweeks()">
-    <span class="flt-lbl">주</span>
-    <button class="flt-apply" onclick="applyNweeks()">적용</button>
-  </div>
-  <span class="flt-sep-or">또는</span>
-  <div class="flt-group">
-    <span class="dsel" id="dsel-s"></span>
-    <span class="flt-lbl" style="color:var(--text3)">~</span>
-    <span class="dsel" id="dsel-e"></span>
-    <button class="flt-apply" onclick="applyDateRange()">적용</button>
-  </div>
-  <button class="flt-reset" id="flt-reset-btn" onclick="resetFilter()" style="display:none">✕ 초기화</button>
+  <button class="flt-quick"    id="fq-custom" onclick="toggleFltMore()">직접 설정 ▾</button>
   <span class="flt-period" id="flt-period" style="display:none"></span>
-  <button class="csv-btn" onclick="exportCSV()" title="현재 기간 데이터를 CSV로 내보내기">⬇ CSV</button>
+  <button class="flt-reset" id="flt-reset-btn" onclick="resetFilter()" style="display:none">✕ 초기화</button>
+  <span class="flt-grow"></span>
+  <button class="csv-btn" onclick="openExport()" title="고른 기간의 자료를 엑셀로 받기">⬇ 엑셀</button>
   <button class="csv-btn" id="print-btn" onclick="printAll()" title="모든 탭을 렌더링한 뒤 인쇄">🖨</button>
+  <div class="flt-more" id="flt-more">
+    <div class="flt-group">
+      <span class="flt-lbl">지난</span>
+      <input type="number" class="flt-num" id="flt-nweeks" min="1" max="260" placeholder="N"
+             onkeydown="if(event.key==='Enter')applyNweeks()">
+      <span class="flt-lbl">주</span>
+      <button class="flt-apply" onclick="applyNweeks()">적용</button>
+    </div>
+    <span class="flt-sep-or">또는</span>
+    <div class="flt-group">
+      <span class="dsel" id="dsel-s"></span>
+      <span class="flt-lbl" style="color:var(--text3)">~</span>
+      <span class="dsel" id="dsel-e"></span>
+      <button class="flt-apply" onclick="applyDateRange()">적용</button>
+    </div>
+  </div>
 </div>
 
 
@@ -1049,89 +1091,60 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
 <!-- ═══ SCHOOL ═══ -->
 <section class="sec" id="s-school">
   <div class="page-hdr">
-    <div class="page-hdr-title"><h2>주일학교</h2><p>사랑부~고등부 부서별 출석 현황</p></div>
+    <div class="page-hdr-title"><h2>주일학교</h2><p>사랑부~고등부 부서별 출석 · 학생 기준 (교사는 '보기'에서 더할 수 있습니다)</p></div>
   </div>
-  <div class="stabs">
-    <button class="stab on" onclick="ss2('school','all')">전체</button>
-    <button class="stab" onclick="ss2('school','love')">사랑부</button>
-    <button class="stab" onclick="ss2('school','pre')">미취학</button>
-    <button class="stab" onclick="ss2('school','sch')">어린이</button>
-    <button class="stab" onclick="ss2('school','teen')">청소년</button>
+  <div class="stabs" id="sch-groups">
+    <button class="stab on" data-g="all" onclick="schGroup('all')">전체</button>
+    <button class="stab" data-g="love" onclick="schGroup('love')">사랑부</button>
+    <button class="stab" data-g="pre" onclick="schGroup('pre')">미취학</button>
+    <button class="stab" data-g="sch" onclick="schGroup('sch')">어린이</button>
+    <button class="stab" data-g="teen" onclick="schGroup('teen')">청소년</button>
   </div>
 
-  <div class="ss on" id="school-all">
-    <div class="school-dept-row">
-      <label>부서 선택</label>
-      <select class="dist-sel" id="school-dept-sel" onchange="renderSchoolDept()">
-        <option value="">전체</option>
-        <option>사랑부</option><option>영아부</option><option>유아부</option><option>유치부</option>
-        <option>송림유년부</option><option>서현유년부</option><option>송림초등부</option><option>서현초등부</option>
-        <option>송림소년부</option><option>서현소년부</option><option>송림청소년부</option>
-        <option>서현중등부</option><option>서현고등부</option>
-      </select>
-    </div>
-    <div class="kg" id="kk-school"></div>
-    <div class="cg">
-      <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct" id="ct-school-trend">주일학교 전체 출석 추이</div></div></div><canvas id="c-school-trend"></canvas></div>
-      <div class="cc" id="card-school-pie" style="display:none"><div class="ch"><div><div class="ct" id="ct-school-pie"></div></div></div><canvas id="c-school-pie"></canvas></div>
-    </div>
-
-    </div>
-    <div class="cc" style="margin-bottom:16px" id="card-school-bu"><div class="ch"><div><div class="ct">주일학교 1부 · 2부 구성</div>
-      <div class="cs" id="cs-school-bu">주차별 학생 수</div></div></div>
-      <canvas id="c-school-bu"></canvas>
-      <div class="fw" id="fw-school-bu" style="margin-top:var(--s4)"></div>
-      <div style="overflow-x:auto;margin-top:var(--s4)"><table id="t-school-bu"></table></div>
-    </div>
-
-    <div class="cc" style="margin-bottom:16px" id="card-school-bar"><div class="ch"><div><div class="ct" id="ct-school-bar">부서별 인원 (최근 4주 평균)</div>
-      <div class="cs" id="cs-school-bar">학생 기준</div></div></div>
-      <div class="pick" id="pick-school">
-        <div class="pick-row">
-          <button class="pill kind on" data-kind="학생" onclick="pickSchoolKind(this)">학생</button>
-          <button class="pill kind" data-kind="교사" onclick="pickSchoolKind(this)">교사</button>
-          <button class="pill kind" data-kind="학생+교사" onclick="pickSchoolKind(this)">학생+교사</button>
-        </div>
+  <div class="ss on" id="school-main">
+    <!-- 부서 고르기 · 보기(학생/교사) -->
+    <div class="sch-bar">
+      <div class="sch-chips" id="sch-chips"></div>
+      <div class="sch-kind" id="sch-kind">
+        <span>보기</span>
+        <button data-k="학생" onclick="schKind('학생')">학생</button>
+        <button data-k="학생+교사" onclick="schKind('학생+교사')">＋ 교사</button>
+        <button data-k="교사" onclick="schKind('교사')">교사만</button>
       </div>
-      <canvas id="c-school-bar" style="display:none"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct" id="ct-school-table">부서별 주별 출석 상세</div></div></div>
-      <div style="overflow-x:auto"><table id="t-school"></table></div>
     </div>
-  </div>
+    <div class="sch-chips sch-bu" id="sch-bu"></div>
 
-  <div class="ss" id="school-love">
-    <div class="kg" id="kk-school-love"></div>
+    <!-- 주 선택 — 주일예배 탭과 같은 모양. 아래 카드는 고른 주의 숫자다 -->
+    <div style="display:flex; gap:var(--s2); margin-bottom:var(--s4); align-items:center; justify-content:center;">
+      <button class="stab" onclick="schWeekNav(-1)" style="flex-grow:0">← 이전주</button>
+      <select id="sch-week-sel" onchange="schWeekGo(this.value)" aria-label="주일 고르기"
+        style="font-weight:600;font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--color-border,#ddd);background:var(--color-surface,#fff);color:inherit;min-width:220px;text-align:center;cursor:pointer"></select>
+      <button class="stab" onclick="schWeekNav(1)" style="flex-grow:0">다음주 →</button>
+    </div>
+    <div id="sch-cards" class="sch-cards"></div>
+
+    <!-- 기간 — 여기서부터 아래 그래프·표에만 걸린다 (sw() 가 기간 줄을 이 자리로 옮긴다) -->
+    <div class="flt-slot"></div>
+
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">사랑부 출석 추이</div></div></div><canvas id="c-school-love-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">부서별 인원</div></div></div><canvas id="c-school-love-pie"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct" id="ct-sch-trend">출석 추이</div><div class="cs" id="cs-sch-trend"></div></div></div><canvas id="c-sch-trend"></canvas></div>
+      <div class="cc"><div class="ch"><div><div class="ct" id="ct-sch-kids">부서별 추이</div><div class="cs" id="cs-sch-kids"></div></div></div><canvas id="c-sch-kids"></canvas></div>
     </div>
-  </div>
 
-  <div class="ss" id="school-pre">
-    <div class="kg" id="kk-school-pre"></div>
     <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">미취학 출석 추이</div><div class="cs">영아부·유아부·유치부</div></div></div><canvas id="c-school-pre-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">부서별 인원</div></div></div><canvas id="c-school-pre-pie"></canvas></div>
+      <div class="cc" id="card-sch-bu"><div class="ch"><div><div class="ct" id="ct-sch-bu">1부 · 2부 구성</div>
+        <div class="cs" id="cs-sch-bu"></div></div></div>
+        <canvas id="c-sch-bu"></canvas></div>
+      <div class="cc" id="card-sch-share"><div class="ch"><div><div class="ct" id="ct-sch-share">부서별 인원</div>
+        <div class="cs" id="cs-sch-share">최근 4주 평균</div></div></div>
+        <canvas id="c-sch-share"></canvas></div>
+    </div>
+
+    <div class="cc"><div class="ch"><div><div class="ct" id="ct-sch-table">주별 상세</div>
+      <div class="cs">최근 주부터 · '한 달 더 보기'로 계속 이어서 볼 수 있습니다 (위 기간과 상관없이)</div></div></div>
+      <div style="overflow-x:auto"><table id="t-sch"></table></div>
     </div>
   </div>
-
-  <div class="ss" id="school-sch">
-    <div class="kg" id="kk-school-sch"></div>
-    <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">어린이 출석 추이</div><div class="cs">유년부·초등부·소년부</div></div></div><canvas id="c-school-sch-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">부서별 인원</div></div></div><canvas id="c-school-sch-pie"></canvas></div>
-    </div>
-  </div>
-
-  <div class="ss" id="school-teen">
-    <div class="kg" id="kk-school-teen"></div>
-    <div class="cg">
-      <div class="cc"><div class="ch"><div><div class="ct">청소년 출석 추이</div><div class="cs">송림청소년부·서현중등부·서현고등부</div></div></div><canvas id="c-school-teen-trend"></canvas></div>
-      <div class="cc"><div class="ch"><div><div class="ct">부서별 인원</div></div></div><canvas id="c-school-teen-pie"></canvas></div>
-    </div>
-  </div>
-
 </section>
 
 <!-- ═══ WEEKDAY ═══ -->
@@ -1748,9 +1761,14 @@ function updatePeriodLabel(fw) {
 
 let QUICK_N = 8;
 
+function toggleFltMore(force) {
+  const el = document.getElementById('flt-more');
+  if (el) el.classList.toggle('open', force ?? !el.classList.contains('open'));
+}
 function syncQuickBtns(active) {
   QUICK_N = active;
-  ['all','52','26','8','4'].forEach(k => {
+  if (active !== 'custom') toggleFltMore(false);
+  ['all','52','26','8','4','custom'].forEach(k => {
     const el = document.getElementById('fq-' + k);
     if (el) el.classList.toggle('on', String(k) === String(active));
   });
@@ -1897,12 +1915,177 @@ function mkCollapsible(cardEl) {
   });
 }
 
-// ── CSV 내보내기 ──
-function exportCSV() {
-  const fw = getFW();
-  const active = Array.from(document.querySelectorAll('.nt')).find(el => el.classList.contains('on'));
-  const idx = active ? Array.from(document.querySelectorAll('.nt')).indexOf(active) : 0;
-  const tab = TABS[idx] || 'home';
+// ── 엑셀 내보내기 ──
+/* .xlsx 를 직접 만든다(라이브러리 없이). 시트 여러 개 = 엑셀 아래 탭 여러 개.
+   무엇을 받을지 고르는 창을 먼저 띄운다 — 탭마다 고를 거리가 다르다(SHEET_OPTIONS). */
+const XL_CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function xlCrc(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = XL_CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+/* 압축 없는(store) zip */
+function xlZip(files) {
+  const enc = new TextEncoder(), parts = [], cen = [];
+  let off = 0;
+  files.forEach(([name, text]) => {
+    const nm = enc.encode(name), data = enc.encode(text), crc = xlCrc(data);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true);
+    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nm.length, true);
+    parts.push(new Uint8Array(h.buffer), nm, data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+    c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, nm.length, true);
+    c.setUint32(42, off, true);
+    cen.push(new Uint8Array(c.buffer), nm);
+    off += 30 + nm.length + data.length;
+  });
+  const cenLen = cen.reduce((a, x) => a + x.length, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+  e.setUint32(12, cenLen, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...cen, new Uint8Array(e.buffer)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+function xlEsc(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ''); }
+function xlCol(i) { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+/* sheets: [{ name, rows: [[...], ...] }] — 첫 줄은 머리(굵게·고정) */
+function xlsxBlob(sheets) {
+  const used = new Set();
+  const names = sheets.map(sh => {
+    let n = String(sh.name).replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31) || '시트', k = 2;
+    while (used.has(n)) n = `${n.slice(0, 28)} ${k++}`;
+    used.add(n); return n;
+  });
+  const sheetXml = sh => {
+    const rows = sh.rows;
+    const width = Math.max(1, ...rows.map(r => r.length));
+    const colW = Array.from({ length: width }, (_, i) => Math.min(40, Math.max(8, ...rows.map(r => String(r[i] ?? '').length * 1.6 + 2))));
+    const body = rows.map((r, ri) => `<row r="${ri + 1}">${r.map((c, ci) => {
+      if (c === '' || c == null) return '';
+      const ref = `${xlCol(ci)}${ri + 1}`, st = ri === 0 ? ' s="1"' : '';
+      return typeof c === 'number' && isFinite(c)
+        ? `<c r="${ref}"${st}><v>${c}</v></c>`
+        : `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${xlEsc(c)}</t></is></c>`;
+    }).join('')}</row>`).join('');
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+      `<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" xSplit="1" topLeftCell="B2" activePane="bottomRight" state="frozen"/></sheetView></sheetViews>` +
+      `<cols>${colW.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w.toFixed(1)}" customWidth="1"/>`).join('')}</cols>` +
+      `<sheetData>${body}</sheetData></worksheet>`;
+  };
+  const files = [
+    ['[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`],
+    ['_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ['xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${names.map((n, i) => `<sheet name="${xlEsc(n)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>`],
+    ['xl/_rels/workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${names.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${names.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ['xl/styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="0"/><fonts count="2"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEEF2F7"/></patternFill></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
+    ...sheets.map((sh, i) => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(sh)]),
+  ];
+  return xlZip(files);
+}
+
+/* 주일학교에서 고를 수 있는 시트들 */
+function schoolSheetOptions() {
+  const DS = myDepts();
+  const grpOf = d => SCHOOL_GROUPS[schGroupOf(d)]?.label || '';
+  const n = x => (x == null ? '' : x);
+  const sum = a => { const f = a.filter(x => x != null); return f.length ? f.reduce((x, y) => x + y, 0) : ''; };
+  const byDept = kind => fw => [['주차', ...DS, '합계'], ...fw.map(w => { const vs = DS.map(d => schVal(w, d, kind, '')); return [w, ...vs.map(n), sum(vs)]; })];
+  const groups = Object.entries(SCHOOL_GROUPS).filter(([k]) => schGroupDepts(k).length);
+  return [
+    { id: 'stu', label: '부서별 학생', desc: '주차 × 부서 · 학생 수 (교사 빼고)', on: true, rows: byDept('학생') },
+    { id: 'tea', label: '부서별 교사', desc: '주차 × 부서 · 교사 수', rows: byDept('교사') },
+    { id: 'all', label: '부서별 학생+교사', desc: '주차 × 부서 · 합계. 2025년까지 옛 자료(구분 없음)도 여기 들어갑니다', rows: byDept('학생+교사') },
+    { id: 'grp', label: '묶음별 요약', desc: '주차 × 사랑부·미취학·어린이·청소년 학생/교사', on: true,
+      rows: fw => [['주차', ...groups.flatMap(([, g]) => [`${g.label} 학생`, `${g.label} 교사`]), '전체 학생', '전체 교사'],
+        ...fw.map(w => [w, ...groups.flatMap(([k]) => [n(schSum(w, schGroupDepts(k), '학생', '')), n(schSum(w, schGroupDepts(k), '교사', ''))]),
+          n(schSum(w, DS, '학생', '')), n(schSum(w, DS, '교사', ''))])] },
+    { id: 'bu', label: '1부 · 2부 학생', desc: '주차 × 부서별 1부·2부 학생 — 부별 쏠림 보기',
+      rows: fw => [['주차', ...DS.flatMap(d => [`${d} 1부`, `${d} 2부`]), '1부 합계', '2부 합계'],
+        ...fw.map(w => [w, ...DS.flatMap(d => [n(schVal(w, d, '학생', '1부')), n(schVal(w, d, '학생', '2부'))]),
+          n(schSum(w, DS, '학생', '1부')), n(schSum(w, DS, '학생', '2부'))])] },
+    { id: 'sum', label: '부서별 기간 요약', desc: '부서마다 평균 학생·교사, 교사 1명당 학생, 최고·최저, 처음 4주 → 마지막 4주 변화', on: true,
+      rows: fw => {
+        const out = [['묶음', '부서', '입력된 주', '학생 평균', '교사 평균', '교사 1명당 학생', '학생 최고', '최고 주', '학생 최저', '최저 주', '처음 4주 평균', '마지막 4주 평균', '변화(%)', '방문자 합계', '등반자 합계']];
+        DS.forEach(d => {
+          const ws = fw.filter(w => schVal(w, d, '학생', '') != null);
+          const st = ws.map(w => schVal(w, d, '학생', '')), te = ws.map(w => schVal(w, d, '교사', '')).filter(x => x != null);
+          const av = a => (a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : '');
+          const mx = st.length ? Math.max(...st) : '', mn = st.length ? Math.min(...st) : '';
+          const a4 = av(st.slice(0, 4)), b4 = av(st.slice(-4));
+          const tot = k => sum(fw.map(w => nn(D.school[w]?.[d]?.[k])));
+          out.push([grpOf(d), d, ws.length, av(st), av(te), av(te) ? Math.round(av(st) / av(te) * 10) / 10 : '',
+            mx, st.length ? ws[st.indexOf(mx)] : '', mn, st.length ? ws[st.indexOf(mn)] : '',
+            a4, b4, a4 && b4 && st.length >= 8 ? Math.round((b4 - a4) / a4 * 1000) / 10 : '', tot('방문자'), tot('등반자')]);
+        });
+        return out;
+      } },
+    { id: 'visit', label: '방문자 · 등반자', desc: '주차 × 부서 · 새로 온 아이(방문자)와 올라온 아이(등반자)',
+      rows: fw => [['주차', ...DS.flatMap(d => [`${d} 방문`, `${d} 등반`])],
+        ...fw.map(w => [w, ...DS.flatMap(d => [n(nn(D.school[w]?.[d]?.방문자)), n(nn(D.school[w]?.[d]?.등반자))])])] },
+    { id: 'raw', label: '원자료 (피벗용)', desc: '한 줄에 주차·묶음·부서·부·학생·교사·방문자·등반자 — 엑셀 피벗으로 직접 뽑을 때',
+      rows: fw => {
+        const out = [['주차', '연도', '월', '묶음', '부서', '부', '학생', '교사', '학생+교사', '방문자', '등반자']];
+        fw.forEach(w => DS.forEach(d => {
+          const r = D.school[w]?.[d]; if (!r) return;
+          const split = r['1부학생'] != null || r['1부교사'] != null || r['2부학생'] != null || r['2부교사'] != null;
+          (split ? ['1부', '2부'] : ['']).forEach(b => {
+            const st = nn(r[b + '학생']), te = nn(r[b + '교사']);
+            const tot = st == null && te == null ? (b ? nn(r[b]) : schoolDeptTotal(w, d)) : (st || 0) + (te || 0);
+            if (tot == null) return;
+            out.push([w, +w.slice(0, 4), +w.slice(5, 7), grpOf(d), d, b || '구분 없음', n(st), n(te), tot, n(nn(r[b + '방문자'])), n(nn(r[b + '등반자']))]);
+          });
+        }));
+        return out;
+      } },
+  ];
+}
+
+const TAB_LABEL = { home: '주간현황', district: '장년교구', youth: '청년교구', school: '주일학교', sunday: '주일예배', wd: '주중예배', newfam: '새가족', special: '특별예배', yearcomp: '연도별비교' };
+function exportOptions(tab) {
+  if (tab === 'school') return schoolSheetOptions();
+  return [{ id: 'tab', label: `${TAB_LABEL[tab] || tab} 자료`, desc: '이 탭의 주차별 숫자', on: true, rows: fw => tabExportRows(tab, fw).rows }];
+}
+
+function openExport() {
+  const tab = currentTab();
+  const opts = exportOptions(tab);
+  const fw = getFW(), all = D.weeks;
+  const lbl = ws => (ws.length ? `${ws[0]} ~ ${ws[ws.length - 1]} · ${ws.length}주` : '');
+  let m = document.getElementById('xl-modal');
+  if (!m) { m = document.createElement('div'); m.id = 'xl-modal'; m.className = 'modal-bg'; m.onclick = e => { if (e.target === m) m.classList.remove('open'); }; document.body.appendChild(m); }
+  m.innerHTML = `<div class="modal xl-box">
+    <div class="xl-h"><b>엑셀로 받기</b> · ${TAB_LABEL[tab] || ''}<button class="xl-x" onclick="document.getElementById('xl-modal').classList.remove('open')">✕</button></div>
+    <div class="xl-sec">기간</div>
+    <label class="xl-opt"><input type="radio" name="xl-p" value="cur" checked><span><b>지금 고른 기간</b><small>${lbl(fw)}</small></span></label>
+    <label class="xl-opt"><input type="radio" name="xl-p" value="all"><span><b>전체 기간</b><small>${lbl(all)}</small></span></label>
+    <div class="xl-sec">받을 자료 <small>— 고른 것마다 엑셀 아래 탭(시트)이 하나씩 생깁니다</small></div>
+    ${opts.map(o => `<label class="xl-opt"><input type="checkbox" value="${o.id}"${o.on ? ' checked' : ''}><span><b>${o.label}</b><small>${o.desc}</small></span></label>`).join('')}
+    ${tab === 'school' && myDepts().length < SCHOOL_DEPTS.length ? `<div class="xl-note">담당 부서(${myDepts().join(', ')})만 들어갑니다</div>` : ''}
+    <button class="xl-go" onclick="runExport()">⬇ 받기</button>
+  </div>`;
+  m.classList.add('open');
+}
+
+function runExport() {
+  const m = document.getElementById('xl-modal');
+  const tab = currentTab();
+  const fw = m.querySelector('input[name=xl-p]:checked').value === 'all' ? D.weeks : getFW();
+  const picked = [...m.querySelectorAll('input[type=checkbox]:checked')].map(x => x.value);
+  const opts = exportOptions(tab).filter(o => picked.includes(o.id));
+  if (!opts.length) { alert('받을 자료를 하나 이상 골라 주세요.'); return; }
+  // 숫자가 하나도 없는 주(학생·교사 구분 전의 옛 주 등)는 뺀다
+  const sheets = opts.map(o => {
+    const rows = o.rows(fw);
+    return { name: o.label, rows: [rows[0], ...rows.slice(1).filter(r => !/^\d{4}-\d{2}-\d{2}$/.test(r[0]) || r.slice(1).some(c => c !== '' && c != null))] };
+  }).filter(sh => sh.rows.length > 1);
+  if (!sheets.length) { alert('내보낼 데이터가 없습니다.'); return; }
+  const name = tab === 'school' ? '주일학교' : (tabExportRows(tab, fw).name || TAB_LABEL[tab]);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(xlsxBlob(sheets));
+  a.download = `분당우리교회_${name}_${fw[0] || ''}~${fw[fw.length - 1] || ''}.xlsx`;
+  a.click();
+  m.classList.remove('open');
+}
+
+/* 탭별 주차 자료(예전 CSV 내용) */
+function tabExportRows(tab, fw) {
   let rows = [], name = tab;
 
   if (tab === 'home' || tab === 'sunday') {
@@ -2021,13 +2204,7 @@ function exportCSV() {
     }
   }
 
-  if (!rows.length) { alert('내보낼 데이터가 없습니다.'); return; }
-  const bom = '﻿';
-  const csv = bom + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
-  a.download = `분당우리교회_${name}_${fw[0]||''}~${fw[fw.length-1]||''}.csv`;
-  a.click();
+  return { name, rows };
 }
 
 function rerender() {
@@ -3663,47 +3840,234 @@ function renderYouthDeptCharts(idx, dept, fw, wl, teams, teamColors) {
 }
 
 // ── SCHOOL ──
-function initSchool() {
-  const fw=getFW(); const wl=getWL(fw); if(!fw.length) return;
-  const totals = fw.map(w => schoolGroupTotal(w));
-  const renderSchoolTrend = (fw2) => {
-    const tots2 = fw2.map(w => schoolGroupTotal(w));
-    mkChart('c-school-trend','line',getWL(fw2),[lds('주일학교 합계',tots2,C.b,true)]);
-  };
-  renderSchoolKpiAll(fw);
-  renderSchoolTrend(fw);
-  addCardPeriod('c-school-trend', renderSchoolTrend, renderSchoolKpiAll);
-  const DS = myDepts();
-  setText('ct-school-bar', '부서별 인원 (최근 4주 평균)');
-  renderSchoolBars(fw);
-  renderSchoolBu(fw);
-  mkTable('t-school',['날짜',...DS,'합계'],
-    fw.map(w=>[w,...DS.map(d=>fmtOr(schoolDeptTotal(w,d))),
-      fmtOr(schoolGroupTotal(w))]));
+/* 주일학교 — 주일예배 탭처럼 위에서부터
+   묶음(전체·사랑부·미취학·어린이·청소년) → 부서 → 부(1·2부) 를 고르고,
+   고른 '주'의 카드 → 기간 줄 → 그 기간의 그래프 → 주별 상세(기간과 상관없이 계속 이어 본다).
+   기본은 학생. 출석에서 중요한 건 대상이라 교사는 '보기'에서 더하거나 따로 본다.
+   2025-12-28 이전 자료는 학생·교사 구분 없이 합계만 있다 — 학생 보기에서는 비어 보인다. */
+const SCH = { group: 'all', dept: '', bu: '', kind: '학생', week: '' };
+const SCH_KIND_LABEL = { '학생': '학생', '교사': '교사', '학생+교사': '학생+교사' };
+const SCH_SPLIT_FROM = '2025-12-28';
 
-  // 그룹별 서브탭
-  Object.entries(SCHOOL_GROUPS).forEach(([key, grp]) => {
-    const depts = grp.depts.filter(d => myDepts().includes(d));
-    const tabBtn = document.querySelector(`#s-school .stab[onclick*="'${key}'"]`);
-    if (tabBtn) tabBtn.hidden = depts.length === 0;   // 담당 부서가 없는 그룹 탭은 감춘다
-    if (!depts.length) return;
-    const colors = depts.map((_,i)=>CA[i%CA.length]);
-    const groupTotals = fw.map(w=>schoolGroupTotal(w, depts));
-    const gi = lastFilledIdx(groupTotals), gp = lastFilledIdx(groupTotals, gi);
-    const gLatest = gi >= 0 ? groupTotals[gi] : null;
-    const gPrev   = gp >= 0 ? groupTotals[gp] : null;
-    const gDiff   = gLatest != null && gPrev != null ? gLatest - gPrev : null;
-    const gW      = gi >= 0 ? fw[gi] : '';
-    const gDate   = gW ? `${Number(gW.slice(5,7))}/${Number(gW.slice(8,10))} 기준` : '입력 대기';
-    const gSums   = depts.map(d=>fw.reduce((a,w)=>a+schoolDeptValue(w,d),0));
-    mkKPI(`kk-school-${key}`,[
-      {label:`${grp.label} 합계 (최근)`,value:fmtOr(gLatest),sub:`${gDate} · 평균 ${fmt(avg(groupTotals))}명`,color:grp.color,
-        trend: gDiff == null ? '' : `${gDiff>=0?'▲':'▼'} 직전 ${gDiff>=0?'+':''}${fmt(gDiff)}`, td: gDiff>=0?'up':'dn'},
-      ...depts.slice(0,3).map(d=>({label:d+' (최근)',value:fmtOr(schoolDeptTotal(gW,d)),sub:gDate,color:'teal'})),
-    ]);
-    mkChart(`c-school-${key}-trend`,'line',wl,depts.map((d,i)=>lds(d,schoolSeries(d,fw),colors[i])));
-    mkShareBars(`c-school-${key}-pie`, depts, depts.map(d => schoolStudentAvg4(d, fw)), colors);
+/* 한 부서 한 주의 값 — kind: 학생 · 교사 · 학생+교사 / bu: '' · '1부' · '2부' */
+function schVal(w, dept, kind = SCH.kind, bu = SCH.bu) {
+  const r = D.school[w]?.[dept];
+  if (!r) return null;
+  const s = nn(r[bu + '학생']), t = nn(r[bu + '교사']);
+  if (kind === '학생') return s;
+  if (kind === '교사') return t;
+  if (s == null && t == null) return bu ? nn(r[bu]) : schoolDeptTotal(w, dept);   // 옛 자료는 합계만
+  return (s || 0) + (t || 0);
+}
+function schSum(w, depts, kind, bu) {
+  let t = 0, has = false;
+  depts.forEach(d => { const x = schVal(w, d, kind, bu); if (x != null) { t += x; has = true; } });
+  return has ? t : null;
+}
+function schGroupOf(dept) { return Object.keys(SCHOOL_GROUPS).find(k => SCHOOL_GROUPS[k].depts.includes(dept)) || 'all'; }
+function schGroupDepts(g) { return g === 'all' ? myDepts() : SCHOOL_GROUPS[g].depts.filter(d => myDepts().includes(d)); }
+
+/* 지금 고른 범위 — 큰 숫자 하나(main)와 그 아래 나눠 보는 것들(kids) */
+function schScope() {
+  const depts = SCH.dept ? [SCH.dept] : schGroupDepts(SCH.group);
+  const K = SCH.kind;
+  const label = SCH.dept ? `${SCH.dept}${SCH.bu ? ' ' + SCH.bu : ''}` : SCH.group === 'all' ? '주일학교' : SCHOOL_GROUPS[SCH.group].label;
+  const main = { label, get: w => schSum(w, depts, K, SCH.bu) };
+  let kids, kidsTitle;
+  if (!SCH.dept && SCH.group === 'all') {
+    kidsTitle = '묶음별';
+    kids = Object.entries(SCHOOL_GROUPS).filter(([k]) => schGroupDepts(k).length)
+      .map(([k, g]) => ({ label: g.label, get: w => schSum(w, schGroupDepts(k), K, '') }));
+  } else if (!SCH.dept) {
+    kidsTitle = '부서별';
+    kids = depts.map(d => ({ label: d, get: w => schVal(w, d, K, '') }));
+  } else if (!SCH.bu) {
+    kidsTitle = '부별';
+    kids = ['1부', '2부'].map(b => ({ label: b, get: w => schVal(w, SCH.dept, K, b) }));
+  } else {
+    kidsTitle = '학생 · 교사';
+    kids = ['학생', '교사'].map(k => ({ label: k, get: w => schVal(w, SCH.dept, k, SCH.bu) }));
+  }
+  return { depts, label, main, kids, kidsTitle };
+}
+
+function schWeeks() { return D.weeks.filter(w => D.school[w]); }
+
+function schGroup(g, opts) {
+  if (g !== 'all' && !SCHOOL_GROUPS[g]) g = 'all';
+  SCH.group = g;
+  // 사랑부는 부서가 하나뿐이라 바로 그 부서로 — 1부·2부를 고르게 한다
+  const ds = schGroupDepts(g);
+  SCH.dept = g !== 'all' && ds.length === 1 ? ds[0] : '';
+  SCH.bu = '';
+  SUB_TAB['school'] = g;
+  if (!opts?.silent) writeHash('school', g);
+  renderSchool();
+}
+function schDept(d) { SCH.dept = d; SCH.bu = ''; renderSchool(); }
+function schBu(b) { SCH.bu = b; renderSchool(); }
+function schKind(k) { SCH.kind = k; renderSchool(); }
+function schWeekNav(off) {
+  const ws = schWeeks(), i = ws.indexOf(SCH.week) + off;
+  if (i >= 0 && i < ws.length) { SCH.week = ws[i]; renderSchoolCards(); }
+}
+function schWeekGo(w) { SCH.week = w; renderSchoolCards(); }
+
+function initSchool() {
+  // 담당 부서가 하나뿐인 사람은 그 부서로 바로
+  const mine = myDepts();
+  if (mine.length === 1 && !SCH.dept) { SCH.group = schGroupOf(mine[0]); SCH.dept = mine[0]; }
+  renderSchool();
+}
+
+function renderSchool() {
+  // 묶음 탭 — 담당 부서가 없는 묶음은 감춘다
+  document.querySelectorAll('#sch-groups .stab').forEach(b => {
+    const g = b.dataset.g;
+    b.hidden = g !== 'all' && !schGroupDepts(g).length;
+    b.classList.toggle('on', g === SCH.group);
   });
+  // 부서 고르기
+  const ds = schGroupDepts(SCH.group);
+  const chip = (on, fn, txt) => `<button class="sch-chip${on ? ' on' : ''}" onclick="${fn}">${txt}</button>`;
+  const chipBox = document.getElementById('sch-chips');
+  chipBox.innerHTML = SCH.group === 'all' || ds.length < 2 ? '' :
+    `<span class="sch-lbl">부서</span>` + chip(!SCH.dept, "schDept('')", `${SCHOOL_GROUPS[SCH.group].label} 전체`) +
+    ds.map(d => chip(SCH.dept === d, `schDept('${d}')`, d)).join('');
+  const buBox = document.getElementById('sch-bu');
+  buBox.innerHTML = SCH.dept ? `<span class="sch-lbl">${SCH.dept}</span>` +
+    chip(!SCH.bu, "schBu('')", '1·2부 전체') + chip(SCH.bu === '1부', "schBu('1부')", '1부') + chip(SCH.bu === '2부', "schBu('2부')", '2부') : '';
+  buBox.style.display = SCH.dept ? '' : 'none';
+  document.querySelectorAll('#sch-kind button').forEach(b => b.classList.toggle('on', b.dataset.k === SCH.kind));
+
+  renderSchoolCards();
+  renderSchoolCharts();
+  renderSchoolTable();
+}
+
+/* 고른 주의 카드 — 주일예배 탭의 서현·송림·합계 카드와 같은 모양 */
+function renderSchoolCards() {
+  const sc = schScope(), ws = schWeeks();
+  if (!ws.includes(SCH.week)) {
+    let i = ws.length - 1;
+    while (i > 0 && sc.main.get(ws[i]) == null) i--;
+    SCH.week = ws[i] || '';
+  }
+  const w = SCH.week, idx = ws.indexOf(w);
+  const sel = document.getElementById('sch-week-sel');
+  if (sel) {
+    if (sel.dataset.n !== String(ws.length)) {
+      const byYear = {};
+      ws.slice().reverse().forEach(x => (byYear[x.slice(0, 4)] = byYear[x.slice(0, 4)] || []).push(x));
+      sel.innerHTML = Object.keys(byYear).sort().reverse().map(y => `<optgroup label="${y}년">${byYear[y].map(x => {
+        const e = parseWeekDate(x);
+        return `<option value="${x}">${e.getMonth() + 1}월 ${e.getDate()}일 주일</option>`;
+      }).join('')}</optgroup>`).join('');
+      sel.dataset.n = String(ws.length);
+    }
+    sel.value = w;
+  }
+  // 직전 주 = 이 범위에 숫자가 있는 바로 앞 주 (방학 주는 건너뛴다)
+  let pw = '';
+  for (let i = idx - 1; i >= 0; i--) if (sc.main.get(ws[i]) != null) { pw = ws[i]; break; }
+  const yw = shiftWeekKey(w, -52);
+  const K = SCH_KIND_LABEL[SCH.kind];
+  const num = x => (x == null ? '–' : fmt(x));
+  const delta = (a, b, lbl) => {
+    if (a == null || b == null) return '';
+    const d = a - b;
+    return `<span class="${d > 0 ? 'sp-up' : d < 0 ? 'sp-down' : ''}" style="font-weight:600">${lbl} ${d > 0 ? '▲' : d < 0 ? '▼' : ''}${d ? fmt(Math.abs(d)) : '±0'}</span>`;
+  };
+  const card = (title, val, sub, rgb) => `<div class="sch-card" style="background:linear-gradient(135deg, rgba(${rgb},0.08), rgba(${rgb},0.02));border-color:rgba(${rgb},0.22)">
+      <div class="sch-card-t">${title}</div>
+      <div class="sch-card-v" style="color:rgb(${rgb})">${val}</div>
+      <div class="sch-card-s">${sub}</div></div>`;
+  const RGB = ['59,130,246', '20,184,166', '234,88,12', '124,58,237', '219,39,119', '101,163,13', '217,119,6'];
+  const m = sc.main.get(w);
+  const mainSub = [delta(m, pw ? sc.main.get(pw) : null, '직전 주'),
+    D.school[yw] ? delta(m, sc.main.get(yw), '전년 같은 주') : ''].filter(Boolean).join(' · ') || (pw ? '' : '&nbsp;');
+  let html = card(`${sc.label} ${K}`, num(m), mainSub, '34,197,94');
+  html += sc.kids.map((k, i) => {
+    const v2 = k.get(w);
+    const share = m && v2 != null && sc.kidsTitle !== '학생 · 교사' ? `${Math.round(v2 / m * 100)}%` : '';
+    return card(`${k.label}${sc.kidsTitle === '학생 · 교사' ? '' : ' ' + K}`, num(v2),
+      [share, delta(v2, pw ? k.get(pw) : null, '직전')].filter(Boolean).join(' · ') || '&nbsp;', RGB[i % RGB.length]);
+  }).join('');
+  // 부서 하나를 볼 때는 학생·교사 비율도
+  if (SCH.dept) {
+    const st = schVal(w, SCH.dept, '학생'), te = schVal(w, SCH.dept, '교사');
+    html += card('학생 · 교사', st != null && te ? `${(st / te).toFixed(1)} : 1` : '–',
+      st != null || te != null ? `학생 ${num(st)} · 교사 ${num(te)} · 교사 1명당 학생` : '학생·교사 구분 없음', '100,116,139');
+  }
+  document.getElementById('sch-cards').innerHTML = html;
+}
+
+function renderSchoolCharts() {
+  const sc = schScope(), K = SCH_KIND_LABEL[SCH.kind];
+  const fw = getFW().filter(w => D.school[w] || !D.weeks.length), wl = getWL(fw);
+  const oldNote = SCH.kind !== '학생+교사' && fw.some(w => w < SCH_SPLIT_FROM)
+    ? `${SCH_SPLIT_FROM.slice(0, 4)}.${+SCH_SPLIT_FROM.slice(5, 7)}.${+SCH_SPLIT_FROM.slice(8)} 이전은 학생·교사 구분이 없어 '＋ 교사'에서만 보입니다` : '';
+
+  // ① 추이 — 4주 이동평균 · 전년 같은 주
+  const main = fw.map(sc.main.get);
+  const yoy = yoySeries(fw, y => sc.main.get(y));
+  setText('ct-sch-trend', `${sc.label} ${K} 추이`);
+  setText('cs-sch-trend', [yoy.some(x => x != null) ? '점선 — 4주 이동평균 · 전년 같은 주' : '점선 — 4주 이동평균', oldNote].filter(Boolean).join(' · '));
+  mkChart('c-sch-trend', 'line', wl, [
+    lds(sc.label, main, C.b, true), ldsDash('4주 이동평균', movAvg(main, 4), C.p),
+    ...(yoy.some(x => x != null) ? [ldsDash('전년 같은 주', yoy, '#94a3b8')] : []),
+  ], { fw });
+
+  // ② 나눠 보기 — 묶음별 · 부서별 · 부별 · 학생/교사
+  setText('ct-sch-kids', `${sc.label} ${sc.kidsTitle} 추이`);
+  setText('cs-sch-kids', sc.kidsTitle === '학생 · 교사' ? '' : K);
+  mkChart('c-sch-kids', 'line', wl, sc.kids.map((k, i) => lds(k.label, fw.map(k.get), CA[i % CA.length])), { fw });
+
+  // ③ 1부 · 2부 구성 (고른 보기 기준)
+  const bu1 = fw.map(w => schSum(w, sc.depts, SCH.kind, '1부')), bu2 = fw.map(w => schSum(w, sc.depts, SCH.kind, '2부'));
+  const buCard = document.getElementById('card-sch-bu');
+  const hasBu = !SCH.bu && (bu1.some(x => x) || bu2.some(x => x));
+  buCard.style.display = hasBu ? '' : 'none';
+  if (hasBu) {
+    const a = last4avg(bu1), b = last4avg(bu2);
+    setText('ct-sch-bu', `${sc.label} 1부 · 2부 구성`);
+    setText('cs-sch-bu', `${K} · 최근 4주 평균 1부 ${fmt(a)} (${a + b ? Math.round(a / (a + b) * 100) : 0}%) · 2부 ${fmt(b)}`);
+    mkChart('c-sch-bu', 'bar', wl, [bds('1부', bu1, C.b), bds('2부', bu2, C.or)], { stack: true, fw, total: true });
+  }
+
+  // ④ 나눠 보기 비중 — 최근 4주 평균
+  const shareCard = document.getElementById('card-sch-share');
+  const showShare = sc.kids.length > 1 && (sc.kidsTitle === '묶음별' || sc.kidsTitle === '부서별');
+  shareCard.style.display = showShare ? '' : 'none';
+  if (showShare) {
+    setText('ct-sch-share', `${sc.kidsTitle} 인원`);
+    setText('cs-sch-share', `${K} · 기간 안 최근 4주 평균`);
+    const avg4 = k => { const vs = fw.map(k.get).filter(x => x != null).slice(-4); return vs.length ? Math.round(vs.reduce((x, y) => x + y, 0) / vs.length) : 0; };
+    mkShareBars('c-sch-share', sc.kids.map(k => k.label), sc.kids.map(avg4), sc.kids.map((_, i) => CA[i % CA.length]));
+  }
+  // 둘 중 하나만 보이면 한 줄을 다 쓰게
+  buCard.parentElement.style.gridTemplateColumns = hasBu && showShare ? '' : '1fr';
+}
+
+/* 주별 상세 — 기간 줄과 상관없이 자료가 있는 모든 주. 최근 주부터 한 달씩 더 연다 */
+function renderSchoolTable() {
+  const sc = schScope();
+  // 학생·교사로 볼 때 구분 없던 옛 주(2025-12-28 이전)는 빈 줄뿐이라 뺀다
+  const ws = schWeeks().filter(w => SCH.dept ? schVal(w, SCH.dept, '학생+교사') != null : sc.main.get(w) != null);
+  const f = x => fmtOr(x);
+  setText('ct-sch-table', `${sc.label} 주별 상세`);
+  if (SCH.dept) {
+    const d = SCH.dept, r = (w, k) => nn(D.school[w]?.[d]?.[k]);
+    const bus = SCH.bu ? [] : ['1부', '2부'];   // 부를 골랐으면 아래 학생·교사가 곧 그 부의 숫자다
+    mkTable('t-sch', ['날짜', ...bus.flatMap(b => [`${b} 학생`, `${b} 교사`]), '학생', '교사', '합계', '방문자', '등반자'],
+      ws.map(w => [w, ...bus.flatMap(b => [f(r(w, b + '학생')), f(r(w, b + '교사'))]),
+        f(schVal(w, d, '학생')), f(schVal(w, d, '교사')), `<b>${f(schVal(w, d, '학생+교사'))}</b>`,
+        f(r(w, (SCH.bu || '') + '방문자')), f(r(w, (SCH.bu || '') + '등반자'))]));
+    return;
+  }
+  const K = SCH_KIND_LABEL[SCH.kind];
+  mkTable('t-sch', ['날짜', ...sc.kids.map(k => k.label), `합계 (${K})`],
+    ws.map(w => [w, ...sc.kids.map(k => f(k.get(w))), `<b>${f(sc.main.get(w))}</b>`]));
 }
 
 function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
@@ -3726,202 +4090,6 @@ function movAvg(arr, n) {
     const win = arr.slice(Math.max(0, i - n + 1), i + 1).filter(v2 => v2 != null);
     return win.length ? Math.round(win.reduce((a, b) => a + b, 0) / win.length) : null;
   });
-}
-
-/* 주일학교 '전체' KPI — initSchool과 부서 선택 해제 시 공용 */
-/* 부서별 인원 — 가로 막대 차트는 부서가 열셋이라 세로로 길어져서 숫자를
-   보려면 일일이 짚어야 했다. 목록으로 내면 이름·인원·비중이 다 보인다. */
-function pickSchoolKind(btn) {
-  btn.parentElement.querySelectorAll('.pill.kind').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  renderSchoolBars();
-}
-
-function schoolKindAvg4(dept, kind, fw) {
-  const pick = w => {
-    const r = D.school[w]?.[dept];
-    if (!r) return null;
-    if (kind === '학생') return nn(r['학생']);
-    if (kind === '교사') return nn(r['교사']);
-    const a = nn(r['학생']), b = nn(r['교사']);
-    return a == null && b == null ? nn(r['합계']) : (a || 0) + (b || 0);
-  };
-  const v = (fw || getFW()).map(pick).filter(x => x != null);
-  return v.length ? Math.round(v.slice(-4).reduce((a, b) => a + b, 0) / Math.min(v.length, 4)) : 0;
-}
-
-/* 부별(1부·2부) 인원. 부서마다 한 번만 드리는 곳도 있고 두 번 드리는 곳도 있어
-   전체 비율과 부서별 비율을 같이 본다. 학생 기준. */
-function schoolBuAvg4(dept, bu, fw) {
-  const v = (fw || getFW()).map(w => nn(D.school[w]?.[dept]?.[bu + '학생'])).filter(x => x != null);
-  return v.length ? Math.round(v.slice(-4).reduce((a, b) => a + b, 0) / Math.min(v.length, 4)) : 0;
-}
-
-function renderSchoolBu(fw) {
-  fw = fw || getFW();
-  const DS = myDepts();
-  const rows = DS.map(d => {
-    const a = schoolBuAvg4(d, '1부', fw), b = schoolBuAvg4(d, '2부', fw);
-    return { d, a, b, t: a + b };
-  }).filter(r => r.t > 0);
-
-  // 주차별로 1부·2부가 어떻게 나뉘는지 — 부서 하나 볼 때와 같은 모양으로
-  const wl = getWL(fw);
-  const buSum = (w, bu) => {
-    let t = 0, has = false;
-    DS.forEach(d => { const v2 = nn(D.school[w]?.[d]?.[bu + '학생']); if (v2 != null) { t += v2; has = true; } });
-    return has ? t : null;
-  };
-  mkChart('c-school-bu', 'bar', wl, [
-    bds('1부', fw.map(w => buSum(w, '1부')), C.b),
-    bds('2부', fw.map(w => buSum(w, '2부')), C.or),
-  ], { stack: true, fw, total: true });
-
-  const box = document.getElementById('fw-school-bu');
-  if (!box) return;
-  if (!rows.length) {
-    box.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">부별 자료가 없습니다. 2026년부터 들어옵니다.</div>';
-    mkTable('t-school-bu', [], []);
-    return;
-  }
-  const A = rows.reduce((x, r) => x + r.a, 0), B = rows.reduce((x, r) => x + r.b, 0);
-  const tot = A + B, max = Math.max(A, B, 1);
-  box.innerHTML = [['1부', A, C.b], ['2부', B, C.or]].map(([l, v, col]) =>
-    `<div class="fr"><div class="fl">${l}</div>
-      <div class="fbo"><div class="fbi" style="width:${Math.round(v / max * 100)}%;background:${col}">${fmt(v)}</div></div>
-      <div class="fp">${tot ? Math.round(v / tot * 100) : 0}%</div></div>`).join('');
-
-  setText('cs-school-bu', `전체 ${fmt(A + B)}명 · 1부 ${A + B ? Math.round(A / (A + B) * 100) : 0}% · 2부 ${A + B ? Math.round(B / (A + B) * 100) : 0}%`);
-  mkTable('t-school-bu', ['부서', '1부', '2부', '계', '1부 비율'],
-    rows.sort((x, y) => y.t - x.t).map(r =>
-      [r.d, fmt(r.a), fmt(r.b), fmt(r.t), r.t ? Math.round(r.a / r.t * 100) + '%' : '–']));
-}
-
-function renderSchoolBars(fw) {
-  fw = fw || getFW();
-  const kind = document.querySelector('#pick-school .pill.kind.on')?.dataset.kind || '학생';
-  const DS = myDepts();
-  setText('cs-school-bar', `${kind} 기준`);
-  mkShareBars('c-school-bar', DS, DS.map(d => schoolKindAvg4(d, kind, fw)), DS.map((_, i) => CA[i % CA.length]));
-}
-
-function renderSchoolKpiAll(fw2) {
-    const tots2 = fw2.map(w => schoolGroupTotal(w));
-    // '최근'은 마지막 주가 아니라 실제로 입력된 마지막 주 기준
-    const li = lastFilledIdx(tots2), pi = lastFilledIdx(tots2, li);
-    const lat2 = li >= 0 ? tots2[li] : null;
-    const prv2 = pi >= 0 ? tots2[pi] : null;
-    const dT2 = lat2 != null && prv2 != null ? lat2 - prv2 : null;
-    const lW2 = li >= 0 ? fw2[li] : '';
-    const lblDate = lW2 ? `${Number(lW2.slice(5,7))}/${Number(lW2.slice(8,10))} 기준` : '입력 대기';
-    const filled = tots2.filter(x => x != null);
-    const maxT2 = filled.length ? Math.max(...filled) : null;
-    const maxW2 = maxT2 != null ? fw2[tots2.indexOf(maxT2)] : '';
-    const maxD2 = maxW2 ? `${Number(maxW2.slice(5,7))}/${Number(maxW2.slice(8,10))}` : '';
-    // 네 파트가 각각 몇 명인지부터 보인다. 학생 기준 최근 4주 평균.
-    const parts = Object.entries(SCHOOL_GROUPS).map(([k, g]) => ({ k, g, v: schoolPartAvg4(k, fw2) }));
-    const partTot = parts.reduce((a, x) => a + x.v, 0);
-    mkKPI('kk-school', [
-      { label:'주일학교 학생 (4주 평균)', value: partTot ? fmt(partTot) : fmtOr(lat2),
-        sub: partTot ? `${lblDate} · 교사 제외` : `${lblDate} · ${fw2.length}주 평균 ${fmt(avg(tots2))}명`,
-        color:'blue',
-        trend: dT2 == null ? '' : `${dT2>=0?'▲':'▼'} 직전 ${dT2>=0?'+':''}${fmt(dT2)}`, td: dT2>=0?'up':'dn' },
-      ...parts.map(({ g, v }) => ({
-        label: `${g.label} (4주 평균)`, value: v ? fmt(v) : '–',
-        sub: partTot && v ? `전체의 ${Math.round(v / partTot * 100)}%` : '학생 자료 없음',
-        color: g.color,
-      })),
-    ]);
-}
-
-function renderSchoolDept() {
-  const fw = getFW(); const wl = getWL(fw);
-  const sel = document.getElementById('school-dept-sel');
-  const dept = sel?.value || '';
-
-  if (!dept) {
-    // ── 전체 보기 복원 ──
-    const pc = document.getElementById('card-school-pie');
-    if (pc) pc.style.display = 'none';
-    ['card-school-bu', 'card-school-bar'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = ''; });
-    setText('ct-school-trend', '주일학교 전체 출석 추이');
-    setText('ct-school-bar',   '부서별 인원 (최근 4주 평균)');
-    setText('ct-school-table', '부서별 주별 출석 상세');
-    const tots = fw.map(w => schoolGroupTotal(w));
-    mkChart('c-school-trend','line',wl,[lds('주일학교 합계',tots,C.b,true)],{fw});
-    const DS = myDepts();
-    renderSchoolBars(fw);
-    mkTable('t-school',['날짜',...DS,'합계'],
-      fw.map(w=>[w,...DS.map(d=>fmtOr(schoolDeptTotal(w,d))), fmtOr(schoolGroupTotal(w))]));
-    renderSchoolKpiAll(fw);
-    return;
-  }
-
-  // ══ 개별 부서 보기 ══
-  const ci = SCHOOL_DEPTS.indexOf(dept);
-  const color = CA[ci >= 0 ? ci % CA.length : 0];
-
-  const total = schoolSeries(dept, fw);                       // 합계 (null 보존)
-  const bu1   = fw.map(w => schoolPart(w, dept, '1부'));
-  const bu2   = fw.map(w => schoolPart(w, dept, '2부'));
-  const stu   = fw.map(w => schoolPart(w, dept, '학생'));
-  const tea   = fw.map(w => schoolPart(w, dept, '교사'));
-  const yoy   = yoySeries(fw, y => schoolDeptTotal(y, dept));
-
-  const li = lastFilledIdx(total), pi = lastFilledIdx(total, li);
-  const latest = li >= 0 ? total[li] : null;
-  const prev   = pi >= 0 ? total[pi] : null;
-  const diff   = latest != null && prev != null ? latest - prev : null;
-  const lW     = li >= 0 ? fw[li] : '';
-  const lDate  = lW ? `${Number(lW.slice(5,7))}/${Number(lW.slice(8,10))} 기준` : '입력 대기';
-  const yoyVal = lW ? (D.weeks.includes(shiftWeekKey(lW,-52)) ? schoolDeptTotal(shiftWeekKey(lW,-52), dept) : null) : null;
-  const yoyDiff = latest != null && yoyVal != null ? latest - yoyVal : null;
-
-  const filled = total.filter(x => x != null);
-  const maxV = filled.length ? Math.max(...filled) : null;
-  const maxW = maxV != null ? fw[total.indexOf(maxV)] : '';
-  const stuL = li >= 0 ? stu[li] : null, teaL = li >= 0 ? tea[li] : null;
-
-  mkKPI('kk-school', [
-    { label:`${dept} (최근)`, value:fmtOr(latest), sub:`${lDate} · ${fw.length}주 평균 ${fmt(avg(total))}명`, color:'blue',
-      trend: diff == null ? '' : `${diff>=0?'▲':'▼'} 직전 ${diff>=0?'+':''}${fmt(diff)}`, td: diff>=0?'up':'dn' },
-    { label:'전년 동주 대비', value: yoyDiff == null ? '–' : `${yoyDiff>=0?'+':''}${fmt(yoyDiff)}`,
-      sub: yoyVal == null ? '전년 데이터 없음' : `작년 같은 주 ${fmt(yoyVal)}명`, color: yoyDiff >= 0 ? 'green' : 'orange' },
-    { label:'학생 : 교사', value: (stuL != null && teaL) ? `${(stuL/teaL).toFixed(1)} : 1` : '–',
-      sub: (stuL != null || teaL != null) ? `학생 ${fmtOr(stuL)} · 교사 ${fmtOr(teaL)}` : '세부 미입력', color:'purple' },
-    { label:'기간 내 최고', value:fmtOr(maxV),
-      sub: maxW ? `${Number(maxW.slice(5,7))}/${Number(maxW.slice(8,10))}` : '', color:'gold' },
-  ]);
-
-  // ① 추이 + 4주 이동평균 + 전년 동기
-  setText('ct-school-trend', `${dept} 출석 추이`);
-  const ds1 = [lds(dept, total, color, true), ldsDash('4주 이동평균', movAvg(total, 4), C.p)];
-  if (yoy.some(x => x != null)) ds1.push(ldsDash('전년 동기', yoy, '#94a3b8'));
-  mkChart('c-school-trend','line',wl,ds1,{fw});
-
-  // ② 1부 / 2부 구성
-  // 부서 하나를 볼 때는 전체 기준 카드를 감춘다 — 지금 보는 부서 얘기가 아니다
-  ['card-school-pie'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = ''; });
-  ['card-school-bu', 'card-school-bar'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
-  setText('ct-school-pie', `${dept} 1부 · 2부 구성`);
-  if (bu1.some(x=>x!=null) || bu2.some(x=>x!=null)) {
-    mkChart('c-school-pie','bar',wl,[bds('1부',bu1,C.b),bds('2부',bu2,C.t)],{stack:true,fw,total:true});
-  } else {
-    mkChart('c-school-pie','line',wl,[lds(dept,total,color,true)],{fw});
-  }
-
-  // ③ 학생 / 교사 추이
-  setText('ct-school-bar', `${dept} 학생 · 교사 추이`);
-  if (stu.some(x=>x!=null) || tea.some(x=>x!=null)) {
-    mkChart('c-school-bar','line',wl,[lds('학생',stu,C.gr,true),lds('교사',tea,C.or)],{fw});
-  } else {
-    mkChart('c-school-bar','bar',[dept],[{data:[last4avg(total)],backgroundColor:[color],borderRadius:4,borderWidth:0}],{horiz:true});
-  }
-
-  // ④ 주별 상세
-  setText('ct-school-table', `${dept} 주별 상세`);
-  mkTable('t-school',['날짜','1부','2부','학생','교사','합계'],
-    fw.map((w,i)=>[w,fmtOr(bu1[i]),fmtOr(bu2[i]),fmtOr(stu[i]),fmtOr(tea[i]),fmtOr(total[i])]));
 }
 
 // ── WEEKDAY ──
@@ -5722,9 +5890,12 @@ function sw(name, opts){
   if (fb) {
     fb.style.display = hide ? 'none' : '';
     if (!hide) {
+      // 탭에 .flt-slot 이 있으면 그 자리로(주일학교 — 고른 주 카드 아래, 그래프 바로 위)
       const sec = document.getElementById('s-' + name);
+      const slot = sec?.querySelector('.flt-slot');
       const hdr = sec?.querySelector('.page-hdr');
-      if (hdr && fb.previousElementSibling !== hdr) hdr.after(fb);
+      if (slot) { if (fb.parentElement !== slot) slot.appendChild(fb); }
+      else if (hdr && fb.previousElementSibling !== hdr) hdr.after(fb);
     }
   }
   if(!DONE[name]){DONE[name]=true;setTimeout(()=>INITS[name](),60);}
@@ -5772,6 +5943,7 @@ function applyHash(){
   if(currentTab() !== tab) sw(tab, {silent:true});
   if(sub){
     if(tab === 'special') spTab(sub, {silent:true});
+    else if(tab === 'school') setTimeout(()=>schGroup(sub, {silent:true}), 80);
     else setTimeout(()=>ss2(subPrefix(tab), sub, {silent:true}), 80);
   }
 }
@@ -6017,6 +6189,10 @@ function applyNewData(data) {
           '2부학생': n0('2부 학생') || null,
           '1부교사': n0('1부 교사') || null,
           '2부교사': n0('2부 교사') || null,
+          방문자: n0('1부 방문자') + n0('2부 방문자') || null,
+          등반자: n0('1부 등반자') + n0('2부 등반자') || null,
+          '1부방문자': n0('1부 방문자') || null, '2부방문자': n0('2부 방문자') || null,
+          '1부등반자': n0('1부 등반자') || null, '2부등반자': n0('2부 등반자') || null,
         };
       });
     }
@@ -6489,15 +6665,6 @@ function applyPermissions(me) {
   if (allowed.has('leader') || allowed.has('cell')) allowed.add('district');   // 예전 권한 호환
   document.querySelectorAll('.nt').forEach((el, i) => { el.hidden = !allowed.has(TABS[i]); });
 
-  // 주일학교 담당 부서 제한
-  if (me.schoolDepts && me.schoolDepts.length) {
-    const sel = document.getElementById('school-dept-sel');
-    if (sel) {
-      [...sel.options].forEach(o => { if (o.value && !me.schoolDepts.includes(o.value)) o.remove(); });
-      // 담당 부서가 하나면 그것으로 고정
-      if (me.schoolDepts.length === 1) { sel.value = me.schoolDepts[0]; sel.disabled = true; }
-    }
-  }
 }
 
 const ALL_TABS_FALLBACK = ['home'];

@@ -39,6 +39,9 @@ button:disabled{opacity:.6;cursor:not-allowed}
 .err{display:none;background:var(--neg-bg);color:var(--neg);font-size:12.5px;line-height:1.5;
   padding:10px 12px;border-radius:8px;margin-bottom:16px}
 .err.on{display:block}
+.chk{display:flex;gap:18px;margin:-4px 0 18px}
+.chk label{display:flex;align-items:center;gap:6px;margin:0;font-weight:500;color:var(--text2);cursor:pointer}
+.chk input{width:16px;height:16px;margin:0;padding:0;accent-color:var(--accent)}
 .foot{margin-top:22px;padding-top:18px;border-top:1px solid var(--border);
   font-size:11.5px;color:var(--text3);line-height:1.6}
 </style>
@@ -61,6 +64,11 @@ button:disabled{opacity:.6;cursor:not-allowed}
   <label for="pw">비밀번호</label>
   <input id="pw" name="password" type="password" autocomplete="current-password" required>
 
+  <div class="chk">
+    <label><input type="checkbox" id="save-id" checked> 아이디 저장</label>
+    <label><input type="checkbox" id="keep" checked> 로그인 유지 (7일)</label>
+  </div>
+
   <button type="submit" id="btn">로그인</button>
 
   <div class="foot">계정은 관리자에게 문의하세요. 이 대시보드의 자료는 교회 내부용입니다.</div>
@@ -70,6 +78,11 @@ button:disabled{opacity:.6;cursor:not-allowed}
 const form = document.getElementById('form');
 const err  = document.getElementById('err');
 const btn  = document.getElementById('btn');
+
+/* 아이디 저장 — 이 기기에만(localStorage). 비밀번호는 저장하지 않는다 */
+const ID_KEY = 'bwc-login-id';
+const saved = localStorage.getItem(ID_KEY);
+if (saved) { document.getElementById('id').value = saved; document.getElementById('pw').focus(); }
 
 function fail(msg) { err.textContent = msg; err.classList.add('on'); }
 
@@ -81,9 +94,12 @@ form.addEventListener('submit', async (e) => {
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id: document.getElementById('id').value, password: document.getElementById('pw').value }),
+      body: JSON.stringify({ id: document.getElementById('id').value, password: document.getElementById('pw').value,
+                             remember: document.getElementById('keep').checked }),
     });
     if (res.ok) {
+      if (document.getElementById('save-id').checked) localStorage.setItem(ID_KEY, document.getElementById('id').value.trim());
+      else localStorage.removeItem(ID_KEY);
       // 이전 세션의 캐시가 남지 않도록 서비스워커 캐시를 비운다
       if (window.caches) { for (const k of await caches.keys()) await caches.delete(k); }
       const next = new URLSearchParams(location.search).get('next');

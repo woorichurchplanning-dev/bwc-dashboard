@@ -1,4 +1,4 @@
-import { verifyPassword, signSession, cookieHeader, SESSION_MAX_AGE } from '../lib/auth.js';
+import { verifyPassword, signSession, cookieHeader, SESSION_MAX_AGE, SESSION_MAX_AGE_LONG } from '../lib/auth.js';
 import { findUser, sessionPayload } from '../lib/users.js';
 import { loadStore } from '../lib/store.js';
 
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
   if (!process.env.SESSION_SECRET) return res.status(500).json({ error: 'server_misconfigured' });
 
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
-  const { id, password } = req.body || {};
+  const { id, password, remember } = req.body || {};
   const key = `${ip}|${String(id || '').trim().toLowerCase()}`;
   if (recent(key) >= MAX_TRIES) return res.status(429).json({ error: 'too_many_attempts' });
 
@@ -45,8 +45,9 @@ export default async function handler(req, res) {
   if (!user || !ok) { noteFail(key); return res.status(401).json({ error: 'invalid_credentials' }); }
 
   attempts.delete(key);
-  const payload = sessionPayload(user, SESSION_MAX_AGE);
+  const maxAge = remember ? SESSION_MAX_AGE_LONG : SESSION_MAX_AGE;
+  const payload = sessionPayload(user, maxAge);
   const token = await signSession(payload, process.env.SESSION_SECRET);
-  res.setHeader('Set-Cookie', cookieHeader(token));
+  res.setHeader('Set-Cookie', cookieHeader(token, maxAge));
   return res.status(200).json({ ok: true, user: { id: user.id, name: user.name, admin: payload.a === 1, tabs: payload.t } });
 }
