@@ -1016,6 +1016,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
       <div class="cg" id="sun-rooms" style="margin:0"></div>
     </div>
 
+    <div class="flt-slot"></div>
     <!-- Drill-down 배지 선택 UI -->
     <div style="display:flex; gap:var(--s2); margin-bottom:var(--s5); flex-wrap:wrap; align-items:center;">
       <label style="font-weight:600; color:var(--color-text-secondary); font-size:12px;">장소 선택:</label>
@@ -1042,6 +1043,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
   </div>
 
   <div class="ss" id="sun-seohhyeon">
+    <div class="flt-slot"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">서현 1·2·3부 출석 추이</div></div></div><canvas id="c-sh-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-sh-pie">서현 부별 인원</div></div></div><canvas id="c-sh-pie"></canvas></div>
@@ -1052,6 +1054,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
   </div>
 
   <div class="ss" id="sun-songrim">
+    <div class="flt-slot"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">송림 1·2·3부 출석 추이</div></div></div><canvas id="c-sr-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-sr-pie">송림 부별 인원</div></div></div><canvas id="c-sr-pie"></canvas></div>
@@ -1070,6 +1073,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
   <div class="stabs" id="youth-tabs"></div>
   <div class="ss on" id="youth-main">
     <div class="kg" id="kk-youth"></div>
+    <div class="flt-slot"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">청년부별 예배 출석 추이</div></div></div><canvas id="c-youth-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-youth-pie">청년부별 인원</div></div></div><canvas id="c-youth-pie"></canvas></div>
@@ -1159,6 +1163,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
     <button class="stab" data-v="both" onclick="wdView('both')">함께</button>
   </div>
   <div class="kg" id="kk-wd"></div>
+  <div class="flt-slot"></div>
   <div class="cg">
     <div class="cc"><div class="ch"><div><div class="ct" id="ct-wed">수요예배</div></div></div><canvas id="c-wed"></canvas><div class="wd-memo" id="memo-wed"></div></div>
     <div class="cc"><div class="ch"><div><div class="ct" id="ct-fri">금요기도회</div><div class="cs">4/5 성금요일·부활절 특별집회 포함</div></div></div><canvas id="c-fri"></canvas><div class="wd-memo" id="memo-fri"></div></div>
@@ -1192,6 +1197,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
 
   <div class="ss on" id="district-all">
     <div class="kg" id="kk-district"></div>
+    <div class="flt-slot"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-dist-trend">다락방 · 순장반 출석 추이</div><div class="cs">주별 합계</div></div></div><canvas id="c-dist-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">교구별 출석 현황</div><div class="cs" id="cs-dist-bar">최근 주 · 다락방+순장반</div></div></div>
@@ -1204,6 +1210,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
 
   <div class="ss" id="district-cell">
     <div class="kg" id="kk-dist-cell"></div>
+    <div class="flt-slot"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-cell-trend">다락방 출석 추이</div><div class="cs">주별 합계</div></div></div><canvas id="c-cell-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-cell-mix">구분별 비중</div><div class="cs">최근 주</div></div></div><canvas id="c-cell-mix"></canvas></div>
@@ -1215,6 +1222,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
 
   <div class="ss" id="district-leader">
     <div class="kg" id="kk-dist-leader"></div>
+    <div class="flt-slot"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct" id="ct-leader-trend">순장반 출석 추이</div><div class="cs">화요 · 직장 구분</div></div></div><canvas id="c-leader-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">교구별 순장반</div><div class="cs">최근 주</div></div></div><canvas id="c-leader-bar"></canvas></div>
@@ -1237,8 +1245,9 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
 
   <div class="ss on" id="newfam-adult">
     <div class="kg" id="kk-newfam-adult"></div>
+    <div class="flt-slot"></div>
     <div class="cc"><div class="ch"><div><div class="ct">장년 등록신청 구성</div>
-      <div class="cs">등록신청 중 등록 가능 · 등록 불가능</div></div></div>
+      <div class="cs">등록신청 중 등록 가능 · 등록 불가능 · 선택 기간 누계</div></div></div>
       <div class="fw" id="fw-adult"></div>
     </div>
 
@@ -1259,6 +1268,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
 
   <div class="ss" id="newfam-youth">
     <div class="kg" id="kk-newfam-youth"></div>
+    <div class="flt-slot"></div>
     <div class="cg">
       <div class="cc"><div class="ch"><div><div class="ct">청년 등록신청 추이</div><div class="cs">등록 가능 + 등록 불가능</div></div></div><canvas id="c-nf-youth-trend"></canvas></div>
       <div class="cc"><div class="ch"><div><div class="ct">청년 등록 가능 사유 (누적)</div><div class="cs">냉담기·이사·초신자·등록교인자녀 등</div></div></div><canvas id="c-nf-youth-route"></canvas></div>
@@ -2215,7 +2225,7 @@ function rerender() {
   if (active) {
     const idx = Array.from(document.querySelectorAll('.nt')).indexOf(active);
     const name = TABS[idx];
-    if (name && INITS[name]) { DONE[name] = true; setTimeout(() => INITS[name](), 60); }
+    if (name && INITS[name]) { DONE[name] = true; setTimeout(() => runInit(name), 60); }
   }
 }
 
@@ -2246,6 +2256,11 @@ const SCHOOL_GROUPS = {
   sch:  { label:'어린이', depts:['송림유년부','서현유년부','송림초등부','서현초등부','송림소년부','서현소년부'], color:'teal' },
   teen: { label:'청소년', depts:['송림청소년부','서현중등부','서현고등부'], color:'purple' },
 };
+/* 위쪽 카드(최근 · 직전 · 평균)가 보는 주 — 기간 줄과 상관없이 늘 최근 8주.
+   기간 줄은 카드 아래에 있어서, 카드가 기간을 따라 바뀌면 무엇에 걸린 것인지 헷갈린다. */
+const KPI_WEEKS = 8;
+function KFW() { return D.weeks.slice(-KPI_WEEKS); }
+
 // ── 차트 카드별 독립 기간 상태 ──
 const CARD_PERIOD = {};
 function getCardFW(cid) {
@@ -3528,20 +3543,20 @@ function initYouth() {
       const l = last(s2[d]), p = prev(s2[d]);
       const diff = l != null && p != null ? l - p : null;
       return {
-        label: `${d} (최근)`, value: fmtOr(l), sub: `평균 ${fmt(avg(s2[d]))}명`,
+        label: `${d} (최근)`, value: fmtOr(l), sub: `최근 ${KPI_WEEKS}주 평균 ${fmt(avg(s2[d]))}명`,
         color: { '1청년부':'blue','2청년부':'purple','3청년부':'orange','4청년부':'green' }[d],
         ...(diff == null ? {} : { trend: `${diff >= 0 ? '▲' : '▼'} 직전 ${diff >= 0 ? '+' : ''}${fmt(diff)}`, td: diff >= 0 ? 'up' : 'dn' }),
       };
     }));
   };
-  kpiOf(fw);
+  kpiOf(KFW());
 
   const trendOf = (fw2) => {
     const ds = DEPTS.map(d => { const x = lds(d, youthSeries(d, fw2), COLORS[d]); x.spanGaps = true; return x; });
     mkChart('c-youth-trend', 'line', getWL(fw2), ds, { fw: fw2 });
   };
   trendOf(fw);
-  addCardPeriod('c-youth-trend', trendOf, kpiOf);
+  addCardPeriod('c-youth-trend', trendOf);
 
   // 청년금요기도회 — 값이 하나도 없으면 카드를 감춘다
   const friOn2 = w => nn(D.youth[w]?.금요집회?.온라인);
@@ -3592,6 +3607,7 @@ function initYouth() {
       </div>` : ''}
       <div class="kg" id="kk-y${idx}"></div>
       ${scoped ? `<div class="yc-banner"><div>담당 팀(<b>${teams.join(' · ') || '없음'}</b>) 자료만 표시됩니다.</div></div>` : ''}
+      <div class="flt-slot"></div>
       <div class="cg">
         <div class="cc"><div class="ch"><div><div class="ct" id="ct-y${idx}-a">${dept} 예배 출석 추이</div>
           <div class="cs" id="cs-y${idx}-a"></div></div></div>
@@ -3683,26 +3699,28 @@ function renderYouthTeam(idx) {
     borderRadius: 4, borderWidth: 0,
   }], { horiz: true });
 
-  const lm = last(mo), pm = prev(mo), lc = last(cg);
+  // 위쪽 카드는 기간과 상관없이 최근 8주
+  const kfw = KFW(), kmo = teamSeries(dept, team, '부서모임', kfw), kcg = teamSeries(dept, team, '소그룹', kfw);
+  const kyoy = yoySeries(kfw, y => nn(D.youth[y]?.[dept]?.팀?.[team]?.부서모임));
+  const lm = last(kmo), pm = prev(kmo), lc = last(kcg);
   const dm = lm != null && pm != null ? lm - pm : null;
-  const deptCg = deptSeries(dept, '소그룹', fw);
-  const teamSum = cg.reduce((a, b) => a + (b || 0), 0);
-  const allSum = teams.reduce((a, t) => a + teamSeries(dept, t, '소그룹', fw).reduce((x, y) => x + (y || 0), 0), 0);
+  const teamSum = kcg.reduce((a, b) => a + (b || 0), 0);
+  const allSum = teams.reduce((a, t) => a + teamSeries(dept, t, '소그룹', kfw).reduce((x, y) => x + (y || 0), 0), 0);
 
   mkKPI(`kk-y${idx}`, [
-    { label: `${team} 부서모임 (최근)`, value: fmtOr(lm), sub: `평균 ${fmt(avg(mo))}명`, color: 'blue',
+    { label: `${team} 부서모임 (최근)`, value: fmtOr(lm), sub: `최근 ${KPI_WEEKS}주 평균 ${fmt(avg(kmo))}명`, color: 'blue',
       ...(dm == null ? {} : { trend: `${dm >= 0 ? '▲' : '▼'} 직전 ${dm >= 0 ? '+' : ''}${fmt(dm)}`, td: dm >= 0 ? 'up' : 'dn' }) },
-    { label: `${team} 소그룹 (최근)`, value: fmtOr(lc), sub: `평균 ${fmt(avg(cg))}명`, color: 'teal' },
+    { label: `${team} 소그룹 (최근)`, value: fmtOr(lc), sub: `최근 ${KPI_WEEKS}주 평균 ${fmt(avg(kcg))}명`, color: 'teal' },
     (() => {
-      const li = mo.reduce((a, v, i) => v != null ? i : a, -1);
-      const yv = li >= 0 ? yoy[li] : null;
+      const li = kmo.reduce((a, v, i) => v != null ? i : a, -1);
+      const yv = li >= 0 ? kyoy[li] : null;
       const dy = lm != null && yv != null ? lm - yv : null;
       return { label: '전년 같은 주 대비', value: dy == null ? '–' : `${dy >= 0 ? '+' : ''}${fmt(dy)}명`,
         sub: dy == null ? '전년 자료 없음' : `${yv}명 → ${lm}명 · ${dy >= 0 ? '+' : ''}${Math.round(dy / yv * 100)}%`,
         color: dy == null ? 'gold' : (dy >= 0 ? 'green' : 'orange') };
     })(),
     { label: `${dept} 안에서`, value: allSum ? Math.round(teamSum / allSum * 100) + '%' : '–',
-      sub: `${teams.length}개 팀 소그룹 누계 대비`, color: 'green' },
+      sub: `최근 ${KPI_WEEKS}주 ${teams.length}개 팀 소그룹 대비`, color: 'green' },
   ]);
 
   setText(`ct-y${idx}-t`, `${dept} ${team} 주별 상세`);
@@ -3785,26 +3803,27 @@ function renderYouthDeptCharts(idx, dept, fw, wl, teams, teamColors) {
     ], { fw });
   }
 
-  // ── 지표: 최근 · 전년 대비 ──
-  const lw = last(wor), pw2 = prev(wor);
+  // ── 지표: 최근 · 전년 대비 — 기간과 상관없이 최근 8주 ──
+  const kfw = KFW(), kwor = youthSeries(dept, kfw), kyoy = yoySeries(kfw, y => nn(D.youth[y]?.[dept]?.예배));
+  const lw = last(kwor), pw2 = prev(kwor);
   const dw = lw != null && pw2 != null ? lw - pw2 : null;
-  const li = wor.reduce((a, v, i) => v != null ? i : a, -1);
-  const yv = li >= 0 ? yoy[li] : null;
+  const li = kwor.reduce((a, v, i) => v != null ? i : a, -1);
+  const yv = li >= 0 ? kyoy[li] : null;
   const dy = lw != null && yv != null ? lw - yv : null;
 
   mkKPI(`kk-y${idx}`, [
-    { label: `${dept} 예배 (최근)`, value: fmtOr(lw), sub: `평균 ${fmt(avg(wor))}명`, color: 'blue',
+    { label: `${dept} 예배 (최근)`, value: fmtOr(lw), sub: `최근 ${KPI_WEEKS}주 평균 ${fmt(avg(kwor))}명`, color: 'blue',
       ...(dw == null ? {} : { trend: `${dw >= 0 ? '▲' : '▼'} 직전 ${dw >= 0 ? '+' : ''}${fmt(dw)}`, td: dw >= 0 ? 'up' : 'dn' }) },
     { label: '전년 같은 주 대비', value: dy == null ? '–' : `${dy >= 0 ? '+' : ''}${fmt(dy)}명`,
       sub: dy == null ? '전년 자료 없음' : `${yv}명 → ${lw}명 · ${dy >= 0 ? '+' : ''}${Math.round(dy / yv * 100)}%`,
       color: dy == null ? 'teal' : (dy >= 0 ? 'green' : 'orange') },
     ...(teams.length ? teams.slice(0, 2).map(t => {
-      const m = teamSeries(dept, t, '부서모임', fw), c = teamSeries(dept, t, '소그룹', fw);
+      const m = teamSeries(dept, t, '부서모임', kfw), c = teamSeries(dept, t, '소그룹', kfw);
       return { label: `${t} (최근)`, value: fmtOr(last(m)),
                sub: `소그룹 ${fmtOr(last(c))} · 평균 ${fmt(avg(m))}명`, color: 'teal' };
     }) : [
-      { label: '부서모임 (최근)', value: fmtOr(last(deptSeries(dept, '부서모임', fw))), sub: '', color: 'teal' },
-      { label: '소그룹 (최근)', value: fmtOr(last(deptSeries(dept, '소그룹', fw))), sub: '', color: 'gold' },
+      { label: '부서모임 (최근)', value: fmtOr(last(deptSeries(dept, '부서모임', kfw))), sub: '', color: 'teal' },
+      { label: '소그룹 (최근)', value: fmtOr(last(deptSeries(dept, '소그룹', kfw))), sub: '', color: 'gold' },
     ]),
   ]);
 
@@ -4150,15 +4169,23 @@ function initWD() {
   const tr=d=>({trend:`${d>=0?'▲':'▼'} 전주 ${d>=0?'+':''}${fmt(d)}`,td:d>=0?'up':'dn'});
   const V=WD_VIEW, showOff=V!=='on', showOn=V!=='off';
 
+  // 위쪽 카드는 기간과 상관없이 최근 8주 — 아래 그래프만 기간을 따른다
+  const kfw=KFW();
+  const kWedOff=kfw.map(w=>nn(D.weekday[w]?.wed_off)), kWedOn=kfw.map(w=>nn(D.weekday[w]?.wed_on));
+  const kFriOff=kfw.map(w=>nn(D.weekday[w]?.fri_off)), kFriOn=kfw.map(w=>nn(D.weekday[w]?.fri_on));
+  const kDawnOn=dawnOnline(kfw), kDawnDay=dawnOfflineDaily(kfw);
+  const kWedOnAvg=avg(kWedOn.filter((_,i)=>!OUTLIERS.includes(kfw[i])));
+  const kFriOnAvg=avg(kFriOn.filter((_,i)=>!OUTLIERS.includes(kfw[i])));
+  const KW=`최근 ${KPI_WEEKS}주 평균`;
   const k=[];
   if (showOff) k.push(
-    {label:'수요예배 현장 (평균)',value:fmt(avg(wedOff.filter(x=>x>0))),sub:'평균 현장 출석',color:'blue',...tr(delta(wedOff))},
-    {label:'금요기도회 현장 (평균)',value:fmt(avg(friOff.filter(x=>x>0))),sub:'평균 현장 출석',color:'purple',...tr(delta(friOff))},
-    {label:'새벽기도 현장 (일평균)',value:fmt(avg(dawnDay.filter(x=>x>0))),sub:'하루 평균 현장 출석',color:'gold',...tr(delta(dawnDay))});
+    {label:'수요예배 현장',value:fmt(avg(kWedOff.filter(x=>x>0))),sub:`${KW} 현장 출석`,color:'blue',...tr(delta(kWedOff))},
+    {label:'금요기도회 현장',value:fmt(avg(kFriOff.filter(x=>x>0))),sub:`${KW} 현장 출석`,color:'purple',...tr(delta(kFriOff))},
+    {label:'새벽기도 현장 (일평균)',value:fmt(avg(kDawnDay.filter(x=>x>0))),sub:`${KW} · 하루 현장 출석`,color:'gold',...tr(delta(kDawnDay))});
   if (showOn) k.push(
-    {label:'수요예배 온라인 (평균)',value:fmt(wedOnAvg),sub:'특별집회 제외',color:'teal'},
-    {label:'금요기도회 온라인 (평균)',value:fmt(friOnAvg),sub:'특별집회 제외',color:'orange'},
-    {label:'새벽기도 온라인 (주평균)',value:fmt(avg(dawnOn)),sub:'주별 온라인 합계',color:'green'});
+    {label:'수요예배 온라인',value:fmt(kWedOnAvg),sub:`${KW} · 특별집회 제외`,color:'teal'},
+    {label:'금요기도회 온라인',value:fmt(kFriOnAvg),sub:`${KW} · 특별집회 제외`,color:'orange'},
+    {label:'새벽기도 온라인 (주 합계)',value:fmt(avg(kDawnOn)),sub:`${KW} · 월~토 합계`,color:'green'});
   mkKPI('kk-wd',k);
 
   const title = {off:'현장', on:'온라인', both:'현장 / 온라인'}[V];
@@ -4191,9 +4218,9 @@ const CELL_KINDS = ['여다락방', '여직장다락방', '남다락방', '부�
 
 /* 두 자료를 주차 기준으로 묶는다. 다락방·순장반은 모이는 요일이 달라
    같은 주에 한쪽만 있는 경우가 흔하다. */
-function districtWeeks() {
-  const cell = filterByMode(D.cell || []);
-  const lead = filterByMode(D.leader || []);
+function districtWeeks(all) {
+  const cell = all ? (D.cell || []) : filterByMode(D.cell || []);
+  const lead = all ? (D.leader || []) : filterByMode(D.leader || []);
   const byDate = {};
   cell.forEach(r => { (byDate[r.date] = byDate[r.date] || {}).cell = r; });
   lead.forEach(r => { (byDate[r.date] = byDate[r.date] || {}).leader = r; });
@@ -4267,6 +4294,12 @@ function renderDistrict() {
   const tueSeries  = rows.map(r => distValue(r.leader, 'tue'));
   const jobSeries  = rows.map(r => distValue(r.leader, 'job'));
   const leadSeries = rows.map(r => distValue(r.leader, 'chul'));
+  // 위쪽 카드는 기간과 상관없이 최근 8주 — 아래 그래프·표만 기간을 따른다
+  const krows = districtWeeks(true).slice(-KPI_WEEKS);
+  const kCell = krows.map(r => distValue(r.cell, 'chul')), kTue = krows.map(r => distValue(r.leader, 'tue'));
+  const kJob = krows.map(r => distValue(r.leader, 'job')), kLead = krows.map(r => distValue(r.leader, 'chul'));
+  const kLastCell = [...krows].reverse().find(r => r.cell)?.cell || null;
+  const KW = `최근 ${KPI_WEEKS}주 평균`;
 
   const last = arr => { for (let i = arr.length - 1; i >= 0; i--) if (arr[i] != null) return arr[i]; return null; };
   const prev = arr => { let seen = 0; for (let i = arr.length - 1; i >= 0; i--) if (arr[i] != null && ++seen === 2) return arr[i]; return null; };
@@ -4276,9 +4309,9 @@ function renderDistrict() {
 
   // ── 전체 현황 ──
   mkKPI('kk-district', [
-    { label: `다락방 (${scope})`, value: fmtOr(last(cellSeries)), sub: `평균 ${fmt(avg(cellSeries))}명`, color: 'blue', ...trendOf(cellSeries) },
-    { label: `순장반 (${scope})`, value: fmtOr(last(leadSeries)), sub: `화요 ${fmtOr(last(tueSeries))} · 직장 ${fmtOr(last(jobSeries))}`, color: 'purple', ...trendOf(leadSeries) },
-    { label: '집계 주차', value: rows.length + '주', sub: '필터 적용 기간', color: 'teal' },
+    { label: `다락방 (${scope})`, value: fmtOr(last(kCell)), sub: `${KW} ${fmt(avg(kCell))}명`, color: 'blue', ...trendOf(kCell) },
+    { label: `순장반 (${scope})`, value: fmtOr(last(kLead)), sub: `화요 ${fmtOr(last(kTue))} · 직장 ${fmtOr(last(kJob))}`, color: 'purple', ...trendOf(kLead) },
+    { label: '최근 입력', value: krows.length ? (d => `${d.getMonth() + 1}/${d.getDate()}`)(parseWeekDate(krows[krows.length - 1].date)) : '–', sub: `최근 ${KPI_WEEKS}주 중 ${krows.length}주 입력`, color: 'teal' },
     { label: '교구 수', value: (pick ? 1 : districtNames().length) + '개', sub: pick || '합산', color: 'gold' },
   ]);
 
@@ -4331,9 +4364,9 @@ function renderDistrict() {
 
   // ── 다락방 ──
   mkKPI('kk-dist-cell', [
-    { label: `다락방 출석 (${scope})`, value: fmtOr(last(cellSeries)), sub: `평균 ${fmt(avg(cellSeries))}명`, color: 'blue', ...trendOf(cellSeries) },
+    { label: `다락방 출석 (${scope})`, value: fmtOr(last(kCell)), sub: `${KW} ${fmt(avg(kCell))}명`, color: 'blue', ...trendOf(kCell) },
     ...CELL_KINDS.slice(0, 3).map((k, i) => ({
-      label: k, value: fmt(distBreakdown(lastCell, k)), sub: '최근 주', color: ['teal', 'green', 'gold'][i] })),
+      label: k, value: fmt(distBreakdown(kLastCell, k)), sub: '최근 주', color: ['teal', 'green', 'gold'][i] })),
   ]);
   setText('ct-cell-trend', `${scope} 다락방 출석 추이`);
   mkChart('c-cell-trend', 'line', labels, CELL_KINDS.map((k, i) =>
@@ -4350,10 +4383,10 @@ function renderDistrict() {
 
   // ── 순장반 ──
   mkKPI('kk-dist-leader', [
-    { label: `순장반 출석 (${scope})`, value: fmtOr(last(leadSeries)), sub: `평균 ${fmt(avg(leadSeries))}명`, color: 'purple', ...trendOf(leadSeries) },
-    { label: '화요순장반', value: fmtOr(last(tueSeries)), sub: '매주 화요일', color: 'blue', ...trendOf(tueSeries) },
-    { label: '직장순장반', value: fmtOr(last(jobSeries)), sub: '격주 토요일', color: 'teal', ...trendOf(jobSeries) },
-    { label: '집계 주차', value: rows.filter(r => r.leader).length + '주', sub: '순장반 자료', color: 'gold' },
+    { label: `순장반 출석 (${scope})`, value: fmtOr(last(kLead)), sub: `${KW} ${fmt(avg(kLead))}명`, color: 'purple', ...trendOf(kLead) },
+    { label: '화요순장반', value: fmtOr(last(kTue)), sub: '매주 화요일', color: 'blue', ...trendOf(kTue) },
+    { label: '직장순장반', value: fmtOr(last(kJob)), sub: '격주 토요일', color: 'teal', ...trendOf(kJob) },
+    { label: '최근 입력', value: (r => r ? (d => `${d.getMonth() + 1}/${d.getDate()}`)(parseWeekDate(r.date)) : '–')([...krows].reverse().find(r => r.leader)), sub: '순장반 자료', color: 'gold' },
   ]);
   setText('ct-leader-trend', `${scope} 순장반 출석 추이`);
   mkChart('c-leader-trend', 'line', labels, [
@@ -4496,6 +4529,10 @@ function initNewFam() {
     return;
   }
   const fwRows = D.newFamily.filter(r => getFW().includes(r.date));
+  // 위쪽 카드는 기간과 상관없이 — 이번 주 · 올해 누계. 기간 누계는 아래 '등록신청 구성'에
+  const yrY = (D.newFamily[D.newFamily.length - 1]?.date || '').slice(0, 4);
+  const yr = D.newFamily.filter(r => r.date.startsWith(yrY));
+  const yrLbl = `${yrY}년`;
   const rColors = [C.b, C.p, C.g, C.or, C.t, C.pk, C.lm];
 
   // 장년
@@ -4509,8 +4546,8 @@ function initNewFam() {
   mkKPI('kk-newfam-adult', [
     {label:'이번 주 등록신청', value:fmt(latestAReq), sub:'등록 가능 + 등록 불가능', color:'blue'},
     {label:'이번 주 등록 가능', value:fmt(latestAAv), sub:latestAReq>0?`${Math.round(latestAAv/latestAReq*100)}% 가능`:'', color:'green'},
-    {label:'기간 등록신청', value:fmt(totAReq), sub:'선택 기간 누계', color:'gold'},
-    {label:'기간 등록 불가능', value:fmt(totAUn), sub:'선택 기간 누계', color:'teal'},
+    {label:'올해 등록신청', value:fmt(yr.reduce((a,r)=>a+nfRequestTotal(r,'adult'),0)), sub:`${yrLbl} 누계`, color:'gold'},
+    {label:'올해 등록 불가능', value:fmt(yr.reduce((a,r)=>a+nfVal(r,'adult','unavailable'),0)), sub:`${yrLbl} 누계`, color:'teal'},
   ]);
 
   const renderAdultTrend = (fw2) => {
@@ -4553,8 +4590,8 @@ function initNewFam() {
   mkKPI('kk-newfam-youth', [
     {label:'이번 주 등록신청', value:fmt(latestYReq), sub:'등록 가능 + 등록 불가능', color:'purple'},
     {label:'이번 주 등록 가능', value:fmt(latestYAv), sub:latestYReq>0?`${Math.round(latestYAv/latestYReq*100)}% 가능`:'', color:'green'},
-    {label:'기간 등록신청', value:fmt(totYReq), sub:'선택 기간 누계', color:'gold'},
-    {label:'기간 등록 불가능', value:fmt(totYUn), sub:'선택 기간 누계', color:'teal'},
+    {label:'올해 등록신청', value:fmt(yr.reduce((a,r)=>a+nfRequestTotal(r,'youth'),0)), sub:`${yrLbl} 누계`, color:'gold'},
+    {label:'올해 등록 불가능', value:fmt(yr.reduce((a,r)=>a+nfVal(r,'youth','unavailable'),0)), sub:`${yrLbl} 누계`, color:'teal'},
   ]);
 
   const renderYouthFamTrend = (fw2) => {
@@ -5889,17 +5926,33 @@ function sw(name, opts){
   const hide = ['home','yearcomp','special'].includes(name);
   if (fb) {
     fb.style.display = hide ? 'none' : '';
-    if (!hide) {
-      // 탭에 .flt-slot 이 있으면 그 자리로(주일학교 — 고른 주 카드 아래, 그래프 바로 위)
-      const sec = document.getElementById('s-' + name);
-      const slot = sec?.querySelector('.flt-slot');
-      const hdr = sec?.querySelector('.page-hdr');
-      if (slot) { if (fb.parentElement !== slot) slot.appendChild(fb); }
-      else if (hdr && fb.previousElementSibling !== hdr) hdr.after(fb);
-    }
+    if (!hide) placeFltBar(name);
   }
-  if(!DONE[name]){DONE[name]=true;setTimeout(()=>INITS[name](),60);}
+  if(!DONE[name]){DONE[name]=true;setTimeout(()=>runInit(name),60);}
   if(!opts?.silent) writeHash(name);
+}
+
+/* 탭을 그린다. 청년부 하위 탭처럼 그릴 때 통째로 다시 만드는 곳이 있어, 기간 줄이 그 안에 있으면
+   같이 지워진다 — 그리기 전에 제목 아래로 잠깐 빼 두었다가 다 그린 뒤 제자리로 돌린다. */
+function runInit(name) {
+  const fb = document.querySelector('.flt-bar');
+  const hdr = document.querySelector(`#s-${name} .page-hdr`);
+  if (fb && hdr && fb.closest('.ss')) hdr.after(fb);
+  INITS[name]();
+  if (fb && fb.style.display !== 'none') placeFltBar(name);
+}
+
+/* 기간 줄 자리 — 탭(지금 열린 하위 탭)에 .flt-slot 이 있으면 그 자리로.
+   위쪽 카드(최근 주·고른 주)는 기간과 상관없고, 기간 줄 아래의 그래프·표만 기간을 따른다.
+   자리가 없으면 제목 아래. */
+function placeFltBar(name) {
+  const fb = document.querySelector('.flt-bar');
+  const sec = document.getElementById('s-' + name);
+  if (!fb || !sec) return;
+  const slot = sec.querySelector('.ss.on .flt-slot') || [...sec.querySelectorAll('.flt-slot')].find(x => !x.closest('.ss'));
+  const hdr = sec.querySelector('.page-hdr');
+  if (slot) { if (fb.parentElement !== slot) slot.appendChild(fb); }
+  else if (hdr && fb.previousElementSibling !== hdr) hdr.after(fb);
 }
 
 /* 인쇄: 아직 렌더되지 않은 탭이 있으면 빈 캔버스로 인쇄되므로 전부 그린 뒤 인쇄한다 */
@@ -5983,6 +6036,7 @@ function ss2(sec,sub,opts){
   par.querySelectorAll('.ss').forEach(el=>el.classList.remove('on'));
   t.classList.add('on');
   SUB_TAB[tab] = sub;
+  placeFltBar(tab);
   // 숨어 있는 동안 0px로 그려진 차트를 다시 그린다
   t.querySelectorAll('canvas').forEach(c => { const ch = Chart.getChart(c); if (ch) ch.resize(); });
   if(!opts?.silent) writeHash(tab, sub);
@@ -6470,13 +6524,12 @@ function getLatestInputGaps() {
 }
 
 /* 최신 데이터 주차를 헤더·문서 제목에 반영 (하드코딩 날짜 제거) */
+/* 로고 아래 부제목에는 날짜를 붙이지 않는다. 예전에는 마지막 주차(아직 비어 있는 주일까지)를
+   붙여서 '데이터 기준' 배지와 날짜가 둘이 되어 헷갈렸다. 자료 기준 시각은 오른쪽 배지가 알린다. */
 function updateHeaderDate() {
-  const latest = D.weeks[D.weeks.length - 1];
-  if (!latest) return;
-  const label = latest.replace(/-/g, '.');
   const sub = document.getElementById('hdr-datestamp');
-  if (sub) sub.textContent = `Ministry Data Dashboard · ${label}`;
-  document.title = `분당우리교회 사역 데이터 대시보드 · ${label}`;
+  if (sub) sub.textContent = 'Ministry Data Dashboard';
+  document.title = '분당우리교회 사역 데이터 대시보드';
 }
 
 function fmtStamp(iso) {
