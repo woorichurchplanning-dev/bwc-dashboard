@@ -6550,6 +6550,13 @@ function updateSyncStatus(prefix, tone) {
     : getLatestInputGaps();
   const gapCount = latest && RAW[latest]
     ? inputStatus(latest).reduce((n, r) => n + r.miss.length, 0) : gaps.length;
+  // 미입력 수는 관리자에게만 — 일반 교역자에게는 자료 기준 시각만 보인다
+  if (!ME?.admin) {
+    status.textContent = prefix;
+    status.title = '';
+    status.style.color = tone || '';
+    return;
+  }
   const gapText = gapCount ? ` · 미입력 ${gapCount}곳` : ' · 입력 완료';
   status.textContent = prefix + gapText;
   status.title = gaps.length ? `누락 항목: ${gaps.join(', ')}` : '최신 주차 주요 항목 입력 완료';
