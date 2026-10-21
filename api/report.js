@@ -5,8 +5,8 @@ import { verifySession, readCookie, SESSION_COOKIE } from '../lib/auth.js';
    설정은 교회 시트의 「보고설정」 탭에 있고, 메일은 Apps Script(교회 계정)가 보낸다.
    이 함수는 관리자 화면과 Apps Script 사이를 이어 줄 뿐이다. 조회 키는 서버에만 둔다.
 
-   GET                       → 설정 { to, on, day, hour, trigger }
-   POST { action: 'save', to, on, day, hour }
+   GET                       → 설정 { to, on, day, hour, sections, teachers, allSections, trigger }
+   POST { action: 'save', to, on, day, hour, sections?, teachers? }   sections = 메일에 넣을 칸 이름들
    POST { action: 'preview' } → 지난주 보고 본문(HTML, 그림 포함)
    POST { action: 'send' }    → 지금 받는 사람 모두에게 한 통 */
 
@@ -45,7 +45,11 @@ export default async function handler(req, res) {
       if (to.length > 50) return res.status(400).json({ error: 'too_many_recipients' });
       const day = DAYS.includes(body.day) ? body.day : '수';
       const hour = Math.min(23, Math.max(0, parseInt(body.hour, 10) || 0));
-      const b = await callGas({ mode: 'report-settings-save', to: to.join(','), on: body.on ? '1' : '0', day, hour: String(hour) });
+      const extra = {};
+      // 보낼 항목·교사 포함 — 안 보내면 Apps Script 가 지금 값을 그대로 둔다
+      if (Array.isArray(body.sections)) extra.sections = body.sections.map(String).filter(x => x.length <= 20).slice(0, 20).join(',');
+      if (typeof body.teachers === 'boolean') extra.teachers = body.teachers ? '1' : '0';
+      const b = await callGas({ mode: 'report-settings-save', to: to.join(','), on: body.on ? '1' : '0', day, hour: String(hour), ...extra });
       return res.status(200).json(b.settings);
     }
     if (body.action === 'preview') {

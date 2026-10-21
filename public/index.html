@@ -983,7 +983,7 @@ table.sp-matrix tr.sp-row-year td { background:transparent; padding-top:14px; fo
   <!-- 추이 차트 (6개) -->
   <div class="cg">
     <div class="cc"><div class="ch"><div><div class="ct">주일예배 장년 추이</div><div class="cs">서현+송림 1–3부 합산</div></div><div class="cpf"><button class="cpb" onclick="sw('sunday')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-adult',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-adult">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-adult',1)">▲</button></div></div></div><canvas id="c-hm-adult"></canvas></div>
-    <div class="cc"><div class="ch"><div><div class="ct">주일학교 인원 추이</div><div class="cs">전체 부서 합산</div></div><div class="cpf"><button class="cpb" onclick="sw('school')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-school',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-school">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-school',1)">▲</button></div></div></div><canvas id="c-hm-school"></canvas></div>
+    <div class="cc"><div class="ch"><div><div class="ct">주일학교 인원 추이</div><div class="cs">전체 부서 합산 · 학생 기준(교사 제외)</div></div><div class="cpf"><button class="cpb" onclick="sw('school')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-school',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-school">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-school',1)">▲</button></div></div></div><canvas id="c-hm-school"></canvas></div>
   </div>
   <div class="cg">
     <div class="cc"><div class="ch"><div><div class="ct">청년교구 예배 추이</div><div class="cs">전체 합계</div></div><div class="cpf"><button class="cpb" onclick="sw('youth')">세부현황 ›</button><div class="hcp-spin"><button class="hcp-dn" onclick="incrHCP('c-hm-youth',-1)">▼</button><span class="hcp-val" id="hcp-val-c-hm-youth">8주</span><button class="hcp-up" onclick="incrHCP('c-hm-youth',1)">▲</button></div></div></div><canvas id="c-hm-youth"></canvas></div>
@@ -2738,6 +2738,12 @@ function schoolTot(w) {
   if (D.school[w]._total != null) return D.school[w]._total;
   return myDepts().reduce((a, d) => a + schoolDeptValue(w, d), 0) || null;
 }
+/* 주간현황은 학생만 센다(교사 제외). 학생·교사 구분이 없는 옛 주는 null — 합계를 대신 넣지 않는다 */
+function schoolStudentTot(w, depts) {
+  let sum = 0, has = false;
+  (depts || myDepts()).forEach(d => { const x = schoolStudent(w, d); if (x != null) { sum += x; has = true; } });
+  return has ? sum : null;
+}
 function dawnOnline(fw)  {
   return (fw||getFW()).map(w => {
     if (!D.dawn[w] || D.dawn[w].allOff) return null;
@@ -2844,13 +2850,13 @@ function initHome() {
   const sunSeohyeon = seohyeonBu(lW);
   const sunSongrim  = songrimBu(lW);
   const sunYouth    = youthTotal(lW) ?? nn(D.sunday[lW]?.youth);
-  const sunSchool   = schoolTot(lW);
+  const sunSchool   = schoolStudentTot(lW);
   const pSunAdult   = pW ? adultBu(pW) : null;
   const ySunAdult   = yW ? adultBu(yW) : null;
   const pSunYouth   = pW ? (youthTotal(pW) ?? nn(D.sunday[pW]?.youth)) : null;
   const ySunYouth   = yW ? (youthTotal(yW) ?? nn(D.sunday[yW]?.youth)) : null;
-  const pSunSchool  = pW ? schoolTot(pW) : null;
-  const ySunSchool  = yW ? schoolTot(yW) : null;
+  const pSunSchool  = pW ? schoolStudentTot(pW) : null;
+  const ySunSchool  = yW ? schoolStudentTot(yW) : null;
 
   // 수요예배
   const wedOff = v(D.weekday[lW]?.wed_off);
@@ -2954,7 +2960,7 @@ function initHome() {
       },
       { cls:'sc', label:'주일학교', dateStr:`${fmtDate(lDt)} (${fmtDay(lDt)})`,
         mainNum: sunSchool ? fmt(sunSchool) : '–',
-        unit: '명 · 현장',
+        unit: '명 · 학생',
         d1: inlineDelta(sunSchool||null, pSunSchool, '전주'),
         d2: inlineDelta(sunSchool||null, ySunSchool, '전년'),
         extraHtml: (() => {
@@ -2964,7 +2970,7 @@ function initHome() {
             { name:'청소년', depts:['송림청소년부','서현중등부','서현고등부'] },
           ];
           const items = groups.map(g => {
-            const n = g.depts.reduce((a,d) => a + schoolDeptValue(lW,d), 0);
+            const n = schoolStudentTot(lW, g.depts.filter(d => myDepts().includes(d)));
             return n ? `<div class="wk-bd-item"><span class="wk-bd-name">${g.name}</span><span class="wk-bd-num">${fmt(n)}</span></div>` : '';
           }).join('');
           return items ? `<div class="wk-breakdown">${items}</div>` : '';
@@ -3029,8 +3035,8 @@ function initHome() {
   mkChart('c-hm-adult', 'line', wl8, [lds('장년 현장', fw8.map(w => adultBu(w)), C.b, true)], homeChartOpts(fw8));
 
   // 2. 주일학교 추이
-  const sc = fw8.map(w => nn(schoolTot(w)));
-  mkChart('c-hm-school', 'line', wl8, [lds('주일학교', sc, C.g, true)], homeChartOpts(fw8));
+  const sc = fw8.map(w => schoolStudentTot(w));
+  mkChart('c-hm-school', 'line', wl8, [lds('주일학교 학생', sc, C.g, true)], homeChartOpts(fw8));
 
   // 3. 청년교구 추이 (합계 기본)
   mkChart('c-hm-youth', 'line', wl8, [lds('청년 합계', fw8.map(youthTotal), C.p, true)], homeChartOpts(fw8));
@@ -3076,8 +3082,8 @@ function initHome() {
     mkChart('c-hm-adult', 'line', getWL(fw2), [lds('장년 현장', fw2.map(w => adultBu(w)), C.b, true)], homeChartOpts(fw2));
   };
   HOME_RENDERERS['c-hm-school'] = fw2 => {
-    const sc2 = fw2.map(w => nn(schoolTot(w)));
-    mkChart('c-hm-school', 'line', getWL(fw2), [lds('주일학교', sc2, C.g, true)], homeChartOpts(fw2));
+    const sc2 = fw2.map(w => schoolStudentTot(w));
+    mkChart('c-hm-school', 'line', getWL(fw2), [lds('주일학교 학생', sc2, C.g, true)], homeChartOpts(fw2));
   };
   HOME_RENDERERS['c-hm-youth'] = fw2 => {
     mkChart('c-hm-youth', 'line', getWL(fw2), [lds('청년 합계', fw2.map(youthTotal), C.p, true)], homeChartOpts(fw2));

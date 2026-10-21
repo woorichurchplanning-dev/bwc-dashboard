@@ -122,6 +122,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
 .rp-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px;align-items:end}
 .rp-toggle{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin:0;padding:9px 0}
 .rp-actions{display:flex;flex-wrap:wrap;gap:8px}
+.rp-secs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.rp-sec{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12.5px;font-weight:600;margin:0;cursor:pointer}
+.rp-sec input{margin:0}
+.rp-sec.on{background:var(--accent-light);border-color:transparent;color:var(--accent-dark)}
 .mr-tbl{width:100%;border-collapse:collapse;margin:0}
 .mr-tbl td{padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
 .mr-tbl td.it{width:150px;font-weight:600;font-size:13px;white-space:nowrap}
@@ -193,6 +197,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
       <div><label class="rp-toggle"><input type="checkbox" id="rp-on"> 매주 자동으로 보내기</label></div>
       <div><button type="button" class="primary" id="rp-save" onclick="rpSave()" style="width:100%">발송 시간 저장</button></div>
     </div>
+
+    <label>메일에 넣을 내용 <span style="font-weight:500;color:var(--text3)">— 누르면 바로 저장 · 미리보기로 확인하세요</span></label>
+    <div class="rp-secs" id="rp-secs"></div>
+    <label class="rp-toggle" style="margin-bottom:14px"><input type="checkbox" id="rp-teachers" onchange="rpSaveContent()"> 주일학교 인원에 교사도 함께 세기 <span style="font-weight:500;color:var(--text3)">(끄면 학생만)</span></label>
 
     <div class="rp-actions" style="border-top:1px solid var(--border);padding-top:16px">
       <button type="button" id="rp-prev" onclick="rpPreview()">미리보기</button>
@@ -521,7 +529,7 @@ $('form').addEventListener('submit', async (e) => {
 });
 
 /* ── 주간 데이터 보고 메일 ── */
-const RP = { to: [], on: true, day: '수', hour: 13, trigger: false };
+const RP = { to: [], on: true, day: '수', hour: 13, trigger: false, sections: [], allSections: [], teachers: false };
 const escH = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const hourLabel = (h) => (h < 12 ? '오전 ' : '오후 ') + (h % 12 === 0 ? 12 : h % 12) + '시';
 
@@ -547,6 +555,11 @@ function rpRender() {
     ? RP.to.map((m, i) => `<span class="rp-chip" title="${escH(m)}">${escH(whoOf([m]))}<button type="button" title="빼기" onclick="rpRemove(${i})">×</button></span>`).join('')
     : '<span style="font-size:12.5px;color:var(--warn)">받는 사람이 없습니다 — 아래에 추가하세요.</span>';
   $('rp-day').value = RP.day; $('rp-hour').value = String(RP.hour); $('rp-on').checked = RP.on;
+  $('rp-secs').innerHTML = (RP.allSections || []).map(k => {
+    const on = (RP.sections || []).includes(k);
+    return `<label class="rp-sec${on ? ' on' : ''}"><input type="checkbox" value="${escH(k)}"${on ? ' checked' : ''} onchange="rpSaveContent()">${escH(k)}</label>`;
+  }).join('');
+  $('rp-teachers').checked = !!RP.teachers;
   $('rp-status').innerHTML =
     // 위쪽 상태는 '저장된' 설정 — 고르는 중인 값이 아니다
     `<span class="rp-pill ${(RP.savedOn ?? RP.on) ? 'on' : 'off'}">${(RP.savedOn ?? RP.on) ? '자동 발송 켜짐' : '자동 발송 꺼짐'}</span>` +
@@ -590,6 +603,18 @@ async function rpSave(okText) {
     return true;
   } catch (e) { show('err', '저장하지 못했습니다: ' + e.message); return false; }
   finally { $('rp-save').disabled = false; }
+}
+/* 보낼 항목·교사 포함 — 바꾸면 바로 저장. 요일·시각은 저장된 값 그대로 보낸다(고르는 중인 값을 같이 저장하지 않게) */
+async function rpSaveContent() {
+  const secs = [...$('rp-secs').querySelectorAll('input:checked')].map(x => x.value);
+  if (!secs.length) { show('err', '적어도 한 가지는 골라야 합니다.'); rpRender(); return; }
+  const teachers = $('rp-teachers').checked;
+  try {
+    const r = await rpApi('POST', { action: 'save', to: RP.savedTo || RP.to, on: RP.savedOn ?? RP.on, day: RP.savedDay ?? RP.day, hour: RP.savedHour ?? RP.hour, sections: secs, teachers });
+    RP.sections = r.sections; RP.teachers = r.teachers; if (r.allSections) RP.allSections = r.allSections;
+    rpRender();
+    show('ok', `저장했습니다 — 메일에 ${RP.sections.length}가지를 넣고, 주일학교는 ${RP.teachers ? '학생+교사' : '학생만'} 셉니다.`);
+  } catch (e) { show('err', '저장하지 못했습니다: ' + e.message); rpRender(); }
 }
 function rpRemember() { RP.savedDay = RP.day; RP.savedHour = RP.hour; RP.savedOn = RP.on; RP.savedTo = [...RP.to]; }
 async function rpPreview() {
