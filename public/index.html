@@ -1498,6 +1498,7 @@ D.leader = [];
 D.cell = [];
 D.cellOff = {};     // 교구 다락방 휴회한 주 → 사유 (입력앱 교구 표의 '이번 주 휴회')
 D.leaderOff = {};   // 순장반 휴회한 주 → 사유
+D.weekOff = {};     // 주일예배·주일학교·청년교구 휴회 → { 주: { '서현': 사유, '유치부': 사유, … } }
 D.newFamily = [];
 
 // ── 기간 필터 ──
@@ -2606,6 +2607,7 @@ function gapWhy(w) {
   if (wd?.fri_why) why.push('금 ' + wd.fri_why);
   if (D.cellOff?.[w]) why.push(D.cellOff[w]);
   if (D.leaderOff?.[w] && D.leaderOff[w] !== D.cellOff?.[w]) why.push(D.leaderOff[w]);
+  Object.values(D.weekOff?.[w] || {}).forEach(x => why.push(x));
   if (!why.length && WEEK_NOTES[w]) why.push(WEEK_NOTES[w]);
   const t = why.map(x => /휴강/.test(x) ? '휴강' : x).filter((x, i, a) => a.indexOf(x) === i).join(' · ');
   return t ? (t.length > 12 ? t.slice(0, 12) + '…' : t) : '미입력';
@@ -6203,6 +6205,16 @@ function sunEvents(sh, sr, ov) {
   return tags.length || Object.keys(memo).length ? { tags, memo } : null;
 }
 
+/* 휴회로 낸 줄 — '휴회' 칸에 사유가 있고 숫자가 없으면 D.weekOff 에 사유를 적고 true(그래프에서 빼라).
+   숫자가 있으면 모인 것으로 보고 그대로 센다(사랑1부·2부처럼 합쳐진 부서에서 한쪽만 쉰 때). */
+function offOf(date, name, val, nums) {
+  const why = String(val?.['휴회'] ?? '').trim();
+  const box = D.weekOff[date] || (D.weekOff[date] = {});
+  if (why && !nums) { box[name] = why; return true; }
+  delete box[name];
+  return false;
+}
+
 function applyNewData(data) {
   Object.entries(data).forEach(([date, rec]) => {
     if (!rec || typeof rec !== 'object') return;
@@ -6217,8 +6229,10 @@ function applyNewData(data) {
     const sh = sun['서현'] || sun['서현교회'] || sun['드림'] || {};   // 서현(드림센터)
     const sr = sun['송림'] || sun['송림교회'] || {};                  // 송림
     if (Object.keys(sh).length || Object.keys(sr).length) {
-      const shTotal = sh['총계'] != null ? sh['총계'] : ((sh['1부']||0)+(sh['2부']||0)+(sh['3부']||0)) || null;
-      const srTotal = sr['총계'] != null ? sr['총계'] : ((sr['1부']||0)+(sr['2부']||0)+(sr['3부']||0)) || null;
+      // 휴회(입력앱 주일예배 표의 '예배 없음')이고 숫자가 없으면 0명이 아니라 빈 주 — 사유만 남긴다
+      const sunOff = (site, r) => offOf(date, site, r, Number(r['총계']) || 0);
+      const shTotal = sunOff('서현', sh) ? null : sh['총계'] != null ? sh['총계'] : ((sh['1부']||0)+(sh['2부']||0)+(sh['3부']||0)) || null;
+      const srTotal = sunOff('송림', sr) ? null : sr['총계'] != null ? sr['총계'] : ((sr['1부']||0)+(sr['2부']||0)+(sr['3부']||0)) || null;
       D.sunday[date] = {
         jangnyeon:     shTotal,
         songrim:       srTotal,
@@ -6253,6 +6267,8 @@ function applyNewData(data) {
       Object.entries(school).forEach(([dept, val]) => {
         if (!val || typeof val !== 'object') return;
         const key = SCHOOL_DEPT_MAP[dept] || dept;
+        const nums = Object.entries(val).filter(([k]) => /학생|교사/.test(k)).reduce((a, [, v]) => a + (Number(v) || 0), 0);
+        if (offOf(date, key, val, nums)) { delete D.school[date][key]; return; }
         const partTotal = part => {
           const student = Number(val[`${part} 학생`]) || 0;
           const teacher = Number(val[`${part} 교사`]) || 0;
@@ -6297,6 +6313,12 @@ function applyNewData(data) {
         if (!val || typeof val !== 'object') return;
         if (RETIRED_YOUTH_DEPTS.some(r => sub.startsWith(r))) return;  // 폐지 조직
         if (sub === '청년금요기도회' || sub === '청년금요집회') return;                             // 부서가 아니라 집회
+        if (offOf(date, sub, val, Object.entries(val).reduce((a, [k, v]) => a + (k === '휴회' ? 0 : Number(v) || 0), 0))) {
+          const m = sub.match(/^([1-4]청년부)\s*(?:\(예배\))?$/), t = sub.match(/^([1-4]청년부)\s+(\d팀)/);
+          if (m && D.youth[date][m[1]]) D.youth[date][m[1]].예배 = null;      // 먼저 읽은 값이 남지 않게
+          if (t) delete D.youth[date][t[1]]?.팀?.[t[2]];
+          return;
+        }
         // "1청년부" / "1청년부 (예배)" / "3청년부" 등 → 예배 + 3/4청년부 직접 필드
         const worshipM = sub.match(/^([1-4]청년부)\s*(?:\(예배\))?$/);
         if (worshipM) {
