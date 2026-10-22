@@ -1496,6 +1496,8 @@ function mergeHist() {
 // 더미를 두면 시트에 값이 없어도 화면에 숫자가 그려져 실제 집계처럼 보이므로 반드시 비워 둔다.
 D.leader = [];
 D.cell = [];
+D.cellOff = {};     // 교구 다락방 휴회한 주 → 사유 (입력앱 교구 표의 '이번 주 휴회')
+D.leaderOff = {};   // 순장반 휴회한 주 → 사유
 D.newFamily = [];
 
 // ── 기간 필터 ──
@@ -2507,7 +2509,7 @@ function mkChart(id, type, labels, datasets, opts={}) {
   // 기준 주차 강조 — focusWeek이 주어진 차트에서만. 예전에는 둘 다 undefined일 때
   // 참이 되어 모든 라벨에 '기준'이 붙었다.
   const isFocus = i => !isH && !!opts.focusWeek && opts.fw?.[i] === opts.focusWeek;
-  const chart = new Chart(ctx, { type, data:{labels,datasets}, options:{
+  const chart = new Chart(ctx, { type, data:{labels: isLine ? gapLabels(labels, datasets, opts.fw) : labels, datasets}, options:{
     responsive:true, maintainAspectRatio:true,
     indexAxis: isH ? 'y' : 'x',
     interaction: isPie || isH ? { mode:'nearest', intersect:true }
@@ -2595,11 +2597,37 @@ function mkChart(id, type, labels, datasets, opts={}) {
   return chart;
 }
 
+/* 꺾은선 중간에 빈 주 — 선은 이어 그리고(spanGaps), 날짜 밑에 왜 비었는지 적는다.
+   휴회 사유(주중예배·새벽·교구)나 그 주 메모가 있으면 그것을, 없으면 '미입력'.
+   맨 앞·맨 뒤의 빈 주(아직 안 낸 이번 주 등)는 표시하지 않는다. */
+function gapWhy(w) {
+  const wd = D.weekday?.[w], why = [];
+  if (wd?.wed_why) why.push('수 ' + wd.wed_why);
+  if (wd?.fri_why) why.push('금 ' + wd.fri_why);
+  if (D.cellOff?.[w]) why.push(D.cellOff[w]);
+  if (D.leaderOff?.[w] && D.leaderOff[w] !== D.cellOff?.[w]) why.push(D.leaderOff[w]);
+  if (!why.length && WEEK_NOTES[w]) why.push(WEEK_NOTES[w]);
+  const t = why.map(x => /휴강/.test(x) ? '휴강' : x).filter((x, i, a) => a.indexOf(x) === i).join(' · ');
+  return t ? (t.length > 12 ? t.slice(0, 12) + '…' : t) : '미입력';
+}
+function gapLabels(labels, datasets, fw) {
+  if (!fw || !Array.isArray(labels)) return labels;
+  const gap = new Set();
+  datasets.forEach(d => {
+    if (!Array.isArray(d.data) || d.spanGaps === false) return;
+    const has = d.data.map(v => v != null && !Number.isNaN(v));
+    const first = has.indexOf(true), last = has.lastIndexOf(true);
+    for (let i = first + 1; i < last; i++) if (!has[i]) gap.add(i);
+  });
+  if (!gap.size) return labels;
+  return labels.map((l, i) => gap.has(i) && typeof l === 'string' && fw[i] ? [l, gapWhy(fw[i])] : l);
+}
+
 function lds(label, data, color, fill=false) {
   return { label, data, borderColor:color, backgroundColor:fill?color+'18':'transparent',
     pointBackgroundColor:color, pointRadius:3, pointHoverRadius:7,
     pointHoverBackgroundColor:color, pointHoverBorderColor:'#fff', pointHoverBorderWidth:2,
-    tension:.4, borderWidth:2.5, fill, spanGaps:false };
+    tension:.4, borderWidth:2.5, fill, spanGaps:true };
 }
 function ldsDash(label, data, color) {
   const d = lds(label, data, color);
@@ -6405,8 +6433,11 @@ function applyNewData(data) {
       let totalChul = 0;
       // 「교구 출석 현황표」 시트 구분과 1:1. 시니어는 남/여를 합쳐 하나로 받는다.
       const cellLabels = ['여다락방','여직장다락방','남다락방','부부다락방','시니어'];
+      let cellOffWhy = '';
       Object.entries(dalak).forEach(([교구, val]) => {
         if (!val || typeof val !== 'object') return;
+        // 휴회로 낸 교구는 0명이 아니라 '안 모인 것' — 세지 않는다
+        if (String(val['휴회'] ?? '').trim()) { cellOffWhy = String(val['휴회']).trim(); return; }
         const breakdown = {};
         cellLabels.forEach(label => { breakdown[label] = Number(val[label]) || 0; });
         const newChul = cellLabels.reduce((sum, label) => sum + breakdown[label], 0);
@@ -6420,7 +6451,13 @@ function applyNewData(data) {
       });
       const cellRec = { date, totalJuk: 0, totalChul, dists };
       const ci = D.cell.findIndex(r => r.date === date);
-      if (ci >= 0) D.cell[ci] = cellRec; else D.cell.push(cellRec);
+      if (!Object.keys(dists).length && cellOffWhy) {   // 모든 교구가 휴회 — 그래프에서 빼고 사유만
+        D.cellOff[date] = cellOffWhy;
+        if (ci >= 0) D.cell.splice(ci, 1);
+      } else {
+        delete D.cellOff[date];
+        if (ci >= 0) D.cell[ci] = cellRec; else D.cell.push(cellRec);
+      }
     }
 
     // ── 순장반 → D.leader ──
@@ -6437,8 +6474,10 @@ function applyNewData(data) {
         dists[교구].chul += n; dists[교구][key] += n; totalChul += n;
       };
       const pick = (val) => Number(val?.['인원'] ?? val?.['count'] ?? 0) || 0;
-      Object.entries(tue).forEach(([교구, val]) => { if (val && typeof val === 'object') bump(교구, pick(val), 'tue'); });
-      Object.entries(job).forEach(([교구, val]) => { if (val && typeof val === 'object') bump(교구, pick(val), 'job'); });
+      let leaderOffWhy = '';
+      const offOf = val => { const y = String(val?.['휴회'] ?? '').trim(); if (y) leaderOffWhy = y; return !!y; };
+      Object.entries(tue).forEach(([교구, val]) => { if (val && typeof val === 'object' && !offOf(val)) bump(교구, pick(val), 'tue'); });
+      Object.entries(job).forEach(([교구, val]) => { if (val && typeof val === 'object' && !offOf(val)) bump(교구, pick(val), 'job'); });
       Object.entries(sunjang).forEach(([교구, val]) => {
         if (!val || typeof val !== 'object') return;
         bump(교구, Number(val['화요순장반'])||0, 'tue');
@@ -6446,8 +6485,20 @@ function applyNewData(data) {
       });
       const leaderRec = { date, totalJuk: 0, totalChul, dists };
       const li = D.leader.findIndex(r => r.date === date);
-      if (li >= 0) D.leader[li] = leaderRec; else D.leader.push(leaderRec);
+      if (!Object.keys(dists).length && leaderOffWhy) {   // 화요·직장 모두 휴회
+        D.leaderOff[date] = leaderOffWhy;
+        if (li >= 0) D.leader.splice(li, 1);
+      } else {
+        delete D.leaderOff[date];
+        if (li >= 0) D.leader[li] = leaderRec; else D.leader.push(leaderRec);
+      }
     }
+
+    // 교구 시트에서 휴강으로 확인된 주(Apps Script '_휴강') — 숫자가 없으면 그 사유를 쓴다
+    const sheetOff = rec['_휴강'] || {};
+    if (sheetOff['교구 다락방'] && !D.cell.some(r => r.date === date)) D.cellOff[date] = sheetOff['교구 다락방'];
+    const leaderSheetOff = sheetOff['화요순장반'] || sheetOff['직장순장반'];
+    if (leaderSheetOff && !D.leader.some(r => r.date === date)) D.leaderOff[date] = leaderSheetOff;
 
     // ── 새가족 → D.newFamily ──
     const nf = rec['새가족'] || {};

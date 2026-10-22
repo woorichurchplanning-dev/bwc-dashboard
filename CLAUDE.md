@@ -118,3 +118,10 @@ bash scripts/deploy.sh                     # 자료까지 새로 수집해 올�
   부서 목록은 자료에서 뽑는다(`schoolExportDepts`) — 새 부서가 생기면 시트도 는다. 다른 탭은 예전 CSV 내용(`tabExportRows`) 한 시트.
 - 로그인: '아이디 저장'(localStorage `bwc-login-id`) · '로그인 유지'(7일, `SESSION_MAX_AGE_LONG`).
   권한은 세션에 담기므로 권한을 바꾸거나 계정을 지워도 다시 로그인하기 전까지(최대 7일) 예전 권한이 남는다.
+
+## 꺾은선의 빈 주
+
+`lds()` 는 `spanGaps:true` — 빈 주는 앞뒤를 이어 그린다. `mkChart` 가 `opts.fw` 가 있는 꺾은선이면 `gapLabels` 로
+가운데 빈 주의 날짜 밑에 사유를 단다(`gapWhy`: 주중 휴회 사유 → 교구 휴회 `D.cellOff`/`D.leaderOff` → `WEEK_NOTES` → 없으면 '미입력').
+교구 휴회는 입력앱 교구 표의 '이번 주 휴회'(각 교구 줄에 `휴회`=사유만, 숫자 없음) 또는 교구 시트의 `_휴강`.
+선을 끊어야 하는 차트는 그 데이터셋에 `spanGaps:false` 를 직접 준다(연도 비교처럼).
