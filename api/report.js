@@ -8,7 +8,10 @@ import { verifySession, readCookie, SESSION_COOKIE } from '../lib/auth.js';
    GET                       → 설정 { to, on, day, hour, sections, teachers, allSections, trigger }
    POST { action: 'save', to, on, day, hour, sections?, teachers? }   sections = 메일에 넣을 칸 이름들
    POST { action: 'preview' } → 지난주 보고 본문(HTML, 그림 포함)
-   POST { action: 'send' }    → 지금 받는 사람 모두에게 한 통 */
+   POST { action: 'send' }    → 지금 받는 사람 모두에게 한 통
+
+   재정부 주간 헌금 보고(수 10시 고정)는 같은 길에 kind: 'finance' 를 붙인다 (Apps Script Finance.js)
+   GET ?kind=finance → { to, on, trigger } · POST { kind: 'finance', action: 'save'|'preview'|'send', to?, on? } */
 
 const GAS = process.env.APPS_SCRIPT_URL ||
   'https://script.google.com/macros/s/AKfycbxJ1NDZxTpDsaVkb7GqlesBvlM_9lBBv2s4f53chZdqbHVnLZqOfVT1qzXVfsXW7qxA/exec';
@@ -32,6 +35,22 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'private, no-store');
 
   try {
+    const fin = req.method === 'GET' ? req.query?.kind === 'finance' : (req.body || {}).kind === 'finance';
+    if (fin) {
+      if (req.method === 'GET') return res.status(200).json((await callGas({ mode: 'fin-report-settings' })).settings);
+      const body = req.body || {};
+      if (body.action === 'save') {
+        const to = (Array.isArray(body.to) ? body.to : []).map(x => String(x).trim()).filter(x => EMAIL_RE.test(x));
+        if (to.length > 20) return res.status(400).json({ error: 'too_many_recipients' });
+        return res.status(200).json((await callGas({ mode: 'fin-report-save', to: to.join(','), on: body.on ? '1' : '0' })).settings);
+      }
+      if (body.action === 'preview') {
+        const b = await callGas({ mode: 'fin-report-preview' });
+        return res.status(200).json({ subject: b.subject, week: b.week, html: b.html });
+      }
+      if (body.action === 'send') return res.status(200).json({ sent: (await callGas({ mode: 'fin-report-send' })).sent });
+      return res.status(400).json({ error: 'unknown_action' });
+    }
     if (req.method === 'GET') {
       const b = await callGas({ mode: 'report-settings' });
       return res.status(200).json(b.settings);

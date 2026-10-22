@@ -173,6 +173,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
     <button class="ptab" data-tab="form" onclick="showPane('form')" id="tab-form-btn">계정 추가</button>
     <button class="ptab" data-tab="mail" onclick="showPane('mail')">보고 메일</button>
     <button class="ptab" data-tab="remind" onclick="showPane('remind')">미입력 알림</button>
+    <button class="ptab" data-tab="finance" onclick="showPane('finance')">재정부 보고</button>
   </div>
   <div class="msg" id="msg"></div>
 
@@ -207,6 +208,28 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);
       <button type="button" id="rp-send" onclick="rpSend()">지금 보내기</button>
     </div>
     <div id="rp-preview"><iframe id="rp-frame" title="보고 메일 미리보기" sandbox></iframe></div>
+  </div>
+
+  <div class="card" id="fr-card" data-pane="finance">
+    <h2>재정부 주간 헌금 보고</h2>
+    <div class="desc">매주 <b>수요일 오전 10시</b>(±15분)에 지난 주일의 주일학교 헌금 계수(부서별 1·2부 학생·교사·헌금, 이달 누계)를 교회 계정이 보냅니다.</div>
+    <div class="rp-status" id="fr-status"><span class="rp-pill">불러오는 중…</span></div>
+
+    <label>받는 사람 <span style="font-weight:500;color:var(--text3)">— 이름이나 이메일을 넣으면 바로 추가·저장됩니다 · ×로 빼기</span></label>
+    <div class="rp-chips" id="fr-chips"></div>
+    <div class="rp-add">
+      <div class="sg-wrap"><input type="text" id="fr-email" placeholder="재정부 이메일 (교역자 명단의 이름도 됨)" autocapitalize="off" spellcheck="false"
+             autocomplete="off" style="width:100%" onkeydown="if(event.key==='Enter'){event.preventDefault();frAdd()}"></div>
+      <button type="button" onclick="frAdd()">추가</button>
+    </div>
+    <label class="rp-toggle" style="margin-bottom:14px"><input type="checkbox" id="fr-on" onchange="frSave()"> 매주 자동으로 보내기</label>
+
+    <div class="rp-actions" style="border-top:1px solid var(--border);padding-top:16px">
+      <button type="button" id="fr-prev" onclick="frPreview()">미리보기</button>
+      <button type="button" id="fr-send" onclick="frSend()">지금 보내기</button>
+    </div>
+    <div id="fr-preview" style="margin-top:16px;display:none"><iframe id="fr-frame" title="재정부 보고 미리보기" sandbox
+      style="width:100%;height:1000px;border:1px solid var(--border);border-radius:12px;background:#efefec"></iframe></div>
   </div>
 
   <div class="card" id="mr-card" data-pane="remind">
@@ -441,7 +464,7 @@ function rowHtml(u) {
 
 /* 탭 — 주소 끝(#list/#form/#mail/#remind)에 남겨 새로고침해도 그 탭으로 */
 function showPane(name) {
-  if (!['list', 'form', 'mail', 'remind'].includes(name)) name = 'list';
+  if (!['list', 'form', 'mail', 'remind', 'finance'].includes(name)) name = 'list';
   document.querySelectorAll('.card[data-pane]').forEach(c => c.classList.toggle('on', c.dataset.pane === name));
   document.querySelectorAll('.ptab').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
   if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
@@ -644,6 +667,65 @@ async function rpSend() {
   ['rp-day', 'rp-hour', 'rp-on'].forEach(id => $(id).addEventListener('change', () => { rpSync(); rpMarkDirty(); rpRender(); }));
   try { Object.assign(RP, await rpApi('GET')); rpRemember(); rpRender(); }
   catch (e) { $('rp-status').innerHTML = `<span class="rp-pill off">설정을 불러오지 못했습니다: ${escH(e.message)}</span>`; }
+})();
+
+/* ── 재정부 주간 헌금 보고 ── (/api/report 의 kind: 'finance') */
+const FR = { to: [], on: true, trigger: false };
+const frApi = (method, body) => method === 'GET'
+  ? fetch('/api/report?kind=finance', { cache: 'no-store' }).then(async res => {
+      if (res.status === 401) { location.replace('/login.html'); throw new Error('unauthorized'); }
+      const d = await res.json().catch(() => ({})); if (!res.ok) throw new Error(d.message || d.error || ('HTTP ' + res.status)); return d; })
+  : rpApi('POST', { kind: 'finance', ...body });
+function frRender() {
+  $('fr-chips').innerHTML = FR.to.length
+    ? FR.to.map((m, i) => `<span class="rp-chip" title="${escH(m)}">${escH(whoOf([m]))}<button type="button" title="빼기" onclick="frRemove(${i})">×</button></span>`).join('')
+    : '<span style="font-size:12.5px;color:var(--warn)">받는 사람이 없습니다 — 아래에 추가하세요.</span>';
+  $('fr-on').checked = FR.on;
+  $('fr-status').innerHTML =
+    `<span class="rp-pill ${FR.on ? 'on' : 'off'}">${FR.on ? '자동 발송 켜짐' : '자동 발송 꺼짐'}</span>` +
+    '<span class="rp-pill">매주 수요일 오전 10시</span>' +
+    `<span class="rp-pill">받는 사람 ${FR.to.length}명</span>` +
+    (FR.trigger ? '' : '<span class="rp-pill off">예약이 아직 없음 — 저장하면 만들어집니다</span>');
+}
+async function frSave(okText) {
+  FR.on = $('fr-on').checked;
+  try {
+    Object.assign(FR, await frApi('POST', { action: 'save', to: FR.to, on: FR.on }));
+    frRender();
+    show('ok', (typeof okText === 'string' ? okText + ' ' : '저장했습니다 — ') + `매주 수요일 오전 10시, ${FR.to.length}명에게 ${FR.on ? '보냅니다' : '보내지 않습니다(꺼짐)'}.`);
+  } catch (e) { show('err', '저장하지 못했습니다: ' + e.message); }
+}
+async function frAdd() {
+  const { out, bad } = resolveOwners($('fr-email').value);
+  const added = out.filter(x => !FR.to.includes(x));
+  FR.to.push(...added);
+  $('fr-email').value = bad.join(', ');
+  if (bad.length) show('err', '명단에 없는 이름이거나 이메일 형식이 아닙니다: ' + bad.join(', '));
+  frRender();
+  if (added.length) await frSave(`${whoOf(added)} 추가 — 저장했습니다.`);
+}
+async function frRemove(i) { const [gone] = FR.to.splice(i, 1); frRender(); await frSave(`${gone} 뺐습니다 — 저장했습니다.`); }
+async function frPreview() {
+  $('fr-prev').disabled = true; $('fr-prev').textContent = '만드는 중…';
+  try {
+    const r = await frApi('POST', { action: 'preview' });
+    $('fr-frame').srcdoc = '<meta charset="utf-8"><meta name="viewport" content="width=device-width"><body style="margin:0">' + r.html;
+    $('fr-preview').style.display = 'block';
+  } catch (e) { show('err', '미리보기를 만들지 못했습니다: ' + e.message); }
+  finally { $('fr-prev').disabled = false; $('fr-prev').textContent = '미리보기'; }
+}
+async function frSend() {
+  if ($('fr-email').value.trim()) await frAdd();
+  if (!FR.to.length) return show('err', '받는 사람이 없습니다.');
+  if (!confirm(`지금 아래 ${FR.to.length}명에게 지난 주일 헌금 보고를 보낼까요?\n\n${FR.to.join('\n')}`)) return;
+  $('fr-send').disabled = true; $('fr-send').textContent = '보내는 중…';
+  try { const r = await frApi('POST', { action: 'send' }); show('ok', `${r.sent}명에게 보냈습니다: ${FR.to.join(', ')}`); }
+  catch (e) { show('err', '보내지 못했습니다: ' + e.message); }
+  finally { $('fr-send').disabled = false; $('fr-send').textContent = '지금 보내기'; }
+}
+(async () => {
+  try { Object.assign(FR, await frApi('GET')); frRender(); }
+  catch (e) { $('fr-status').innerHTML = `<span class="rp-pill off">설정을 불러오지 못했습니다: ${escH(e.message)}</span>`; }
 })();
 
 /* ── 미입력 알림 메일 ── */
@@ -895,7 +977,9 @@ async function mrSend() {
     mrStatus(); mrRenderOwners(); mrRenderAs();
     if (STATE.users && STATE.users.length) renderRows();   // 계정 목록에 이메일 붙이기
     attachSuggest($('rp-email'), p => { $('rp-email').value = p.email; rpAdd(); });
+    attachSuggest($('fr-email'), p => { $('fr-email').value = p.email; frAdd(); });
     if (RP.to) rpRender();   // 받는 사람 칩을 이름으로
+    frRender();
   } catch (e) { $('mr-status').innerHTML = `<span class="rp-pill off">설정을 불러오지 못했습니다: ${escH(e.message)}</span>`; }
 })();
 
